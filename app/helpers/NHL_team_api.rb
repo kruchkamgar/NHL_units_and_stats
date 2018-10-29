@@ -1,6 +1,8 @@
 =begin
 fetches the teams' information
 -
+
+- does not fetch all the seasons (leave this to application logic / seeds.rb)
 =end
 
 module NHLTeamAPI

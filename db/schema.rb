@@ -10,14 +10,14 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema.define(version: 2018_10_27_170619) do
+ActiveRecord::Schema.define(version: 2018_10_28_235809) do
 
   create_table "circumstances", force: :cascade do |t|
     t.integer "unit_id"
-    t.integer "player_id"
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
-    t.index ["player_id"], name: "index_circumstances_on_player_id"
+    t.integer "player_profile_id_id"
+    t.index ["player_profile_id_id"], name: "index_circumstances_on_player_profile_id_id"
     t.index ["unit_id"], name: "index_circumstances_on_unit_id"
   end
 
@@ -54,13 +54,20 @@ ActiveRecord::Schema.define(version: 2018_10_27_170619) do
   end
 
   create_table "logs", force: :cascade do |t|
-    t.integer "player_id"
     t.integer "event_id"
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
     t.string "action_type"
+    t.integer "player_profile_id"
     t.index ["event_id"], name: "index_logs_on_event_id"
-    t.index ["player_id"], name: "index_logs_on_player_id"
+    t.index ["player_profile_id"], name: "index_logs_on_player_profile_id"
+  end
+
+  create_table "player_profiles", force: :cascade do |t|
+    t.integer "player_id"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["player_id"], name: "index_player_profiles_on_player_id"
   end
 
   create_table "players", force: :cascade do |t|

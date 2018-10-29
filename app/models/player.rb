@@ -1,9 +1,7 @@
 class Player < ApplicationRecord
-  has_many :logs
-  has_many :events, through: :logs
-  has_many :units, through: :circumstances # players may have different roles on different units (a center may play wing, instead, on a [niche] unit)
   has_and_belongs_to_many :rosters
+  has_many :player_profiles
 
-
+  #add a self-join for primary-position changes?
 
 end
