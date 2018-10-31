@@ -6,8 +6,19 @@
 #   movies = Movie.create([{ name: 'Star Wars' }, { name: 'Lord of the Rings' }])
 #   Character.create(name: 'Luke', movie: movies.first)
 
+Log.destroy_all
+Circumstance.destroy_all
 
-# Book.destroy_all
-# Author.destroy_all
+Event.destroy_all
+Player_profile.destroy_all
+Unit.destroy_all
 
-NHLGameAPI::Adapter.new()
+Player.destroy_all
+Game.destroy_all
+Roster.destroy_all
+Team.destroy_all
+
+
+
+
+Player.destroy_all

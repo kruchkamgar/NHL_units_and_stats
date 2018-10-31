@@ -10,14 +10,14 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema.define(version: 2018_10_28_235809) do
+ActiveRecord::Schema.define(version: 2018_10_30_031157) do
 
   create_table "circumstances", force: :cascade do |t|
     t.integer "unit_id"
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
-    t.integer "player_profile_id_id"
-    t.index ["player_profile_id_id"], name: "index_circumstances_on_player_profile_id_id"
+    t.integer "player_profile_id"
+    t.index ["player_profile_id"], name: "index_circumstances_on_player_profile_id"
     t.index ["unit_id"], name: "index_circumstances_on_unit_id"
   end
 
@@ -67,6 +67,8 @@ ActiveRecord::Schema.define(version: 2018_10_28_235809) do
     t.integer "player_id"
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.string "position"
+    t.string "position_type"
     t.index ["player_id"], name: "index_player_profiles_on_player_id"
   end
 
@@ -75,8 +77,6 @@ ActiveRecord::Schema.define(version: 2018_10_28_235809) do
     t.string "last_name"
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
-    t.string "position"
-    t.string "position_type"
     t.integer "player_id"
   end
 

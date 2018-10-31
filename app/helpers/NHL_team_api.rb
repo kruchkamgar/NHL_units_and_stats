@@ -18,31 +18,16 @@ module NHLTeamAPI
     end
 
     def create_team
-      Team.find_or_create_by(team_id: @team_id, season: @season)
-      create_listed_roster
-
-      fetch_data
+      team = Team.find_or_create_by(team_id: @team_id, season: @season)
+      team.name = @name
     end
 
     def fetch_data
       # get games from schedule
       sched_data = JSON.parse(RestClient.get(get_sched_url))
-      # call NHLGameAPI::Adapter.new().create_game for each scheduled game
-      sched_data["dates"].each { |date_hash|
-        game_id = date_hash["games"].first["gamePk"]
-        NHLGameAPI::Adapter.new(game_id: game_id).create_game
-        # byebug
-      }
-
     end
 
     private
-
-    def create_listed_roster
-      # roster.find_or_create_by(...)
-      # data = JSON.parse(RestClient.get(get_roster_url))
-      # roster.team_id =
-    end
 
     def get_roster_url
       "#{BASE_URL}#{@team_id}/roster"

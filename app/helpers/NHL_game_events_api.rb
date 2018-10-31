@@ -1,15 +1,21 @@
 =begin
 Get the shifts events from API and call SynthesizeUnits functionality
 -
+
+make this a standalone or mixin-only module for gameAPI module?
 =end
 
 
-module NHLEventsAPI
+module NHLGameEventsAPI
 
   class Adapter
 
+    def initialize (shifts_url:)
+      @shifts_url = shifts_url
+    end
+
     def create_game_events
-      shift_events = fetch_data(get_shifts_url)["data"]
+      shift_events = fetch_data(@shifts_url)["data"]
 
       shift_events.each do |event|
 
@@ -24,7 +30,7 @@ module NHLEventsAPI
 
         Log.find_or_create_by(
           event_id: new_event.id,
-          player_id: Player.find_or_create_by(player_id: event["playerId"]).id,
+          player_id: Player_profile.find_or_create_by(player_id: event["playerId"]).id,
           action_type: "shift"
         )
 
@@ -36,7 +42,7 @@ module NHLEventsAPI
 
           assisters.each { |player|
             Log.find_or_create_by(
-              player_id: Player.find_by(
+              player_id: Player_profile.find_by(
                 last_name: player["last_name"],
                 first_name: player["first_name"]
               ).id,
@@ -46,8 +52,11 @@ module NHLEventsAPI
           }
         end
       end
+    end #create_game_events
+
+    def fetch_data (url = nil)
+      data = JSON.parse(RestClient.get(url))
     end
 
-
-  end
+  end #class Adapter
 end
