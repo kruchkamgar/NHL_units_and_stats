@@ -10,26 +10,26 @@ module ApplicationHelper
       game_id = date_hash["games"].first["gamePk"]
 
       # game API may deliver two teams' players
-      teams_hash = NHLGameAPI::Adapter.new(game_id: game_id).create_game
-      byebug
-
+      game, teams_hash = NHLGameAPI::Adapter.new(game_id: game_id).create_game
       # create a roster for the team
       NHLRosterAPI::create_game_roster(
         select_team_hash(teams_hash),
-        @team
+        @team, game
       )
+      NHLGameEventsAPI::Adapter.new(game_id: game_id).create_game_events
+      # byebug
     }
 
     # create the main roster
-    NHLRosterAPI::Adapter.new(team.team_id, season: team.season).fetch_roster
+    # NHLRosterAPI::Adapter.new(team.team_id, season: team.season).fetch_roster
 
   end
 
   # ////////////// helpers /////////////// #
 
-  def select_team_hash teams_hash
+  def self.select_team_hash teams_hash
     teams_hash.select { |side|
-      side["team"]["id"] == @team.team_id
-    }
+      teams_hash[side]["team"]["id"] == @team.team_id
+    }.first[1]
   end
 end

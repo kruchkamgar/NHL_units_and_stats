@@ -5,33 +5,36 @@ module NHLRosterAPI
   #handles roster creation
   # handle new player profiles? (primary-position change for example)
 
-  def self.create_game_roster (team_hash, team)
-
-    byebug
+  def self.create_game_roster (team_hash, team, game)
     # check if roster already exists [to save on work]
-    exists = team.rosters.any? { |roster|
+    roster = team.rosters.select { |roster|
       roster.players.all? { |player|
         team_hash["players"].include? "ID#{player.player_id}"
       }
-    }
+    }.first
 
     # new players likely show up in the game's rosters first
+    if roster
+      roster.games << game
+      roster.save
+    else
+      roster = team.rosters.build
 
-    unless exists
-      roster = team.roster.build
       team_hash["players"].each { |id, player_hash|
         individual = player_hash["person"]
 
         player = Player.find_or_create_by(
           first_name: individual["firstName"],
-          last_name: individual["lastName"]
+          last_name: individual["lastName"],
+          player_id: individual["id"]
         )
         player.player_profiles.find_or_create_by(
           position: player_hash["position"]["name"],
           position_type: player_hash["position"]["type"],
-          player_id: individual["id"]
+          player_id: player.id
         )
         roster.players << player
+        roster.games << game
       }
       roster.save
     end
@@ -50,22 +53,24 @@ module NHLRosterAPI
   def fetch_roster
     roster = JSON.parse(RestClient.get(get_url))
 
-    # roster["teams"].each { |roster_hash|
-    #   roster_hash["roster"]["roster"].each { |player|
-    #
-    #     player_name = /(?<first_name>[^\s]+)\s(?<last_name>[^\s]+)/.match(
-    #       player["person"]["fullName"]
-    #     )
-    #
-    #     Player.find_or_create_by(
-    #       player_id: player["person"]["id"],
-    #       first_name: player_name["first_name"],
-    #       last_name: player_name["last_name"]
-    #     )
-    #   }
-    # }
+    roster["teams"].each { |roster_hash|
+      roster_hash["roster"]["roster"].each { |player|
 
-    # return roster hash; or call self.create_game_roster, first
+        player_name = /(?<first_name>[^\s]+)\s(?<last_name>[^\s]+)/.match(
+          player["person"]["fullName"]
+        )
+
+        Player.find_or_create_by(
+          player_id: player["person"]["id"],
+          first_name: player_name["first_name"],
+          last_name: player_name["last_name"]
+        )
+      }
+    }
+
+    # return roster hash; or call # self.class.create_game_roster, first
+
+
   end
 
 

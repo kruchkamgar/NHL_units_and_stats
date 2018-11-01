@@ -10,7 +10,7 @@ Log.destroy_all
 Circumstance.destroy_all
 
 Event.destroy_all
-Player_profile.destroy_all
+PlayerProfile.destroy_all
 Unit.destroy_all
 
 Player.destroy_all

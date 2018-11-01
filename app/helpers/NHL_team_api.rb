@@ -20,6 +20,8 @@ module NHLTeamAPI
     def create_team
       team = Team.find_or_create_by(team_id: @team_id, season: @season)
       team.name = @name
+      team.save
+      team
     end
 
     def fetch_data

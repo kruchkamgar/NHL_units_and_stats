@@ -12,9 +12,7 @@ module NHLGameAPI
 
   class Adapter
 
-      SHIFT_CHARTS_URL = 'http://www.nhl.com/stats/rest/shiftcharts'
       GAME_BASE_URL = 'https://statsapi.web.nhl.com/api/v1/game/'
-
 
     def initialize (game_id: )
       @game_id = game_id
@@ -27,17 +25,11 @@ module NHLGameAPI
 
       #handles roster creation
       # handle new player profiles? (primary-position change for example)
-      fetch_data(get_game_url)["teams"].each do |side, team_hash|
+      teams_hash = fetch_data(get_game_url)["teams"].each do |side, team_hash|
         game.home_side = team_hash["team"]["name"] if side == "home"
       end
-    end
 
-    def create_game_events
-      NHLGameEventsAPI::Adapter.new(shifts_url: get_shifts_url).create_game_events
-    end
-
-    def get_shifts_url
-      "#{SHIFT_CHARTS_URL}?cayenneExp=gameId=#{@game_id}"
+      return [game, teams_hash]
     end
 
     def get_game_url
