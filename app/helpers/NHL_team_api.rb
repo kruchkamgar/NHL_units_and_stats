@@ -18,7 +18,11 @@ module NHLTeamAPI
     end
 
     def create_team
-      team = Team.find_or_create_by(team_id: @team_id, season: @season)
+      team = Team.find_or_create_by(
+        team_id: @team_id,
+        season: @season,
+        name: @name
+      )
       team.name = @name
       team.save
       team

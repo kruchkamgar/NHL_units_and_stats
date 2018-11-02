@@ -15,7 +15,7 @@ module NHLGameAPI
       GAME_BASE_URL = 'https://statsapi.web.nhl.com/api/v1/game/'
 
     def initialize (game_id: )
-      @game_id = game_id
+      @game_id = 2017020019
       # author_name_split = author.split(" ") # ["Roald", "Dahl"]
     end
 

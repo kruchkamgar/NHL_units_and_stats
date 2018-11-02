@@ -1,8 +1,8 @@
 class Roster < ApplicationRecord
-  has_and_belongs_to_many :units #redundant w/ players (could use has_many :players -> {includes :units} )
+  # has_and_belongs_to_many :units #redundant w/ players (could use has_many :players -> {includes :units} )
   has_and_belongs_to_many :games
   has_and_belongs_to_many :players #has_many players through player_profiles?
-  has_many :units, through: :players
+  has_many :units, through: :games
   belongs_to :team
 
 end

@@ -4,17 +4,17 @@ module NHLRosterAPI
 
   #handles roster creation
   # handle new player profiles? (primary-position change for example)
+  # new players likely show up in the games' rosters first
 
   def self.create_game_roster (team_hash, team, game)
     # check if roster already exists [to save on work]
     roster = team.rosters.select { |roster|
       roster.players.all? { |player|
-        team_hash["players"].include? "ID#{player.player_id}"
+        team_hash["players"].include? "ID#{player.player_id}" #should include only these players
       }
     }.first
 
-    # new players likely show up in the game's rosters first
-    if roster
+    if roster.players.any?
       roster.games << game
       roster.save
     else
@@ -28,18 +28,23 @@ module NHLRosterAPI
           last_name: individual["lastName"],
           player_id: individual["id"]
         )
-        player.player_profiles.find_or_create_by(
+        player_profile = player.player_profiles.find_or_create_by(
           position: player_hash["position"]["name"],
           position_type: player_hash["position"]["type"],
           player_id: player.id
         )
+        # byebug
+        game.player_profiles << player_profile
         roster.players << player
         roster.games << game
       }
+
+      game.save
       roster.save
     end
-
+    roster
   end
+
 
   class Adapter
 

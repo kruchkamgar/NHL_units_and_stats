@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema.define(version: 2018_10_30_031157) do
+ActiveRecord::Schema.define(version: 2018_11_02_045915) do
 
   create_table "circumstances", force: :cascade do |t|
     t.integer "unit_id"
@@ -30,6 +30,8 @@ ActiveRecord::Schema.define(version: 2018_10_30_031157) do
     t.string "end_time"
     t.integer "shift_number"
     t.integer "period"
+    t.integer "game_id"
+    t.index ["game_id"], name: "index_events_on_game_id"
   end
 
   create_table "games", force: :cascade do |t|
@@ -37,6 +39,11 @@ ActiveRecord::Schema.define(version: 2018_10_30_031157) do
     t.string "home_side"
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+  end
+
+  create_table "games_player_profiles", id: false, force: :cascade do |t|
+    t.integer "game_id", null: false
+    t.integer "player_profile_id", null: false
   end
 
   create_table "games_rosters", id: false, force: :cascade do |t|
@@ -93,7 +100,7 @@ ActiveRecord::Schema.define(version: 2018_10_30_031157) do
     t.integer "team_id"
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
-    t.index ["team_id"], name: "index_rosters_on_team_id", unique: true
+    t.index ["team_id"], name: "index_rosters_on_team_id"
   end
 
   create_table "rosters_units", id: false, force: :cascade do |t|

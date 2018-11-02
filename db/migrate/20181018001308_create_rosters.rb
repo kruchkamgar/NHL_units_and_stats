@@ -3,7 +3,7 @@ class CreateRosters < ActiveRecord::Migration[5.2]
     create_table :rosters do |t|
       t.boolean :baseline
       t.string :type
-      t.references :team, index: {:unique => true},
+      t.references :team, index: true,
       foreign_key: true
 
       t.timestamps

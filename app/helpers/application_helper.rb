@@ -12,12 +12,15 @@ module ApplicationHelper
       # game API may deliver two teams' players
       game, teams_hash = NHLGameAPI::Adapter.new(game_id: game_id).create_game
       # create a roster for the team
-      NHLRosterAPI::create_game_roster(
+      roster = NHLRosterAPI::create_game_roster(
         select_team_hash(teams_hash),
         @team, game
       )
-      NHLGameEventsAPI::Adapter.new(game_id: game_id).create_game_events
-      # byebug
+
+      events = NHLGameEventsAPI::Adapter.new(team:
+        @team, game: game, roster: roster).create_game_events
+      byebug
+      SynthesizeUnits::get_lines_from_shifts(@team, roster, game) if events
     }
 
     # create the main roster
