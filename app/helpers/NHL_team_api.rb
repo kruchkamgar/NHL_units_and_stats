@@ -7,10 +7,11 @@ fetches the teams' information
 
 module NHLTeamAPI
 
-  class Adapter
+  TEAM_URL = 'https://statsapi.web.nhl.com/api/v1/teams/'
+  BASE_URL = 'https://statsapi.web.nhl.com/api/v1/teams/'
+  SCHEDULE_URL = 'https://statsapi.web.nhl.com/api/v1/schedule'
 
-    BASE_URL = 'https://statsapi.web.nhl.com/api/v1/teams/'
-    SCHEDULE_URL = 'https://statsapi.web.nhl.com/api/v1/schedule'
+  class Adapter
 
     def initialize (name: nil, team_id:, year: Date.current.year, season: nil, start_date: nil, end_date: nil)
       @name, @team_id, @year, @season, @start_date, @end_date = name, team_id, year, season, start_date, end_date
@@ -20,12 +21,11 @@ module NHLTeamAPI
     def create_team
       team = Team.find_or_create_by(
         team_id: @team_id,
-        season: @season,
-        name: @name
+        season: @season
       )
-      team.name = @name
+      team.name = @name ||= (@name = get_team_name["teams"][0]["name"])
       team.save
-      team
+      [team, self]
     end
 
     def fetch_data
@@ -35,8 +35,11 @@ module NHLTeamAPI
 
     private
 
-    def get_roster_url
-      "#{BASE_URL}#{@team_id}/roster"
+    # def get_roster_url
+    #   "#{BASE_URL}#{@team_id}/roster"
+    # end
+    def get_team_name
+      JSON.parse(RestClient.get(TEAM_URL+"#{@team_id}"))
     end
 
     def get_sched_url

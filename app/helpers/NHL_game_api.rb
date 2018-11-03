@@ -10,18 +10,17 @@ fetches the game information:
 
 module NHLGameAPI
 
+  GAME_BASE_URL = 'https://statsapi.web.nhl.com/api/v1/game/'
+
   class Adapter
 
-      GAME_BASE_URL = 'https://statsapi.web.nhl.com/api/v1/game/'
-
     def initialize (game_id: )
-      @game_id = 2017020019
+      @game_id = game_id #2017020019
       # author_name_split = author.split(" ") # ["Roald", "Dahl"]
     end
 
     def create_game
       game = Game.find_or_create_by(game_id: @game_id)
-      # game.roster =
 
       #handles roster creation
       # handle new player profiles? (primary-position change for example)

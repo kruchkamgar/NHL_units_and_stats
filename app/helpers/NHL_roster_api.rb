@@ -14,7 +14,7 @@ module NHLRosterAPI
       } if roster.players.any?
     }.first
 
-    if roster.players.any?
+    if roster && roster.players.any?
       roster.games << game unless roster.games.any? { |g| g == game }
       roster.save
     else
@@ -28,12 +28,12 @@ module NHLRosterAPI
           last_name: individual["lastName"],
           player_id: individual["id"]
         )
+
         player_profile = player.player_profiles.find_or_create_by(
           position: player_hash["position"]["name"],
           position_type: player_hash["position"]["type"],
           player_id: player.id
         )
-        # byebug
         game.player_profiles << player_profile
         roster.players << player
         roster.games << game
@@ -74,10 +74,7 @@ module NHLRosterAPI
     }
 
     # return roster hash; or call # self.class.create_game_roster, first
-
-
   end
-
 
     def get_url
       "#{ROSTER_URL}?#{teams_params}#{season_params}"
@@ -92,7 +89,6 @@ module NHLRosterAPI
       season = "&#{@season}"
       roster += season if @season
     end
-
 
   end
 end

@@ -22,9 +22,6 @@ module NHLGameEventsAPI
       shift_events_by_team = shift_events.select { |event|
         event["teamId"] == @team.team_id
       }
-
-      # puts shift_events_by_team.count {|event| event["startTime"] == "00:00" && event["period"] == 1 }
-      byebug
       # if @game.game_id.to_s[5].to_i > 1 then byebug end
 
       special_events = []
@@ -43,13 +40,14 @@ module NHLGameEventsAPI
           game_id: @game.id
         )
 
-        #  match even with player, player_profile in database – each created in the NHLRosterAPI
+        #  match event with player, player_profile, stored in tables – each created in the NHLRosterAPI
         player = @roster.players.find { |player|
           player.player_id == event["playerId"]
         }
         player_profile = @game.player_profiles.find { |profile|
           profile.player_id == player.id
         }
+        unless player_profile then byebug end
 
         # NHL API currently omits the per-shift position of players
         # could manually edit based on known line combinations (player 1 plays center when on unit alongside players 2, 3)
@@ -60,7 +58,6 @@ module NHLGameEventsAPI
         )
 
       end
-      byebug
       shift_events.any?
     end #create_game_events
 
