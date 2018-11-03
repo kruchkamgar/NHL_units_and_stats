@@ -17,13 +17,14 @@ module NHLGameEventsAPI
     end
 
     def create_game_events
-      return true
-      
+
       shift_events = fetch_data(get_shifts_url)["data"]
       shift_events_by_team = shift_events.select { |event|
         event["teamId"] == @team.team_id
       }
 
+      # puts shift_events_by_team.count {|event| event["startTime"] == "00:00" && event["period"] == 1 }
+      byebug
       # if @game.game_id.to_s[5].to_i > 1 then byebug end
 
       special_events = []
@@ -38,6 +39,7 @@ module NHLGameEventsAPI
           end_time: event["endTime"],
           shift_number: event["shiftNumber"],
           period: event["period"],
+          player_id_num: event["playerId"],
           game_id: @game.id
         )
 
@@ -51,13 +53,14 @@ module NHLGameEventsAPI
 
         # NHL API currently omits the per-shift position of players
         # could manually edit based on known line combinations (player 1 plays center when on unit alongside players 2, 3)
-        Log.find_or_create_by(
+        LogEntry.find_or_create_by(
           event_id: new_event.id,
           player_profile_id: player_profile.id,
           action_type: "shift"
         )
 
       end
+      byebug
       shift_events.any?
     end #create_game_events
 
@@ -70,7 +73,7 @@ module NHLGameEventsAPI
 
       # get UP TO two full names separated by comma and space
       assisters.each { |player|
-        Log.find_or_create_by(
+        LogEntry.find_or_create_by(
           player_profile_id: (
             PlayerProfile.find_by(
               player_id: (

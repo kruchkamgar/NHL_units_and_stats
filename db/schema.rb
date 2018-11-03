@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema.define(version: 2018_11_02_045915) do
+ActiveRecord::Schema.define(version: 2018_11_02_234944) do
 
   create_table "circumstances", force: :cascade do |t|
     t.integer "unit_id"
@@ -31,6 +31,7 @@ ActiveRecord::Schema.define(version: 2018_11_02_045915) do
     t.integer "shift_number"
     t.integer "period"
     t.integer "game_id"
+    t.integer "player_id_num"
     t.index ["game_id"], name: "index_events_on_game_id"
   end
 
@@ -60,14 +61,14 @@ ActiveRecord::Schema.define(version: 2018_11_02_045915) do
     t.index ["unit_id", "game_id"], name: "index_games_units_on_unit_id_and_game_id"
   end
 
-  create_table "logs", force: :cascade do |t|
+  create_table "log_entries", force: :cascade do |t|
     t.integer "event_id"
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
     t.string "action_type"
     t.integer "player_profile_id"
-    t.index ["event_id"], name: "index_logs_on_event_id"
-    t.index ["player_profile_id"], name: "index_logs_on_player_profile_id"
+    t.index ["event_id"], name: "index_log_entries_on_event_id"
+    t.index ["player_profile_id"], name: "index_log_entries_on_player_profile_id"
   end
 
   create_table "player_profiles", force: :cascade do |t|

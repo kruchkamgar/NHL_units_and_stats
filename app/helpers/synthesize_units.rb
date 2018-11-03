@@ -57,11 +57,12 @@ organize shifts into chronological order within an array*
         }.position_type
       )
     }
+    byebug
   end
 
   def self.get_shifts roster_sample
     shifts = @game.events.select { |event|
-      #any shifts have player ID, matching with the roster?
+      # any player in the roster match the shift event's player profile(s)?
         roster_sample.any? { |player|
             event.player_profiles.any? {|profile|
               profile.player_id == player.id

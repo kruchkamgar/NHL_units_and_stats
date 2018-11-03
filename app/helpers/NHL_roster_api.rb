@@ -10,12 +10,12 @@ module NHLRosterAPI
     # check if roster already exists [to save on work]
     roster = team.rosters.select { |roster|
       roster.players.all? { |player|
-        team_hash["players"].include? "ID#{player.player_id}" #should include only these players
-      }
+        team_hash["players"].include? ("ID#{player.player_id}") #should include only these players
+      } if roster.players.any?
     }.first
 
     if roster.players.any?
-      roster.games << game
+      roster.games << game unless roster.games.any? { |g| g == game }
       roster.save
     else
       roster = team.rosters.build
