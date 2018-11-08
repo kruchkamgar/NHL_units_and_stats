@@ -9,6 +9,7 @@ module ApplicationHelper
     schedule_hash["dates"].each { |date_hash|
       game_id = date_hash["games"].first["gamePk"]
       unless game_id then byebug end
+
       # game API may deliver two teams' players
       game, teams_hash = NHLGameAPI::Adapter.new(game_id: game_id).create_game
 

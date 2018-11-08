@@ -27,10 +27,28 @@ module SynthesizeUnits
       units.uniq! { |unit| unit.sort.first }
       units.each { |unit|
         # build a unit
+
+      new_unit = Unit.new(
+      )
+
         # build a circumstance
           # add a player
       }
+
       puts JSON.pretty_generate(JSON.parse(units.first(3).to_json))
+    end
+
+    def create_instance
+      # create events
+      # assign new instance to each event set (shift).
+      # calculate tallies [using model methods] and store them in instance.
+        # get game intances into array
+        # iterate over theem and create units based on unique sets, of players retrieved from their events (instance.events.map(&:player) )
+      # create unit and add each instance
+
+      Instance.new(
+        unit_id: unit.id
+      )
     end
 
   end
@@ -90,6 +108,7 @@ organize shifts into chronological order within an array*
     p_chron.each { |period|
       i=0; period_shifts = period[1]
       while i < (period_shifts.length-1)
+        if period_shifts[i].duration == nil then byebug end
         if period_shifts[i].duration > minimum_shift_length
           shift = period_shifts[i..-1].first(unit_size)
           if mutual_overlap (shift)

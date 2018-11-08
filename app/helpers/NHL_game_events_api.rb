@@ -27,7 +27,7 @@ module NHLGameEventsAPI
       special_events = []
       shift_events_by_team.each do |event|
 
-        if event["eventDetails"] then special_events << event; next; end
+        if event["eventDescription"] then special_events << event; next; end
 
         new_event = Event.find_or_create_by(
           event_type: event["eventDescription"] ||= "shift", #API lists null, except for goals
@@ -44,10 +44,11 @@ module NHLGameEventsAPI
         player = @roster.players.find { |player|
           player.player_id == event["playerId"]
         }
+        byebug unless player
         player_profile = @game.player_profiles.find { |profile|
           profile.player_id == player.id
         }
-        unless player_profile then byebug end
+        byebug unless player_profile
 
         # NHL API currently omits the per-shift position of players
         # could manually edit based on known line combinations (player 1 plays center when on unit alongside players 2, 3)

@@ -20,6 +20,8 @@ ActiveRecord::Schema.define(version: 2018_11_02_234944) do
     t.index ["player_profile_id"], name: "index_circumstances_on_player_profile_id"
     t.index ["unit_id"], name: "index_circumstances_on_unit_id"
   end
+  # should have shift time, shift duration,
+  # shift number?
 
   create_table "events", force: :cascade do |t|
     t.datetime "created_at", null: false
