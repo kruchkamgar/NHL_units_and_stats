@@ -7,4 +7,5 @@ class Unit < ApplicationRecord
 
   # has_and_belongs_to_many :rosters # does this assocation matter if only theoretical, given games manifest unit exigence? ––
   has_many :rosters, through: :games
+  has_one :tally
 end

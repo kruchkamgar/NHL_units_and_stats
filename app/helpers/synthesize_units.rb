@@ -7,9 +7,11 @@
 
 module SynthesizeUnits
 
-  UNIT_HASH = { 3 => ["Forward"] }
-  UNIT_HASH[5] = ["Defenseman"] + UNIT_HASH[3]
-  UNIT_HASH[6] = ["Goalie"] + UNIT_HASH[5]
+  UNIT_HASH = {
+    3 => ["Forward"],
+    5 => ["Forward", "Defenseman"],
+    6 => ["Forward", "Defenseman", "Goalie"]
+  }
 
   def self.get_lines_from_shifts (team, roster, game)
     @team, @roster, @game = team, roster, game
@@ -23,33 +25,45 @@ module SynthesizeUnits
       shifts = get_shifts(roster_sample) #find the shifts matching the roster sample
       period_chronology = shifts_into_periods (shifts)
 
-      units = create_units(period_chronology, unit_size)
-      units.uniq! { |unit| unit.sort.first }
-      units.each { |unit|
-        # build a unit
+      units_instances = create_units(period_chronology, unit_size)
+      # units.uniq! { |unit| unit.sort.first }
+      units_instances.each { |instance|
+        # build an instance
+        create_instance(instance)
 
-      new_unit = Unit.new(
-      )
+      # new_unit = Unit.new(
+      # )
+      #
+      #   # build a circumstance
+      #     # add a player
+      # }
 
-        # build a circumstance
-          # add a player
+      # puts JSON.pretty_generate(JSON.parse(units.first(1).to_json))
       }
-
-      puts JSON.pretty_generate(JSON.parse(units.first(3).to_json))
     end
 
-    def create_instance
-      # create events
+    def self.create_instance instance_events
       # assign new instance to each event set (shift).
-      # calculate tallies [using model methods] and store them in instance.
-        # get game intances into array
-        # iterate over theem and create units based on unique sets, of players retrieved from their events (instance.events.map(&:player) )
-      # create unit and add each instance
 
-      Instance.new(
-        unit_id: unit.id
+      new_instance = Instance.find_or_create_by(
+        start_time: instance_events[0].start_time,
+        duration: instance_events[0].duration
       )
+
+      instance_events.each { |event|
+        event.instance_id = new_instance.id
+      }
+      
     end
+
+
+
+    # then...
+    # process score events and add to instances
+    # calculate tallies [using model methods] and store them in instance.
+      # get game instances into array
+      # iterate over them and create units based on unique sets, of players retrieved from their events (instance.events.map(&:player) )
+    # create unit and add each instance
 
   end
 

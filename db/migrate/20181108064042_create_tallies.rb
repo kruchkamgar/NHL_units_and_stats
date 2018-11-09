@@ -1,13 +1,11 @@
-class CreateInstances < ActiveRecord::Migration[5.2]
+class CreateTallies < ActiveRecord::Migration[5.2]
   def change
-    create_table :instances do |t|
+    create_table :tallies do |t|
       t.references :unit, foreign_key: true
       t.integer :assists
       t.integer :plus_minus
       t.integer :goals
       t.integer :points
-      t.string :start_time
-      t.string :duration
       t.timestamps
     end
   end
