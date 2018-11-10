@@ -15,11 +15,11 @@ module NHLRosterAPI
   # new players likely show up in the games' rosters first
 
   def self.create_game_roster (team_hash, team, game)
-    @game, @team_hash = game, team_hash
+    @team_hash, @team, @game = team_hash, team, game
 
     # check if roster already exists [to save on work]
     roster_exists = team.rosters.select { |rstr|
-      rstr.players.map(&:player_id) == team_hash["players"].keys.map { |playerId| playerId.match(/\d+/)[0] }
+      rstr.players.map(&:player_id).sort == team_hash["players"].keys.map { |playerId| playerId.match(/\d+/)[0].to_i }.sort
         # should check player_profiles, additionally
     }.first
 

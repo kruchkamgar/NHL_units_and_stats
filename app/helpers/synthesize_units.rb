@@ -14,6 +14,7 @@ module SynthesizeUnits
   }
 
   def self.get_lines_from_shifts (team, roster, game)
+
     @team, @roster, @game = team, roster, game
 
     # iterate through units: 6-man, 5-man, 3-man
@@ -26,10 +27,12 @@ module SynthesizeUnits
       period_chronology = shifts_into_periods (shifts)
 
       units_instances = create_units(period_chronology, unit_size)
-      # units.uniq! { |unit| unit.sort.first }
+      # units.uniq! { |unit| unit.sort.first } #sorts alphabetically and then makes uniq based on first item
+
+      @game_instances = []
       units_instances.each { |instance|
         # build an instance
-        create_instance(instance)
+        @game_instances << create_instance(instance)
 
       # new_unit = Unit.new(
       # )
@@ -40,34 +43,67 @@ module SynthesizeUnits
 
       # puts JSON.pretty_generate(JSON.parse(units.first(1).to_json))
       }
+
+      process_special_events
     end
-
-    def self.create_instance instance_events
-      # assign new instance to each event set (shift).
-
-      new_instance = Instance.find_or_create_by(
-        start_time: instance_events[0].start_time,
-        duration: instance_events[0].duration
-      )
-
-      instance_events.each { |event|
-        event.instance_id = new_instance.id
-      }
-      
-    end
-
-
-
-    # then...
-    # process score events and add to instances
-    # calculate tallies [using model methods] and store them in instance.
-      # get game instances into array
-      # iterate over them and create units based on unique sets, of players retrieved from their events (instance.events.map(&:player) )
-    # create unit and add each instance
-
   end
 
 # private
+
+  def self.create_instance instance_events
+    # assign new instance to each event set (shift).
+
+    new_instance = Instance.find_or_create_by(
+       start_time: instance_events.first.start_time, duration: instance_events.first.duration #instead find the overlap/intersect of its events
+     )
+
+    # add shift events to the new unit instance
+    instance_events.each { |event|
+      event.instance_id = new_instance.id
+    }
+
+    # # add special events
+    # add_special_events(new_instance)
+
+    new_instance
+  end
+
+  def self.process_special_events
+    special_events = @game.events.where('event_type != "shift"')
+    #opposing_team_evnets = special_events.each {|event|
+    # @roster.players.any? {|player| event.player_profiles.include? player.player_profile}
+    # } or @roster.player.any? player_id == event.player_id_num
+
+    # add the events and their tallies for each instance
+    @game_instances.each do |instance|
+      special_events.select { |event|
+        event.start_time == instance.start_time
+      }.each { |event|
+        event.instance_id = instance.id
+
+        # case event.event_type
+        # when "EVG", "PPG", "SHG"
+        event.log_entries.each do |entry|
+          case entry.action_type
+          when "assist"
+            instance.assists += 1
+          when "goal"
+            instance.goals +=1
+            instance.plus_minus += 1
+          end
+        end
+      }
+    end
+
+  end
+
+  # then...
+  # process score events and add to instances
+  # calculate tallies [using model methods] and store them in instance.
+    # get game instances into array
+    # iterate over them and create units based on unique sets, of players retrieved from their events —
+    #(instances.map {|instance| instance.events.map(&:player_profile) }.uniq { |unit| unit.sort.first}
+
 
 =begin
 organize shifts into chronological order within an array*

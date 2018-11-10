@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema.define(version: 2018_11_02_234944) do
+ActiveRecord::Schema.define(version: 2018_11_08_064042) do
 
   create_table "circumstances", force: :cascade do |t|
     t.integer "unit_id"
@@ -20,8 +20,6 @@ ActiveRecord::Schema.define(version: 2018_11_02_234944) do
     t.index ["player_profile_id"], name: "index_circumstances_on_player_profile_id"
     t.index ["unit_id"], name: "index_circumstances_on_unit_id"
   end
-  # should have shift time, shift duration,
-  # shift number?
 
   create_table "events", force: :cascade do |t|
     t.datetime "created_at", null: false
@@ -34,7 +32,9 @@ ActiveRecord::Schema.define(version: 2018_11_02_234944) do
     t.integer "period"
     t.integer "game_id"
     t.integer "player_id_num"
+    t.integer "instance_id"
     t.index ["game_id"], name: "index_events_on_game_id"
+    t.index ["instance_id"], name: "index_events_on_instance_id"
   end
 
   create_table "games", force: :cascade do |t|
@@ -61,6 +61,19 @@ ActiveRecord::Schema.define(version: 2018_11_02_234944) do
     t.integer "unit_id", null: false
     t.index ["game_id", "unit_id"], name: "index_games_units_on_game_id_and_unit_id"
     t.index ["unit_id", "game_id"], name: "index_games_units_on_unit_id_and_game_id"
+  end
+
+  create_table "instances", force: :cascade do |t|
+    t.integer "unit_id"
+    t.integer "assists"
+    t.integer "plus_minus"
+    t.integer "goals"
+    t.integer "points"
+    t.string "start_time"
+    t.string "duration"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["unit_id"], name: "index_instances_on_unit_id"
   end
 
   create_table "log_entries", force: :cascade do |t|
@@ -111,6 +124,17 @@ ActiveRecord::Schema.define(version: 2018_11_02_234944) do
     t.integer "unit_id", null: false
     t.index ["roster_id", "unit_id"], name: "index_rosters_units_on_roster_id_and_unit_id"
     t.index ["unit_id", "roster_id"], name: "index_rosters_units_on_unit_id_and_roster_id"
+  end
+
+  create_table "tallies", force: :cascade do |t|
+    t.integer "unit_id"
+    t.integer "assists"
+    t.integer "plus_minus"
+    t.integer "goals"
+    t.integer "points"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["unit_id"], name: "index_tallies_on_unit_id"
   end
 
   create_table "teams", force: :cascade do |t|

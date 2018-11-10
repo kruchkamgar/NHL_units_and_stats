@@ -18,13 +18,14 @@ module NHLGameEventsAPI
 
     def create_game_events
 
-      shift_events = fetch_data(get_shifts_url)["data"]
-      shift_events_by_team = shift_events.select { |event|
+      events = fetch_data(get_shifts_url)["data"]
+      events_by_team = events.select { |event|
         event["teamId"] == @team.team_id
       }
-      special_events = shift_events_by_team.delete_if { |event|
+      special_events = events_by_team.select { |event|
         event["eventDescription"]
       }
+      shift_events_by_team = events_by_team - special_events
 
       # if @game.game_id.to_s[5].to_i > 1 then byebug end
 
@@ -45,7 +46,9 @@ module NHLGameEventsAPI
         )
 
         # (these players and profiles should already exist by now)
-        records_hash = get_player_and_profile_by (:player_id, event["playerId"])
+        records_hash = get_player_and_profile_by ({
+          :player_id => event["playerId"]
+          })
 
         # NHL API currently omits the per-shift position of players
         # could manually edit based on known line combinations (player 1 plays center when on unit alongside players 2, 3)
@@ -58,7 +61,7 @@ module NHLGameEventsAPI
 
       create_special_game_events special_events
 
-      shift_events.any?
+      events.any?
     end #create_game_events
 
     private
@@ -81,27 +84,31 @@ module NHLGameEventsAPI
         # create a log entry per assister(s)
         assisters= []
         event["eventDetails"].gsub(/(?<player_name>(?<first_name>[^,\s]+)\s(?<last_name>[^,]+))/) { |m| assisters << $~ }
+        byebug unless event["eventDetails"]
 
           # get UP TO two full names separated by comma and space
           assisters.each { |player|
+
             records_hash = get_player_and_profile_by ({
               first_name: player["first_name"], last_name: player["last_name"]
-            })
+              })
 
             LogEntry.find_or_create_by(
-              player_profile_id: records_hash[:profile].id
+              player_profile_id: records_hash[:profile].id,
               event_id: new_event.id,
               action_type: "assist"
             )
           }
 
         # get goal-scorer by API playerId
-        records_hash = get_player_and_profile_by (:player_id, event["playerId"])
+        records_hash = get_player_and_profile_by({
+          :player_id => event["playerId"]
+          })
 
         LogEntry.find_or_create_by(
           event_id: new_event.id,
-          player_profile_id: player_profile.id,
-          action_type: event
+          player_profile_id: records_hash[:profile].id,
+          action_type: "goal"
         )
       end
 

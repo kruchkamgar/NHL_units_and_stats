@@ -1,5 +1,13 @@
 module ApplicationHelper
 
+  $game_id = 2017020019
+  $game = Game.find_by_game_id($game_id)
+  $roster = $game.rosters.first
+
+  def self.synthesize
+    SynthesizeUnits::get_lines_from_shifts(@team, $roster, $game)
+  end
+
   def self.creation
     # create team and get its schedule
     @team, team_adapter = NHLTeamAPI::Adapter.new(team_id: 1).create_team
@@ -11,7 +19,7 @@ module ApplicationHelper
       unless game_id then byebug end
 
       # game API may deliver two teams' players
-      game, teams_hash = NHLGameAPI::Adapter.new(game_id: game_id).create_game
+      game, teams_hash = NHLGameAPI::Adapter.new(game_id: $game_id).create_game
 
       # create a roster for the team
       roster = NHLRosterAPI::create_game_roster(
@@ -23,6 +31,7 @@ module ApplicationHelper
         @team, game: game, roster: roster).create_game_events
 
       SynthesizeUnits::get_lines_from_shifts(@team, roster, game) if events
+      byebug
     }
 
     # create the main roster
