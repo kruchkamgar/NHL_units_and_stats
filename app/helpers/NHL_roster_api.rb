@@ -8,12 +8,14 @@ roster > player > player_profile;
 game > player_profile
 =end
 
+
+#handles roster creation
+# handle new player profiles? (primary-position change for example)
+# new players likely show up in the games' rosters first
 module NHLRosterAPI
 
-  #handles roster creation
-  # handle new player profiles? (primary-position change for example)
-  # new players likely show up in the games' rosters first
-
+  # probably do this in SQL statements instead
+  #https://stackoverflow.com/questions/5288283/sql-server-insert-if-not-exists-best-practice
   def self.create_game_roster (team_hash, team, game)
     @team_hash, @team, @game = team_hash, team, game
 
@@ -23,9 +25,11 @@ module NHLRosterAPI
         # should check player_profiles, additionally
     }.first
 
+    # check if selected roster already associates to this game, before adding duplicatively
     if roster_exists && roster_exists.players.any?
       @roster = roster_exists
-      @roster.games << game unless roster_exists.games.any? { |g| g == game }
+      @roster.games << game unless roster_exists.games.any? { |g| g == @game }
+
       @roster.save
       add_profiles_to_game
     else

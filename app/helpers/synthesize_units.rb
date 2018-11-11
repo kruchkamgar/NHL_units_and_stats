@@ -26,23 +26,70 @@ module SynthesizeUnits
       shifts = get_shifts(roster_sample) #find the shifts matching the roster sample
       period_chronology = shifts_into_periods (shifts)
 
-      units_instances = create_units(period_chronology, unit_size)
-      # units.uniq! { |unit| unit.sort.first } #sorts alphabetically and then makes uniq based on first item
+      #find all unit instances by shift event temporal overlaps (array of arrays)
+      instances_events = create_units_events(period_chronology, unit_size)
+
+      # units_events.uniq { |unit|
+      #   unit.events.map(&:player_id_num).sort #make unique based on this evaluation
+      # }.each { |unit|
+      #
+      # }
+
+      # [[event1, event2, ...], [instance2's events]]
+      # cloned_instances = instances_events.clone
+      instances_events.each do |instance|
+        next if prior_selected_unit_instances.include? instance
+
+        new_unit_instances = cloned_instances.select { |match?|
+          # select all matching instances (having same players)
+          instance.events.map(&:player_id_num).sort == match?.events.map(&:player_id_num).sort
+        }
+
+        new_unit = Unit.create
+        new_unit_instances.each { |instance|
+          new_instance = Instance.create(unit_id: new_unit.id)
+          # add create_instance functionality
+          instance.events.each { |event|
+            event.instance_id = new_instance.id
+          }
+        }
+        prior_selected_unit_instances += new_unit_instances.flatten
+        # cloned_instances -= new_unit_instances
+
+        # avoid duplication by deleting (or ignoring) current selection (new_unit_instances) from instances_events
+        # may need to operate on a clone (clone.select...), within a .each on the original
+      end
+
 
       @game_instances = []
-      units_instances.each { |instance|
+      units_events.each { |instance|
         # build an instance
         @game_instances << create_instance(instance)
 
-      # new_unit = Unit.new(
-      # )
-      #
-      #   # build a circumstance
-      #     # add a player
-      # }
-
       # puts JSON.pretty_generate(JSON.parse(units.first(1).to_json))
       }
+
+      # @game_instances.each { |instance|
+      #   @game_instances.select { |inst|
+      #     }
+      #   instance.events.map(&:player_id_num).uniq.sort #*1
+      # }.each { |unit| #unique based on player_profiles
+      #     new_unit = Unit.new
+      #     unit.each { |instance|
+      #       instance.unit_id = new_unit.id
+      #     }
+      #     new_unit.save
+      #   }
+      #
+      # @game_instances.uniq { |instance|
+      #   instance.events.map(&:player_id_num).uniq.sort #*1
+      # }.each { |unit| #unique based on player_profiles
+      #     new_unit = Unit.new
+      #     unit.each { |instance|
+      #       instance.unit_id = new_unit.id
+      #     }
+      #     new_unit.save
+      #   }
 
       process_special_events
     end
@@ -101,7 +148,7 @@ module SynthesizeUnits
   # process score events and add to instances
   # calculate tallies [using model methods] and store them in instance.
     # get game instances into array
-    # iterate over them and create units based on unique sets, of players retrieved from their events —
+    # iterate over them and create units based on unique sets, comprised of players retrieved from their events —
     #(instances.map {|instance| instance.events.map(&:player_profile) }.uniq { |unit| unit.sort.first}
 
 
@@ -151,30 +198,47 @@ organize shifts into chronological order within an array*
     period_chron
   end
 
-  def self.create_units (p_chron, unit_size)
+  def self.create_units_events (p_chron, unit_size)
     minimum_shift_length = "00:15" # __ one std deviation from median shift length
 
-    units_instances = []
+    instances_events = []
     p_chron.each { |period|
       i=0; period_shifts = period[1]
+
+=begin (rewrite)
+      period_shifts.each_with_index do |shift, i|
+        next unless shift.duration > minimum_shift_length
+          period_shifts[i...(i+unit_size)]
+          ...test mutual overlap
+=end
       while i < (period_shifts.length-1)
         if period_shifts[i].duration == nil then byebug end
         if period_shifts[i].duration > minimum_shift_length
           shift = period_shifts[i..-1].first(unit_size)
           if mutual_overlap (shift)
-            units_instances << shift
+            instances_events << shift
           end
         end
         i+=1
       end
     }
-    units_instances
+    instances_events
   end
 
   def self.mutual_overlap (shift_group)
     # refine: set minimum ice-time shared
     shifts_array = shift_group.clone
     overlap_test = []
+
+    #make comparisons in a factorial-fashion pattern
+=begin (rewrite)
+  shifts_array.each_with_index { |shift|
+    shifts_array[i..-1].all? { |overlaps?|
+      shift.end_time > overlaps?.start_time && shift.start_time < overlaps?.end_time
+    }
+  }
+
+=end
     while shifts_array.length > 1
       base_shift = shifts_array.shift
       overlap_test << shifts_array.all? { |shift|
@@ -185,9 +249,18 @@ organize shifts into chronological order within an array*
       }
     end
 
-    overlap_test.all? { |iteration| iteration }
+    overlap_test.all? #all true values in array? #{ |iteration| iteration }
   end
 
 
-
 end
+
+=begin
+
+*1—
+instance.events.map { |event| event.log_entries.where(action_type: "shift").player_profile_id) }.sort.
+  --re: player_id_num
+
+instance.events.map { |event| event.log_entries.map(&:player_profile_id) }.flatten.uniq.sort
+
+=end
