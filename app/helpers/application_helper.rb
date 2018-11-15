@@ -1,11 +1,16 @@
 module ApplicationHelper
 
   $game_id = 2017020019
+  @team = Team.find_by_id(1)
   $game = Game.find_by_game_id($game_id)
   $roster = $game.rosters.first
 
   def self.synthesize
     SynthesizeUnits::get_lines_from_shifts(@team, $roster, $game)
+  end
+
+  def self.process_special_events
+    SynthesizeUnits::process_special_events(@team, $roster, $game)
   end
 
   def self.creation
@@ -30,8 +35,9 @@ module ApplicationHelper
       events = NHLGameEventsAPI::Adapter.new(team:
         @team, game: game, roster: roster).create_game_events
 
+        byebug
       SynthesizeUnits::get_lines_from_shifts(@team, roster, game) if events
-      byebug
+
     }
 
     # create the main roster

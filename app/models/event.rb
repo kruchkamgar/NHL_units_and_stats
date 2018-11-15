@@ -1,6 +1,6 @@
 class Event < ApplicationRecord
   belongs_to :game
-  belongs_to :instance
+  has_and_belongs_to_many :instances
   has_many :log_entries
   has_many :player_profiles, through: :log_entries # perhaps a player may get injured, and that would result or explain an event.
 

@@ -6,6 +6,7 @@
 
 
 module SynthesizeUnits
+  include Utilities # time calculations
 
   UNIT_HASH = {
     3 => ["Forward"],
@@ -28,140 +29,120 @@ module SynthesizeUnits
 
       #find all unit instances by shift event temporal overlaps (array of arrays)
       instances_events = create_units_events(period_chronology, unit_size)
+      if instances_events
+        @existing_game_instances = Instances.includes("events").where( events: { game_id: "#{@game.id}"})
 
-      # units_events.uniq { |unit|
-      #   unit.events.map(&:player_id_num).sort #make unique based on this evaluation
-      # }.each { |unit|
-      #
-      # }
+        @existing_game_instances.map(&:events).sort == instances_events.sort
 
+
+
+
+      prior_selected_unit_instances = []
       # [[event1, event2, ...], [instance2's events]]
-      # cloned_instances = instances_events.clone
-      instances_events.each do |instance|
-        next if prior_selected_unit_instances.include? instance
-
-        new_unit_instances = cloned_instances.select { |match?|
-          # select all matching instances (having same players)
-          instance.events.map(&:player_id_num).sort == match?.events.map(&:player_id_num).sort
+      if true then instances_events.each do |events| # Instance.new instead, and batch insert? (performance)
+        next if prior_selected_unit_instances.include? events
+        # select all like instances (having same players), to add to new_unit
+        new_unit_instances = instances_events.select { |match|
+          events.map(&:player_id_num).sort == match.map(&:player_id_num).sort
+          # note: simply remove the non-shift events (with .compact?) for this step, if temporally processing all events together
         }
 
-        new_unit = Unit.create
-        new_unit_instances.each { |instance|
-          new_instance = Instance.create(unit_id: new_unit.id)
-          # add create_instance functionality
-          instance.events.each { |event|
-            event.instance_id = new_instance.id
+=begin (pattern)
+  create instances for new_unit_instances only
+
+=end
+
+        # only create a unit if one had not existed prior
+        unit = Unit.includes( instances: [ :events ]).where(events: events)
+        new_unit = Unit.create unless unit
+
+        )
+        new_unit_instances.each { |prospective|
+
+          # instance start times come from the start of the overlap, between all the involved players' shifts
+          # duration measures the time spanned in this overlap
+          new_instance = Instance.create(
+            unit_id: new_unit.id || unit.id,
+            start_time: (start_time = prospective.max_by(&:start_time).start_time ),
+            duration: TimeOperation.new(:-, start_time, prospective.min_by(&:end_time).end_time).result
+          )
+
+          prospective.each { |event|
+            #event.instance_id = new_instance.id
+            new_instance.events << event
           }
+
+          # events_times[:start_times].max - event_times[:end_times].min
+
         }
-        prior_selected_unit_instances += new_unit_instances.flatten
+        prior_selected_unit_instances += new_unit_instances
         # cloned_instances -= new_unit_instances
 
-        # avoid duplication by deleting (or ignoring) current selection (new_unit_instances) from instances_events
+        # note: avoid duplication by deleting (or ignoring) current selection (new_unit_instances) from instances_events
         # may need to operate on a clone (clone.select...), within a .each on the original
-      end
+      end # instances_events.each...
 
+      # # puts JSON.pretty_generate(JSON.parse(units.first(1).to_json))
 
-      @game_instances = []
-      units_events.each { |instance|
-        # build an instance
-        @game_instances << create_instance(instance)
-
-      # puts JSON.pretty_generate(JSON.parse(units.first(1).to_json))
-      }
-
-      # @game_instances.each { |instance|
-      #   @game_instances.select { |inst|
-      #     }
-      #   instance.events.map(&:player_id_num).uniq.sort #*1
-      # }.each { |unit| #unique based on player_profiles
-      #     new_unit = Unit.new
-      #     unit.each { |instance|
-      #       instance.unit_id = new_unit.id
-      #     }
-      #     new_unit.save
-      #   }
-      #
-      # @game_instances.uniq { |instance|
-      #   instance.events.map(&:player_id_num).uniq.sort #*1
-      # }.each { |unit| #unique based on player_profiles
-      #     new_unit = Unit.new
-      #     unit.each { |instance|
-      #       instance.unit_id = new_unit.id
-      #     }
-      #     new_unit.save
-      #   }
-
-      process_special_events
-    end
+      # process_special_events # no real need to do this separately from units_instances creation pipeline. integration could help tallying +/-
+    end if
   end
 
 # private
 
-  def self.create_instance instance_events
-    # assign new instance to each event set (shift).
 
-    new_instance = Instance.find_or_create_by(
-       start_time: instance_events.first.start_time, duration: instance_events.first.duration #instead find the overlap/intersect of its events
-     )
+  def self.process_special_events (team, roster, game)
+    @team, @roster, @game = team, roster, game
 
-    # add shift events to the new unit instance
-    instance_events.each { |event|
-      event.instance_id = new_instance.id
-    }
-
-    # # add special events
-    # add_special_events(new_instance)
-
-    new_instance
-  end
-
-  def self.process_special_events
     special_events = @game.events.where('event_type != "shift"')
-    #opposing_team_evnets = special_events.each {|event|
-    # @roster.players.any? {|player| event.player_profiles.include? player.player_profile}
-    # } or @roster.player.any? player_id == event.player_id_num
+
+    opposing_team_events = special_events.select { |event|
+        @roster.players.any? { |player|
+          player.player_id == event.player_id_num
+        }
+        # @roster.players.any? {|player| event.player_profiles.include? player.player_profile}
+      } # or
 
     # add the events and their tallies for each instance
-    @game_instances.each do |instance|
-      special_events.select { |event|
-        event.start_time == instance.start_time
-      }.each { |event|
-        event.instance_id = instance.id
+    special_events.each do |event|
+        game_instances = Instance.includes("events").where(events: { game_id: "#{@game.id}"})
 
+        cspdg_instance = game_instances.find { |instance|
+          instance_end_time = TimeOperation.new(:+, instance.start_time, instance.duration).result
+          # byebug if instance.id == 8392 && event.end_time == "19:32"
+          event.end_time > instance.start_time && event.end_time <= instance_end_time && instance.events.first.period == event.period
+        }
+
+        next unless cspdg_instance
+
+        event.instances << cspdg_instance
         # case event.event_type
         # when "EVG", "PPG", "SHG"
-        event.log_entries.each do |entry|
-          case entry.action_type
-          when "assist"
-            instance.assists += 1
-          when "goal"
-            instance.goals +=1
-            instance.plus_minus += 1
+        event.log_entries.each { |entry|
+          if opposing_team_events.any? { |event|
+            event.log_entries.include? entry
+          }
+            cspdg_instance.plus_minus ||= 0
+            cspdg_instance.plus_minus -= 1 if entry.action_type == "goal"; cspdg_instance.save
+            next
+          else
+            case entry.action_type
+            when "assist", "primary", "secondary"
+              cspdg_instance.assists ||= 0
+              cspdg_instance.assists += 1
+            when "goal"
+              cspdg_instance.goals ||= 0
+              cspdg_instance.goals += 1
+            end
+            cspdg_instance.save
           end
-        end
-      }
+        }
     end
 
   end
 
-  # then...
-  # process score events and add to instances
-  # calculate tallies [using model methods] and store them in instance.
-    # get game instances into array
-    # iterate over them and create units based on unique sets, comprised of players retrieved from their events —
-    #(instances.map {|instance| instance.events.map(&:player_profile) }.uniq { |unit| unit.sort.first}
 
-
-=begin
-organize shifts into chronological order within an array*
-    OR into hash with keys as the times, or shift number
-
-    #LINE criteria: fwds' shifts starting prior and after a [reference] player's shifts
-      - minimum overlapping duration [to avoid incidental/negligible shared ice-time]
-
-=end
-
-
+  # get only certain types of players (see UNIT_HASH)
   def self.get_roster_sample (player_types)
 
     roster_sample = @roster.players.select { |player|
@@ -173,9 +154,11 @@ organize shifts into chronological order within an array*
     }
   end
 
+  # get the shifts for the roster
   def self.get_shifts roster_sample
-    shifts = @game.events.select { |event|
-      # any player in the roster match the shift event's player profile(s)?
+    # any player in the roster match each shift event's player profile(s)?
+    game_events = @game.events #single load for performance
+    shifts = game_events.select { |event|
         roster_sample.any? { |player|
             event.player_profiles.any? {|profile|
               profile.player_id == player.id
@@ -199,7 +182,7 @@ organize shifts into chronological order within an array*
   end
 
   def self.create_units_events (p_chron, unit_size)
-    minimum_shift_length = "00:15" # __ one std deviation from median shift length
+    minimum_shift_length = "00:15" # __ perhaps use a std deviation from median shift length
 
     instances_events = []
     p_chron.each { |period|
@@ -232,12 +215,15 @@ organize shifts into chronological order within an array*
 
     #make comparisons in a factorial-fashion pattern
 =begin (rewrite)
-  shifts_array.each_with_index { |shift|
-    shifts_array[i..-1].all? { |overlaps?|
+  shifts_array.each_with_index { |shift, i|
+    shifts_array[(i+1)..-1].all? { |overlaps?|
       shift.end_time > overlaps?.start_time && shift.start_time < overlaps?.end_time
-    }
+    } if i < shifts_array.size - 1
   }
 
+unit criteria– why no larger minimum overlap time?
+  - even a 2-second overlap can make a difference in the play (relevant unit criteria)
+  - if using minimum overlap time, use on top of 2 or 4 plyrs (3, or 5-man unit)
 =end
     while shifts_array.length > 1
       base_shift = shifts_array.shift

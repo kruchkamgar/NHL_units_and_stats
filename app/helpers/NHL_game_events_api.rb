@@ -66,7 +66,9 @@ module NHLGameEventsAPI
 
     private
 
-    def create_special_game_events special_events
+    # create events; and then log entries for player_profiles involved in the event
+    def create_special_game_events(special_events)
+      goal_string = "goal"
 
       special_events.each do |event|
 
@@ -80,47 +82,46 @@ module NHLGameEventsAPI
           player_id_num: event["playerId"],
           game_id: @game.id
         )
+        byebug
 
-        # create a log entry per assister(s)
+        # get UP TO two full names separated by comma and space
         assisters= []
         event["eventDetails"].gsub(/(?<player_name>(?<first_name>[^,\s]+)\s(?<last_name>[^,]+))/) { |m| assisters << $~ }
         byebug unless event["eventDetails"]
 
-          # get UP TO two full names separated by comma and space
+          # create a log entry per assister(s)
           assisters.each { |player|
 
             records_hash = get_player_and_profile_by ({
-              first_name: player["first_name"], last_name: player["last_name"]
+              first_name: player["first_name"],
+              last_name: player["last_name"]
               })
 
-            LogEntry.find_or_create_by(
-              player_profile_id: records_hash[:profile].id,
-              event_id: new_event.id,
-              action_type: "assist"
-            )
+            if assisters.find_index(player) == 0
+              create_log_entry(new_event, records_hash, "primary")
+            else
+              create_log_entry(new_event, records_hash, "secondary")
+            end
           }
 
-        # get goal-scorer by API playerId
+        # get the goal-scorer by API playerId
         records_hash = get_player_and_profile_by({
           :player_id => event["playerId"]
           })
 
-        LogEntry.find_or_create_by(
-          event_id: new_event.id,
-          player_profile_id: records_hash[:profile].id,
-          action_type: "goal"
-        )
+        create_log_entry(new_event, records_hash, goal_string )
+        byebug
       end
-
     end
-    # player_profile_id: (
-    #   PlayerProfile.find_by(
-    #     player_id: (
-    #       player = Player.find_by(
-    #         last_name: player["last_name"],
-    #         first_name: player["first_name"]
-    #       ).id ).last #player_id # *1
-    #   ).id ), # player_profile_id
+
+
+    def create_log_entry(event, records_hash, action_type)
+      LogEntry.find_or_create_by(
+        event_id: event.id,
+        player_profile_id: records_hash[:profile].id,
+        action_type: action_type
+      )
+    end
 
     # get player and player_profile on record (created in NHLRosterAPI.rb), using the event playerId via the API.
     # roster > players; game > player_profiles; player > player_profiles

@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema.define(version: 2018_11_08_064042) do
+ActiveRecord::Schema.define(version: 2018_11_14_190217) do
 
   create_table "circumstances", force: :cascade do |t|
     t.integer "unit_id"
@@ -31,10 +31,15 @@ ActiveRecord::Schema.define(version: 2018_11_08_064042) do
     t.integer "shift_number"
     t.integer "period"
     t.integer "game_id"
-    t.integer "player_id_num" #consider removing in favor of using log_entry.player_profile_id (SynthesizeUnits.rb, *1)
-    t.integer "instance_id"
+    t.integer "player_id_num"
     t.index ["game_id"], name: "index_events_on_game_id"
-    t.index ["instance_id"], name: "index_events_on_instance_id"
+  end
+
+  create_table "events_instances", id: false, force: :cascade do |t|
+    t.integer "instance_id", null: false
+    t.integer "event_id", null: false
+    t.index ["event_id", "instance_id"], name: "index_events_instances_on_event_id_and_instance_id"
+    t.index ["instance_id", "event_id"], name: "index_events_instances_on_instance_id_and_event_id"
   end
 
   create_table "games", force: :cascade do |t|
@@ -100,7 +105,7 @@ ActiveRecord::Schema.define(version: 2018_11_08_064042) do
     t.string "last_name"
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
-    t.integer "player_id" # perhaps rename to player_id_num, and make primary key?
+    t.integer "player_id"
   end
 
   create_table "players_rosters", id: false, force: :cascade do |t|
