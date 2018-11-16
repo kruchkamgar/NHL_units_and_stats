@@ -22,34 +22,31 @@ module SynthesizeUnits
     UNIT_HASH.each do |unit_size, unit_type|
 
       roster_sample = get_roster_sample (unit_type)
-
-      #apply shifts to the roster units
       shifts = get_shifts(roster_sample) #find the shifts matching the roster sample
       period_chronology = shifts_into_periods (shifts)
 
       #find all unit instances by shift event temporal overlaps (array of arrays)
       instances_events = create_units_events(period_chronology, unit_size)
+      # subtract events of existing game instances, from the API-sourced instances' events array
       if instances_events
-        @existing_game_instances = Instances.includes("events").where( events: { game_id: "#{@game.id}"})
+        @existing_game_instances = Instance.includes("events").where( events: { game_id: "#{@game.id}"})
 
-        @existing_game_instances.map(&:events).sort == instances_events.sort
-
-
-
+        new_instances_events = instances_events - @existing_game_instances.map(&:events)
+      end
 
       prior_selected_unit_instances = []
       # [[event1, event2, ...], [instance2's events]]
-      if true then instances_events.each do |events| # Instance.new instead, and batch insert? (performance)
-        next if prior_selected_unit_instances.include? events
+      unless new_instances_events.empty? then new_instances_events.each do |events| # Instance.new instead, and batch insert? (performance)
+        next if prior_selected_instances.include? events
         # select all like instances (having same players), to add to new_unit
         new_unit_instances = instances_events.select { |match|
-          events.map(&:player_id_num).sort == match.map(&:player_id_num).sort
-          # note: simply remove the non-shift events (with .compact?) for this step, if temporally processing all events together
+          events.map(&:player_id_num).sort == match.map(&:player_id_num).sort # *2.nui
         }
 
 =begin (pattern)
-  create instances for new_unit_instances only
-
+  situation: if doing a live-update, one may need to update new instances for a unit
+  - could use a different API for this however (w/ similar code)
+  create instances for new instances_events only
 =end
 
         # only create a unit if one had not existed prior
@@ -72,17 +69,9 @@ module SynthesizeUnits
             new_instance.events << event
           }
 
-          # events_times[:start_times].max - event_times[:end_times].min
-
         }
-        prior_selected_unit_instances += new_unit_instances
-        # cloned_instances -= new_unit_instances
-
-        # note: avoid duplication by deleting (or ignoring) current selection (new_unit_instances) from instances_events
-        # may need to operate on a clone (clone.select...), within a .each on the original
+        prior_selected_instances += new_unit_instances
       end # instances_events.each...
-
-      # # puts JSON.pretty_generate(JSON.parse(units.first(1).to_json))
 
       # process_special_events # no real need to do this separately from units_instances creation pipeline. integration could help tallying +/-
     end if
@@ -94,7 +83,7 @@ module SynthesizeUnits
   def self.process_special_events (team, roster, game)
     @team, @roster, @game = team, roster, game
 
-    special_events = @game.events.where('event_type != "shift"')
+    special_events = Event.includes( :log_entries).where("events.event_type != 'shift' AND events.game_id = '#{@game.id}'").references(:log_entries)
 
     opposing_team_events = special_events.select { |event|
         @roster.players.any? { |player|
@@ -114,25 +103,24 @@ module SynthesizeUnits
         }
 
         next unless cspdg_instance
-
         event.instances << cspdg_instance
-        # case event.event_type
-        # when "EVG", "PPG", "SHG"
+
+        # event_log = Event.includes("log_entries").where(log_entries: { event: event })
         event.log_entries.each { |entry|
           if opposing_team_events.any? { |event|
             event.log_entries.include? entry
           }
-            cspdg_instance.plus_minus ||= 0
-            cspdg_instance.plus_minus -= 1 if entry.action_type == "goal"; cspdg_instance.save
-            next
+            case entry.event.event_type
+            when "EVG", "SHG"
+              cspdg_instance.plus_minus ||= 0
+              cspdg_instance.plus_minus -= 1 if entry.action_type == "goal"; cspdg_instance.save
+            end
           else
             case entry.action_type
             when "assist", "primary", "secondary"
-              cspdg_instance.assists ||= 0
-              cspdg_instance.assists += 1
+              cspdg_instance.assists ||= 0; cspdg_instance.assists += 1
             when "goal"
-              cspdg_instance.goals ||= 0
-              cspdg_instance.goals += 1
+              cspdg_instance.goals ||= 0; cspdg_instance.goals += 1
             end
             cspdg_instance.save
           end
@@ -248,5 +236,11 @@ instance.events.map { |event| event.log_entries.where(action_type: "shift").play
   --re: player_id_num
 
 instance.events.map { |event| event.log_entries.map(&:player_profile_id) }.flatten.uniq.sort
+
+*2-
+processing special events and shift events in same flow / methods
+
+  nui-
+  note: simply remove the NON-SHIFT / special events (with .compact?) for this step, if temporally processing all events together
 
 =end

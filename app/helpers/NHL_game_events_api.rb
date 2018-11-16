@@ -69,10 +69,12 @@ module NHLGameEventsAPI
     # create events; and then log entries for player_profiles involved in the event
     def create_special_game_events(special_events)
       goal_string = "goal"
+      event_fields = [ :event_type, :duration, :start_time, :end_time, :shift_number, :period, :player_id_num, :game_id ]
 
-      special_events.each do |event|
 
-        new_event = Event.find_or_create_by(
+      events_date = special_events.map do |event|
+
+        {
           event_type: event["eventDescription"],
           duration: event["duration"],
           start_time: event["startTime"],
@@ -81,8 +83,19 @@ module NHLGameEventsAPI
           period: event["period"],
           player_id_num: event["playerId"],
           game_id: @game.id
-        )
-        byebug
+        }
+
+        # "VALUES (CSV string1),(string2),(string3)..."
+        sql = "
+        INSERT INTO events (#{events_data.first.keys.map(&:to_s).join(',')} )
+        VALUES ( #{ events_data.map { |data| data.values.join(',')}.join('),(')} )
+        "
+      end
+
+      new_events = Event.where("game_id: '#{@game.id}'", "event_type != 'shift'") #*2
+
+      special_events.each do |event|
+        new_event = new_events.find_by( end_time: event["endTime"] )
 
         # get UP TO two full names separated by comma and space
         assisters= []
@@ -96,6 +109,7 @@ module NHLGameEventsAPI
               first_name: player["first_name"],
               last_name: player["last_name"]
               })
+              #combine into a single array of hashes and retrieve all at once
 
             if assisters.find_index(player) == 0
               create_log_entry(new_event, records_hash, "primary")
@@ -158,7 +172,12 @@ end
 
 
 =begin
-*1- (nevermind, as API omits player positions per-shift) perhaps process the goal events, after synthesizing the units, to cross-reference the corresponding player profile matching the assist.
+*1-
+(nevermind, as API omits player positions per-shift) perhaps process the goal events, after synthesizing the units, to cross-reference the corresponding player profile matching the assist.
   .- check the time of the event against the players' shifts' times
     .=> player_profile.logs.select { |log| log.start_time < event.time < log.end_time }
+
+*2-
+Use the OUTPUT sql command, to output ids into a table using DECLARE ... TABLE
+https://stackoverflow.com/questions/810962/getting-new-ids-after-insert.
 =end

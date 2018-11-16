@@ -19,7 +19,23 @@ module NHLRosterAPI
   def self.create_game_roster (team_hash, team, game)
     @team_hash, @team, @game = team_hash, team, game
 
+
+    INSERT Competitors (cName)
+    SELECT  DISTINCT cr.Name
+    FROM    CompResults cr left join
+            Competitors c on cr.Name = c.cName
+    where   c.cName is null
+
+
+    INSERT INTO #players (id, guidd, TimeAdded, ExtraData)
+    SELECT id, guidd, TimeAdded, ExtraData from #table2
+    EXCEPT
+    SELECT id, guidd, TimeAdded, ExtraData from #table1
+    SET NOCOUNT ON
+
     # check if roster already exists [to save on work]
+    Roster.includes("players").where(players: players)
+
     roster_exists = team.rosters.select { |rstr|
       rstr.players.map(&:player_id).sort == team_hash["players"].keys.map { |playerId| playerId.match(/\d+/)[0].to_i }.sort
         # should check player_profiles, additionally

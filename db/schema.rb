@@ -13,7 +13,7 @@
 ActiveRecord::Schema.define(version: 2018_11_14_190217) do
 
   create_table "circumstances", force: :cascade do |t|
-    t.integer "unit_id"
+    t.integer "unit_id"``
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
     t.integer "player_profile_id"
