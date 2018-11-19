@@ -73,7 +73,6 @@ module NHLGameEventsAPI
 
 
       events_date = special_events.map do |event|
-
         {
           event_type: event["eventDescription"],
           duration: event["duration"],
@@ -84,13 +83,13 @@ module NHLGameEventsAPI
           player_id_num: event["playerId"],
           game_id: @game.id
         }
+      end
 
         # "VALUES (CSV string1),(string2),(string3)..."
         sql = "
         INSERT INTO events (#{events_data.first.keys.map(&:to_s).join(',')} )
         VALUES ( #{ events_data.map { |data| data.values.join(',')}.join('),(')} )
         "
-      end
 
       new_events = Event.where("game_id: '#{@game.id}'", "event_type != 'shift'") #*2
 

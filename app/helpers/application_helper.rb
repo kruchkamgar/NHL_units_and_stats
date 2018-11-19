@@ -1,18 +1,5 @@
 module ApplicationHelper
 
-  $game_id = 2017020019
-  @team = Team.find_by_id(1)
-  $game = Game.find_by_game_id($game_id)
-  $roster = $game.rosters.first
-
-  def self.synthesize
-    SynthesizeUnits::get_lines_from_shifts(@team, $roster, $game)
-  end
-
-  def self.process_special_events
-    SynthesizeUnits::process_special_events(@team, $roster, $game)
-  end
-
   def self.creation
     # create team and get its schedule
     @team, team_adapter = NHLTeamAPI::Adapter.new(team_id: 1).create_team
@@ -31,11 +18,11 @@ module ApplicationHelper
         select_team_hash(teams_hash),
         @team, game
       )
+      byebug
 
       events = NHLGameEventsAPI::Adapter.new(team:
         @team, game: game, roster: roster).create_game_events
 
-        byebug
       SynthesizeUnits::get_lines_from_shifts(@team, roster, game) if events
 
     }
@@ -47,9 +34,12 @@ module ApplicationHelper
 
   # ////////////// helpers /////////////// #
 
-  def self.select_team_hash teams_hash
+  def self.select_team_hash (teams_hash, team_id = nil)
+    team_id ||= @team.team_id
+
     teams_hash.select { |side|
-      teams_hash[side]["team"]["id"] == @team.team_id
+      teams_hash[side]["team"]["id"] == team_id
     }.first[1]
   end
+
 end

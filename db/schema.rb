@@ -10,10 +10,10 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema.define(version: 2018_11_14_190217) do
+ActiveRecord::Schema.define(version: 2018_11_19_010249) do
 
   create_table "circumstances", force: :cascade do |t|
-    t.integer "unit_id"``
+    t.integer "unit_id"
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
     t.integer "player_profile_id"
@@ -93,10 +93,10 @@ ActiveRecord::Schema.define(version: 2018_11_14_190217) do
 
   create_table "player_profiles", force: :cascade do |t|
     t.integer "player_id"
-    t.datetime "created_at", null: false
-    t.datetime "updated_at", null: false
     t.string "position"
     t.string "position_type"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
     t.index ["player_id"], name: "index_player_profiles_on_player_id"
   end
 
@@ -105,7 +105,8 @@ ActiveRecord::Schema.define(version: 2018_11_14_190217) do
     t.string "last_name"
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
-    t.integer "player_id"
+    t.integer "player_id_num"
+    t.index ["player_id_num"], name: "index_players_on_player_id_num", unique: true
   end
 
   create_table "players_rosters", id: false, force: :cascade do |t|
