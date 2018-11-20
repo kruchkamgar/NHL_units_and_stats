@@ -71,9 +71,8 @@ module NHLGameEventsAPI
       goal_string = "goal"
       event_fields = [ :event_type, :duration, :start_time, :end_time, :shift_number, :period, :player_id_num, :game_id ]
 
-
-      events_date = special_events.map do |event|
-        {
+      new_events_array = special_events.map do |event|
+        Hash[
           event_type: event["eventDescription"],
           duration: event["duration"],
           start_time: event["startTime"],
@@ -82,81 +81,115 @@ module NHLGameEventsAPI
           period: event["period"],
           player_id_num: event["playerId"],
           game_id: @game.id
-        }
+        ]
       end
 
-        # "VALUES (CSV string1),(string2),(string3)..."
-        sql = "
-        INSERT INTO events (#{events_data.first.keys.map(&:to_s).join(',')} )
-        VALUES ( #{ events_data.map { |data| data.values.join(',')}.join('),(')} )
-        "
+        # "VALUES (CSV string1),(string2),(string3)...
+        insert_events = new_events_array.map {
+            |event_hash| event_hash.values.join(',')
+          }
 
-      new_events = Event.where("game_id: '#{@game.id}'", "event_type != 'shift'") #*2
+        sql_events = "
+        INSERT INTO events (#{new_events_array.first.keys.map(&:to_s).join(',')} )
+        VALUES ( #{insert_events}.join('),(') )"
 
+        begin
+          ApplicationRecord.connection.execute(sql_events)
+        rescue StandardError => e
+          puts "\n\n error: \n\n #{e}"
+        end
+        # if updates to database occurred (inserts)
+        if ApplicationRecord.connection.execute("SELECT Changes()").first["changes()"] == 1
+        end
+
+      num_queries = new_events_array.map {
+          "player_id_num = ? AND end_time = ?"
+        }
+      inserted_events = Event.find_by_sql ["
+        SELECT * FROM events
+        WHERE #{num_queries.join(' OR ')}", new_events_array.map { |event|
+          [event[:player_id_num], event[:end_time]]
+        }.flatten ]
+
+      # Event.where("game_id: '#{@game.id}'", "event_type != 'shift'") #*2
+
+      # create associated log_entries for each created event
       special_events.each do |event|
         new_event = new_events.find_by( end_time: event["endTime"] )
+
+        # get roster player's game profile by matching to info from API data- 'event'
+        records_hash = get_player_and_profile_by({
+          :player_id => event["playerId"]
+          })
+        new_scorer_log_entry = Hash[
+          event_id: new_event.id,
+          player_profile_id: records_hash[:profile].id,
+          action_type: "goal"
+        ]
 
         # get UP TO two full names separated by comma and space
         assisters= []
         event["eventDetails"].gsub(/(?<player_name>(?<first_name>[^,\s]+)\s(?<last_name>[^,]+))/) { |m| assisters << $~ }
-        byebug unless event["eventDetails"]
-
+          byebug unless event["eventDetails"]
           # create a log entry per assister(s)
-          assisters.each { |player|
-
+        new_assister_log_entries = assisters.map {
+            |player|
+            action_type = ''
             records_hash = get_player_and_profile_by ({
               first_name: player["first_name"],
               last_name: player["last_name"]
               })
-              #combine into a single array of hashes and retrieve all at once
 
-            if assisters.find_index(player) == 0
-              create_log_entry(new_event, records_hash, "primary")
-            else
-              create_log_entry(new_event, records_hash, "secondary")
-            end
+              if assisters.find_index(player) == 0 then action_type = "primary" else action_type = "secondary" end
+
+              Hash[
+                event_id: new_event.id,
+                player_profile_id: records_hash[:profile].id,
+                action_type: action_type
+              ]
           }
 
-        # get the goal-scorer by API playerId
-        records_hash = get_player_and_profile_by({
-          :player_id => event["playerId"]
-          })
+        new_log_entries = [new_scorer_log_entry] + new_assister_log_entries
 
-        create_log_entry(new_event, records_hash, goal_string )
-        byebug
+        created_log_entries = LogEntry.create(new_log_entries).first
       end
     end
 
-
     def create_log_entry(event, records_hash, action_type)
-      LogEntry.find_or_create_by(
-        event_id: event.id,
-        player_profile_id: records_hash[:profile].id,
-        action_type: action_type
-      )
+      # LogEntry.find_or_create_by(
+      #   event_id: event.id,
+      #   player_profile_id: records_hash[:profile].id,
+      #   action_type: action_type
+      # )
     end
 
-    # get player and player_profile on record (created in NHLRosterAPI.rb), using the event playerId via the API.
+    # get the roster player and player_profile (created in NHLRosterAPI.rb), using the event's info via API data.
     # roster > players; game > player_profiles; player > player_profiles
     def get_player_and_profile_by (**search_hash)
       player = @roster.players.find_by (search_hash)
-      byebug unless player
+        byebug unless player
       player_profile = @game.player_profiles.find_by(player_id: player.id)
-
-      byebug unless player_profile
+        byebug unless player_profile
 
       { player: player, profile: player_profile }
     end
-=begin
-player = @roster.players.find { |player|
-  player.player_id == playerId
-}
-byebug unless player
-player_profile = @game.player_profiles.find { |profile|
-  profile.player_id == player.id
-}
-byebug unless player_profile
-=end
+
+    def sql_insert (fields, values)
+      # "VALUES (CSV string1),(string2),(string3)...
+      insert_events = new_events_array.map {
+          |event_hash| event_hash.values.join(',')
+        }
+      sql_events = "
+      INSERT INTO events (#{fields.join(',')} )
+      VALUES ( #{values}.join('),(') )"
+
+      begin ApplicationRecord.connection.execute(sql_events) rescue StandardError => e
+        puts "\n\n error: \n\n #{e}" end
+      # if updates to database occurred (inserts)
+      if ApplicationRecord.connection.execute("SELECT Changes()").first["changes()"] == 1
+        # ...
+      end
+    end
 
     def get_shifts_url
       "#{SHIFT_CHARTS_URL}?cayenneExp=gameId=#{@game.game_id}"
