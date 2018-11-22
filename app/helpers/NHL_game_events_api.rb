@@ -26,15 +26,11 @@ module NHLGameEventsAPI
         event["eventDescription"]
       }
       shift_events_by_team = events_by_team - special_events
-
       # if @game.game_id.to_s[5].to_i > 1 then byebug end
-
       # special_events = []
-      shift_events_by_team.each do |event|
-
+      shift_events_by_team.map do |event|
         # if event["eventDescription"] then special_events << event; next; end
-
-        new_event = Event.find_or_create_by(
+        Hash[
           event_type: event["eventDescription"] ||= "shift", #API lists null, except for goals
           duration: event["duration"],
           start_time: event["startTime"],
@@ -43,7 +39,7 @@ module NHLGameEventsAPI
           period: event["period"],
           player_id_num: event["playerId"],
           game_id: @game.id
-        )
+        ]
 
         # (these players and profiles should already exist by now)
         records_hash = get_player_and_profile_by ({
@@ -174,15 +170,16 @@ module NHLGameEventsAPI
       { player: player, profile: player_profile }
     end
 
-    def sql_insert (fields, values)
+    def sql_insert_all (table, data_hash)
       # "VALUES (CSV string1),(string2),(string3)...
-      insert_events = new_events_array.map {
-          |event_hash| event_hash.values.join(',')
+      insert_values = data_hash.map {
+          |hash| hash.values.join(',')
         }
-      sql_events = "
-      INSERT INTO events (#{fields.join(',')} )
-      VALUES ( #{values}.join('),(') )"
 
+      fields = data_hash.first.keys.map(&:to_s)
+      sql_events = "
+      INSERT INTO #{table} (#{fields.join(',')} )
+      VALUES ( #{insert_values}.join('),(') )"
       begin ApplicationRecord.connection.execute(sql_events) rescue StandardError => e
         puts "\n\n error: \n\n #{e}" end
       # if updates to database occurred (inserts)
@@ -190,6 +187,7 @@ module NHLGameEventsAPI
         # ...
       end
     end
+    # upgrade to Active-Import?
 
     def get_shifts_url
       "#{SHIFT_CHARTS_URL}?cayenneExp=gameId=#{@game.game_id}"
