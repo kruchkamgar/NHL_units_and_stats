@@ -24,17 +24,17 @@ module Utilities
 
   end # TimeOperation
 
-  def float_ time
-    time_hash = time.match(/(?<min>\d+):(?<sec>\d+)/)
-    # integer_time = time_hash[:sec].to_f/60*100 + time_hash[:min].to_f
 
-    seconds = time_hash[:sec].to_i + time_hash[:min].to_i*60
-
-    # time = "#{(seconds/60).to_f.floor}:#{seconds%60}"
-  end
+  # ////////////// helpers ////////////// #
 
   def convert
     formatted_time = Time.at(@seconds_int).strftime("%M:%S")
+  end
+
+  def float_ time
+    time_hash = time.match(/(?<min>\d+):(?<sec>\d+)/)
+
+    seconds = time_hash[:sec].to_i + time_hash[:min].to_i*60
   end
 
 end

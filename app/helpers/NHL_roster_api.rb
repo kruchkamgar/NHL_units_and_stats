@@ -10,8 +10,6 @@ game > player_profile
 
 
 #handles roster creation
-# handle new player profiles? (primary-position change for example)
-# new players likely show up in the games' rosters first
 module NHLRosterAPI
 
   # probably do this in SQL statements instead
@@ -19,18 +17,30 @@ module NHLRosterAPI
   def self.create_game_roster (team_hash, team, game)
     @team_hash, @team, @game = team_hash, team, game
 
-    # check if roster already exists [to save on work]
+    # check if roster already exists [to save on work] *3
     # "players" : { "ID8474709" : { "person" : { "id" : 8474709,
     player_id_nums = team_hash["players"].keys.map { |key| key.match(/\d+/)[0].to_i }
 
     roster_exists = Roster.includes(players: [:player_profiles]).where(players: { player_id_num: player_id_nums }).references(:players).first #*1
 
-      @players = roster_exists.players
+    if roster_exists
+      new_player_id_nums = player_id_nums.reject { |id_num|
+        roster_exists.players.map(&:player_id_num).include? id_num
+      }
+    else new_player_id_nums = player_id_nums end
+      #becomes nil if roster_exists.players fails to match player_id_nums
 
-    new_player_id_nums = player_id_nums.reject { |id_num|
-      roster_exists.players.map(&:player_id_num).include? id_num
-    } if roster_exists
-    #becomes nil if roster_exists.players fails to match player_id_nums
+=begin
+  (refactor: logic)
+
+  if roster_exists
+    if new_player_id_nums
+      build_new_roster
+    end
+  else
+    build_new_roster
+  end
+=end
 
     if !roster_exists || new_player_id_nums.any?
       @roster = team.rosters.build
@@ -39,84 +49,70 @@ module NHLRosterAPI
           |id, player_hash|
           person = player_hash["person"]
 
-          [
-            "'#{person["firstName"]}'",
-            "'#{person["lastName"]}'",
-            person["id"],
-            "'#{Time.now}'", "'#{Time.now}'"
+          Hash[
+            first_name: person["firstName"],
+            last_name: person["lastName"],
+            player_id_num: person["id"],
+            created_at: Time.now,
+            updated_at: Time.now
           ]
         }
 
-      insert_players = new_players_array.map { |value|
-          value.join(',')
-        }
-
-      sql_players = "INSERT INTO players (first_name, last_name, player_id_num, created_at, updated_at) VALUES ( #{insert_players.join('),(')} )"
-
-      begin
-        ApplicationRecord.connection.execute(sql_players)
-      rescue StandardError => e
-        puts "\n\n error: \n\n #{e}"
-      end
-
-      # if updates to database occurred (inserts)
-      if ApplicationRecord.connection.execute("SELECT Changes()").first["changes()"] == 1
+      changes = SQLOperations.sql_insert_all("players", new_players_array )
+      
+      if changes > 0
         inserted_players = Player.where(player_id_num: new_player_id_nums) #if inserted_players == 1
-
+        @roster.save
         @players = @roster.players << inserted_players
       end
+    else
+      @roster = roster_exists
+      @players = roster_exists.players
     end #if new_players.any?
 
-    # determine if any new profiles exist in the team_hash
+    # determine if any new profiles exist in the team_hash data from API
     new_profiles = @players.map do |player|
-      # find the player by playerId in the team_hash
+        # find the player by playerId in the team_hash
         player_hash = team_hash["players"].find {|id,
           plyr_hash|
           plyr_hash["person"]["id"] == player.player_id_num
         }[1]
-        # skip if player_profile already exists
-        next if player.player_profiles.map(&:position).include? player_hash["position"]
+        # skip if player's player_profile already exists, by position
+        next if player.player_profiles.map(&:position).include? player_hash["position"]["name"]
 
+        # then create hash if not exists
         Hash[
           position: player_hash["position"]["name"],
           position_type: player_hash["position"]["type"],
-          player_id: player.id
+          player_id: player.id,
+          created_at: Time.now,
+          updated_at: Time.now
         ]
-      # create the sql column values array
-      end
+      end.compact
 
-    created_profiles = PlayerProfile.create(new_profiles).first
-    @game.player_profiles << created_profiles.flatten
-    @game.save
+    created_profiles = SQLOperations.sql_insert_all("player_profiles", new_profiles ) unless new_profiles.empty? # *3 (incomplete)
 
-    # @roster.games << @game
-    # @game.player_profiles << new_players.map(&:player_profiles).flatten if new_players.any?
-
-      # if new players inserted, then create a new roster
-        #- SELECT changes() (return count of affected rows as integer)
-      # create new player profiles based on retrieved, added players
-      # add new player_profile to game
-
+    # @game.player_profiles << created_profiles.flatten
+    add_profiles_to_game
 
     # check if selected roster already associates to this game, before adding duplicatively
-    @roster.games << @game unless roster_exists.games.any? { |g| g == @game }
-    @roster.save
+
+    @roster.games << @game unless @roster.games.include? @game
     @roster
   end
 
-  # add all the profiles, defined by their position listed in the team_hash—(from Game API)
+  # add all the profiles. Position defines profiles -position as listed in the team_hash—(from Game API)
   def self.add_profiles_to_game
-    @team_hash["players"].each { |id, player_hash|
-
-      player = Player.find_by(
-        player_id: player_hash["person"]["id"]
-      )
-      player_profile = player.player_profiles.find_by(
-        position: player_hash["position"]["name"]
-      )
-      @game.player_profiles << player_profile
-    }
-    @game.save
+    players = @players.includes(:player_profiles)
+    player_profiles = @team_hash["players"].map do |id, player_hash|
+        player = players.find { |player|
+            player.player_id_num == player_hash["person"]["id"]
+          }
+        player.player_profiles.find { |profile|
+          profile.position == player_hash["position"]["name"]
+        }
+      end
+    @game.player_profiles += player_profiles if (@game.player_profiles & player_profiles).empty? # '&' operator tests array overlap
   end
 
   ROSTER_URL = 'https://statsapi.web.nhl.com/api/v1/teams' #/ID for specific team
@@ -128,6 +124,7 @@ module NHLRosterAPI
       @season = season
     end
 
+    # [unused] secondary function, for now
     def fetch_roster
       roster = JSON.parse(RestClient.get(get_url))
 
@@ -184,3 +181,12 @@ end
    #   rstr.players.map(&:player_id).sort == team_hash["players"].keys.map { |playerId| playerId.match(/\d+/)[0].to_i }.sort
    #     # should check player_profiles, additionally
    # }.first
+
+# *2-
+# handles new player profiles because:
+# (primary-position change for example)
+# - new profiles exhibited in the new game rosters;
+# - new players likely show up in the games' rosters first
+
+# *3- (incomplete)
+# existing roster check currently forgoes checking for new [or different combinations of] player_profiles

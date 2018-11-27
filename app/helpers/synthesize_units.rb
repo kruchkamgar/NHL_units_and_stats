@@ -1,5 +1,5 @@
 =begin
-- get shifts by team
+- get shifts by team, for a game
 
 =end
 

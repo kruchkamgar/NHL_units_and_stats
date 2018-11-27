@@ -3,7 +3,7 @@ module Test
   $game_id = 2017020019
   @team = Team.find_by_id(1)
   $game = Game.find_by_game_id($game_id)
-  # $roster = $game.rosters.first
+  @roster = $game.rosters.first
 
   def synthesize
     SynthesizeUnits::get_lines_from_shifts(@team, $roster, $game)
@@ -33,6 +33,12 @@ module Test
       )
   end
 
-  module_function :synthesize, :process_special_events, :create_game_roster
+
+  def create_game_events
+    events = NHLGameEventsAPI::Adapter.new(team:
+      @team, game: game, roster: @roster).create_game_events
+  end
+
+  module_function :synthesize, :process_special_events, :create_game_roster, :create_game_events
 
 end

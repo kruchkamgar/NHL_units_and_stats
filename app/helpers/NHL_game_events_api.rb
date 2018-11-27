@@ -13,7 +13,9 @@ module NHLGameEventsAPI
     SHIFT_CHARTS_URL = 'http://www.nhl.com/stats/rest/shiftcharts'
 
     def initialize (team:, game:, roster:)
-      @team, @game, @roster = team, game, roster
+      @team = team
+      @game = game.includes(:player_profiles)
+      @roster = roster.includes(:players)
     end
 
     def create_game_events
@@ -26,10 +28,9 @@ module NHLGameEventsAPI
         event["eventDescription"]
       }
       shift_events_by_team = events_by_team - special_events
-      # if @game.game_id.to_s[5].to_i > 1 then byebug end
-      # special_events = []
-      shift_events_by_team.map do |event|
-        # if event["eventDescription"] then special_events << event; next; end
+
+      new_events_array = shift_events_by_team.map do |event|
+
         Hash[
           event_type: event["eventDescription"] ||= "shift", #API lists null, except for goals
           duration: event["duration"],
@@ -40,7 +41,12 @@ module NHLGameEventsAPI
           player_id_num: event["playerId"],
           game_id: @game.id
         ]
+      end
 
+      # insert events
+      # grab events
+      inserted_events = Event.where("game_id: '#{@game.id}'", "event_type = 'shift'") #*2
+      # map log entries for each event
         # (these players and profiles should already exist by now)
         records_hash = get_player_and_profile_by ({
           :player_id => event["playerId"]
@@ -65,7 +71,6 @@ module NHLGameEventsAPI
     # create events; and then log entries for player_profiles involved in the event
     def create_special_game_events(special_events)
       goal_string = "goal"
-      event_fields = [ :event_type, :duration, :start_time, :end_time, :shift_number, :period, :player_id_num, :game_id ]
 
       new_events_array = special_events.map do |event|
         Hash[
@@ -87,7 +92,7 @@ module NHLGameEventsAPI
 
         sql_events = "
         INSERT INTO events (#{new_events_array.first.keys.map(&:to_s).join(',')} )
-        VALUES ( #{insert_events}.join('),(') )"
+        VALUES ( #{insert_events.join('),(')} )"
 
         begin
           ApplicationRecord.connection.execute(sql_events)
@@ -111,7 +116,7 @@ module NHLGameEventsAPI
 
       # create associated log_entries for each created event
       special_events.each do |event|
-        new_event = new_events.find_by( end_time: event["endTime"] )
+        new_event = inserted_events.find_by( end_time: event["endTime"] )
 
         # get roster player's game profile by matching to info from API data- 'event'
         records_hash = get_player_and_profile_by({
@@ -147,7 +152,7 @@ module NHLGameEventsAPI
 
         new_log_entries = [new_scorer_log_entry] + new_assister_log_entries
 
-        created_log_entries = LogEntry.create(new_log_entries).first
+        created_log_entries = LogEntry.create(new_log_entries)
       end
     end
 
@@ -162,6 +167,7 @@ module NHLGameEventsAPI
     # get the roster player and player_profile (created in NHLRosterAPI.rb), using the event's info via API data.
     # roster > players; game > player_profiles; player > player_profiles
     def get_player_and_profile_by (**search_hash)
+
       player = @roster.players.find_by (search_hash)
         byebug unless player
       player_profile = @game.player_profiles.find_by(player_id: player.id)
@@ -169,25 +175,6 @@ module NHLGameEventsAPI
 
       { player: player, profile: player_profile }
     end
-
-    def sql_insert_all (table, data_hash)
-      # "VALUES (CSV string1),(string2),(string3)...
-      insert_values = data_hash.map {
-          |hash| hash.values.join(',')
-        }
-
-      fields = data_hash.first.keys.map(&:to_s)
-      sql_events = "
-      INSERT INTO #{table} (#{fields.join(',')} )
-      VALUES ( #{insert_values}.join('),(') )"
-      begin ApplicationRecord.connection.execute(sql_events) rescue StandardError => e
-        puts "\n\n error: \n\n #{e}" end
-      # if updates to database occurred (inserts)
-      if ApplicationRecord.connection.execute("SELECT Changes()").first["changes()"] == 1
-        # ...
-      end
-    end
-    # upgrade to Active-Import?
 
     def get_shifts_url
       "#{SHIFT_CHARTS_URL}?cayenneExp=gameId=#{@game.game_id}"
