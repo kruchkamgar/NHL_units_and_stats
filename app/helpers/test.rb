@@ -5,12 +5,12 @@ module Test
   $game = Game.find_by_game_id($game_id)
   @roster = $game.rosters.first
 
-  def synthesize
-    SynthesizeUnits::get_lines_from_shifts(@team, $roster, $game)
+  def create_units
+    CreateUnitsAndInstances.get_lines_from_shifts(@team, $roster, $game)
   end
 
       def process_special_events
-        SynthesizeUnits::process_special_events(@team, $roster, $game)
+        CreateUnitsAndInstances.process_special_events(@team, $roster, $game)
       end
 
 
@@ -27,16 +27,15 @@ module Test
       game, teams_hash = NHLGameAPI::Adapter.new(game_id: $game_id).create_game
 
       # create a roster for the team
-      roster = NHLRosterAPI::create_game_roster(
-        ApplicationHelper::select_team_hash(teams_hash, @team.team_id),
+      roster = CreateRoster::create_game_roster(
+        ApplicationHelper.select_team_hash(teams_hash, @team.team_id),
         @team, game
       )
   end
 
-
   def create_game_events
     events = NHLGameEventsAPI::Adapter.new(team:
-      @team, game: game, roster: @roster).create_game_events
+      @team, game: $game, roster: @roster).create_game_events
   end
 
   module_function :synthesize, :process_special_events, :create_game_roster, :create_game_events

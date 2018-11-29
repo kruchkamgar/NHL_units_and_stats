@@ -14,11 +14,13 @@ module NHLGameEventsAPI
 
     def initialize (team:, game:, roster:)
       @team = team
-      @game = game.includes(:player_profiles)
-      @roster = roster.includes(:players)
+      @game = Game.where(id: game).includes(:player_profiles)[0]
+      @roster = Roster.where(id: roster).includes(:players)[0]
     end
 
     def create_game_events
+      if Event.where(game_id: game.game_id) then return true end
+        # grab and subtract from API events, if live-updating
 
       events = fetch_data(get_shifts_url)["data"]
       events_by_team = events.select { |event|
@@ -32,37 +34,48 @@ module NHLGameEventsAPI
       new_events_array = shift_events_by_team.map do |event|
 
         Hash[
-          event_type: event["eventDescription"] ||= "shift", #API lists null, except for goals
+          event_type: event["eventDescription"] || "shift", #API lists null, except for goals
           duration: event["duration"],
           start_time: event["startTime"],
           end_time: event["endTime"],
           shift_number: event["shiftNumber"],
           period: event["period"],
           player_id_num: event["playerId"],
-          game_id: @game.id
+          game_id: @game.id,
+          created_at: Time.now,
+          updated_at: Time.now
         ]
       end
-
       # insert events
+      events_changes = SQLOperations.sql_insert_all("events", new_events_array )
       # grab events
-      inserted_events = Event.where("game_id: '#{@game.id}'", "event_type = 'shift'") #*2
+      if events_changes > 0
+        inserted_events = Event.where("game_id = '#{@game.id}'", "event_type = 'shift'") #*2
+      end
+
       # map log entries for each event
         # (these players and profiles should already exist by now)
+      new_log_entries_array = inserted_events.map do |event|
         records_hash = get_player_and_profile_by ({
-          :player_id => event["playerId"]
+            player_id_num: event.player_id_num
           })
 
-        # NHL API currently omits the per-shift position of players
-        # could manually edit based on known line combinations (player 1 plays center when on unit alongside players 2, 3)
-        LogEntry.find_or_create_by(
-          event_id: new_event.id,
+        Hash[
+          event_id: event.id,
           player_profile_id: records_hash[:profile].id,
-          action_type: "shift"
-        )
+          action_type: "shift",
+          created_at: Time.now,
+          updated_at: Time.now
+        ] #*3
+      end
+      # insert events
+      log_entries_changes = SQLOperations.sql_insert_all("events", new_events_array )
+      # grab events
+      if log_entries_changes > 0
+        # inserted_events = Event.where("game_id: '#{@game.id}'", "event_type = 'shift'")
       end
 
       create_special_game_events special_events
-
       events.any?
     end #create_game_events
 
@@ -75,57 +88,47 @@ module NHLGameEventsAPI
       new_events_array = special_events.map do |event|
         Hash[
           event_type: event["eventDescription"],
-          duration: event["duration"],
+          duration: event["duration"] || "null",
           start_time: event["startTime"],
           end_time: event["endTime"],
           shift_number: event["shiftNumber"],
           period: event["period"],
           player_id_num: event["playerId"],
-          game_id: @game.id
+          game_id: @game.id,
+          created_at: Time.now,
+          updated_at: Time.now
         ]
       end
 
-        # "VALUES (CSV string1),(string2),(string3)...
-        insert_events = new_events_array.map {
-            |event_hash| event_hash.values.join(',')
-          }
+      events_changes = SQLOperations.sql_insert_all("events", new_events_array )
 
-        sql_events = "
-        INSERT INTO events (#{new_events_array.first.keys.map(&:to_s).join(',')} )
-        VALUES ( #{insert_events.join('),(')} )"
-
-        begin
-          ApplicationRecord.connection.execute(sql_events)
-        rescue StandardError => e
-          puts "\n\n error: \n\n #{e}"
-        end
-        # if updates to database occurred (inserts)
-        if ApplicationRecord.connection.execute("SELECT Changes()").first["changes()"] == 1
-        end
-
+      # just use value of Changes() and ORDER DESC LIMIT ...
       num_queries = new_events_array.map {
           "player_id_num = ? AND end_time = ?"
         }
       inserted_events = Event.find_by_sql ["
         SELECT * FROM events
-        WHERE #{num_queries.join(' OR ')}", new_events_array.map { |event|
+        WHERE #{num_queries.join(' OR ')}", *new_events_array.map { |event|
           [event[:player_id_num], event[:end_time]]
         }.flatten ]
+        #gets select events, based on their individual data for given fields
 
-      # Event.where("game_id: '#{@game.id}'", "event_type != 'shift'") #*2
-
+      new_log_entries_array = []
       # create associated log_entries for each created event
       special_events.each do |event|
-        new_event = inserted_events.find_by( end_time: event["endTime"] )
-
+        new_event = inserted_events.find { |i_evnt|
+            i_evnt.end_time == event["endTime"]
+          }
         # get roster player's game profile by matching to info from API data- 'event'
         records_hash = get_player_and_profile_by({
-          :player_id => event["playerId"]
+            player_id_num: event["playerId"]
           })
         new_scorer_log_entry = Hash[
           event_id: new_event.id,
           player_profile_id: records_hash[:profile].id,
-          action_type: "goal"
+          action_type: "goal",
+          created_at: Time.now,
+          updated_at: Time.now
         ]
 
         # get UP TO two full names separated by comma and space
@@ -137,8 +140,8 @@ module NHLGameEventsAPI
             |player|
             action_type = ''
             records_hash = get_player_and_profile_by ({
-              first_name: player["first_name"],
-              last_name: player["last_name"]
+                first_name: player["first_name"],
+                last_name: player["last_name"]
               })
 
               if assisters.find_index(player) == 0 then action_type = "primary" else action_type = "secondary" end
@@ -146,34 +149,36 @@ module NHLGameEventsAPI
               Hash[
                 event_id: new_event.id,
                 player_profile_id: records_hash[:profile].id,
-                action_type: action_type
+                action_type: action_type,
+                created_at: Time.now,
+                updated_at: Time.now
               ]
           }
 
-        new_log_entries = [new_scorer_log_entry] + new_assister_log_entries
-
-        created_log_entries = LogEntry.create(new_log_entries)
+        new_log_entries_array += [new_scorer_log_entry] + new_assister_log_entries
       end
+      log_entries_changes = SQLOperations.sql_insert_all("log_entries", new_log_entries_array )
+
     end
 
-    def create_log_entry(event, records_hash, action_type)
-      # LogEntry.find_or_create_by(
-      #   event_id: event.id,
-      #   player_profile_id: records_hash[:profile].id,
-      #   action_type: action_type
-      # )
-    end
-
-    # get the roster player and player_profile (created in NHLRosterAPI.rb), using the event's info via API data.
+    # get game's player_profile, of roster player (via  NHLRosterAPI.rb)
     # roster > players; game > player_profiles; player > player_profiles
     def get_player_and_profile_by (**search_hash)
-
-      player = @roster.players.find_by (search_hash)
+      #cross-reference (inserted) event with roster player
+      player = @roster.players.find { |player|
+        search_hash.keys.map do |method|
+          search_hash[method] == player.send(method)
+        end.all?
+      }
         byebug unless player
-      player_profile = @game.player_profiles.find_by(player_id: player.id)
+      # player_profile = @game.player_profiles.find_by(player_id: player.id)
+      player_profile = @game.player_profiles.find {
+        |profile|
+          profile.player_id == player.id
+        }
         byebug unless player_profile
 
-      { player: player, profile: player_profile }
+      { profile: player_profile }
     end
 
     def get_shifts_url
@@ -198,3 +203,9 @@ end
 Use the OUTPUT sql command, to output ids into a table using DECLARE ... TABLE
 https://stackoverflow.com/questions/810962/getting-new-ids-after-insert.
 =end
+
+# could ALSO just grab the last X inserted records, per the Changes() sqlite function
+
+# *3-
+# NHL API currently omits the per-shift position of players
+# could manually edit based on known line combinations (player 1 plays center when on unit alongside players 2, 3)

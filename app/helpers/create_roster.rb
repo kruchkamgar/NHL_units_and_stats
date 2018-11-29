@@ -10,7 +10,7 @@ game > player_profile
 
 
 #handles roster creation
-module NHLRosterAPI
+module CreateRoster
 
   # probably do this in SQL statements instead
   #https://stackoverflow.com/questions/5288283/sql-server-insert-if-not-exists-best-practice
@@ -58,9 +58,9 @@ module NHLRosterAPI
           ]
         }
 
-      changes = SQLOperations.sql_insert_all("players", new_players_array )
-      
-      if changes > 0
+      players_changes = SQLOperations.sql_insert_all("players", new_players_array )
+
+      if players_changes > 0
         inserted_players = Player.where(player_id_num: new_player_id_nums) #if inserted_players == 1
         @roster.save
         @players = @roster.players << inserted_players
@@ -71,7 +71,7 @@ module NHLRosterAPI
     end #if new_players.any?
 
     # determine if any new profiles exist in the team_hash data from API
-    new_profiles = @players.map do |player|
+    new_profiles_array = @players.map do |player|
         # find the player by playerId in the team_hash
         player_hash = team_hash["players"].find {|id,
           plyr_hash|
@@ -90,7 +90,7 @@ module NHLRosterAPI
         ]
       end.compact
 
-    created_profiles = SQLOperations.sql_insert_all("player_profiles", new_profiles ) unless new_profiles.empty? # *3 (incomplete)
+    profiles_changes = SQLOperations.sql_insert_all("player_profiles", new_profiles_array ) unless new_profiles_array.empty? # *3 (incomplete)
 
     # @game.player_profiles << created_profiles.flatten
     add_profiles_to_game
