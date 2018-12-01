@@ -2,17 +2,18 @@ module Test
 
   $game_id = 2017020019
   @team = Team.find_by_id(1)
-  $game = Game.find_by_game_id($game_id)
-  @roster = $game.rosters.first
+
+  if ($game = Game.find_by_game_id($game_id))
+    @roster = $game.rosters.first
+  end
 
   def create_units
-    CreateUnitsAndInstances.get_lines_from_shifts(@team, $roster, $game)
+    CreateUnitsAndInstances.get_lines_from_shifts(@team, @roster, $game)
   end
 
       def process_special_events
-        CreateUnitsAndInstances.process_special_events(@team, $roster, $game)
+        CreateUnitsAndInstances.process_special_events(@team, @roster, $game)
       end
-
 
   def create_game_roster
     @team, team_adapter = NHLTeamAPI::Adapter.new(team_id: 1).create_team
@@ -34,10 +35,11 @@ module Test
   end
 
   def create_game_events
+
     events = NHLGameEventsAPI::Adapter.new(team:
       @team, game: $game, roster: @roster).create_game_events
   end
 
-  module_function :synthesize, :process_special_events, :create_game_roster, :create_game_events
+  module_function :create_units, :process_special_events, :create_game_roster, :create_game_events
 
 end

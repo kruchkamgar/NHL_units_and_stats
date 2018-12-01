@@ -16,7 +16,9 @@ module CreateUnitsAndInstances
 
   def get_lines_from_shifts (team, roster, game)
 
-    @team, @roster, @game = team, roster, game
+    @team = team
+    @game = Game.where(id: game).includes(events: [:player_profiles])[0]
+    @roster = Roster.where(id: roster).includes(:players)[0]
 
     # iterate through units: 6-man, 5-man, 3-man
     UNIT_HASH.each do |unit_size, unit_type|
@@ -26,95 +28,114 @@ module CreateUnitsAndInstances
       period_chronology = shifts_into_periods (shifts)
 
       #find all unit instances by shift events' temporal overlaps (format: array of arrays)
-      instances_events = make_units_events(period_chronology, unit_size)
-
-      create_instances (instances_events)
+      instances_events_arrays = make_units_events(period_chronology, unit_size)
+# performance: group instances_events from all periods before calling 'create'
+      make_units_and_instances (instances_events_arrays)
     end
 
   end
 
-  def create_instances instances_events
+  def make_units_and_instances instances_events_arrays
     @existing_units = Unit.includes( instances: [ :events ])
 
-    if instances_events
-      @existing_game_instances = Instance.includes("events").where( events: { game_id: "#{@game.id}"})
+    if instances_events_arrays
+      @existing_game_instances = Instance.includes("events").where( events: { game_id: @game.id })
 
       # subtract events of existing game instances
-      new_instances_events = instances_events - @existing_game_instances.map(&:events)
+      @new_instances_events = instances_events_arrays - @existing_game_instances.map(&:events)
     end
 
-
-    new_unit_instances_array = []
-    new_instances_array = []
-    prior_selected_unit_instances = []
+    new_units_arrays = [] # collect all new unit arrays
+    prior_selected_instances = []
     # [[event1, event2, ...], [instance2's events]]
-    unless new_instances_events.empty? then new_instances_events.each do |events|
+    unless @new_instances_events.empty? then @new_instances_events.each { |events|
       next if prior_selected_instances.include? events
+      # new_units_arrays.any? { |array| array.include? events } # if instance_events already included
 
-      # select all like instances, to add to a unit
-      new_unit_instances = instances_events.select { |match|
-        events.map(&:player_id_num).sort == match.map(&:player_id_num).sort # *2.nui
-      }
-
-      new_unit_instances_array += new_unit_instances
-      # *5
-      # only create a unit if one had not existed prior
-      unit = @existing_units.find { |unit|
-        unit.instances.map(&:events) & events
-      }
-      new_unit = Unit.create unless unit
-
-      new_instances_array += new_unit_instances.map { |event_array|
-        # event_array.each { |event|
-        #   #event.instance_id = new_instance.id
-        #   new_instance.events << event
-        # }
-        Hash[
-          unit_id: new_unit.id || unit.id,
-          start_time: (start_time = event_array.max_by(&:start_time).start_time ),
-          duration: TimeOperation.new(:-, start_time, event_array.min_by(&:end_time).end_time).result
-        ] # *3
-      }
-
-      prior_selected_instances += new_unit_instances
-    end # instances_events.each...
-
-    instances_changes = insert_instances(new_instances_array)
-    associate_events_to_instances(new_instances_array, instances_changes)
-
-  end
-
-
-  def insert_instances (instances_array)
-    SQLOperations.sql_insert_all("instances", instances_array)
-  end
-
-  def associate_events_to_instances (instances_events_arrays, changes)
-    inserted_instances = Instance.order(id: :desc).limit(changes)
-
-    new_associations_array = inserted_instances.map do
-    |instance|
-        # find events array, which formed basis for [inserted] instance
-        instances_events_array.find{ |events_array|
-          (events_array - instance.map(&:events)).empty?
-        }.map { |event|
-          # an "events_instances" record per event
-          Hash[
-            instance_id: instance.id,
-            event_id: event.id
-          ]
+      # aggregate all like instances, into a unit
+      new_unit_instances_arrays = @new_instances_events.select { |match|
+          events.map(&:player_id_num).sort == match.map(&:player_id_num).sort # *2.nui
         }
-      end.flatten
 
-    SQLOperations.sql_insert_all("events_instances", new_associations_array)
+      new_units_arrays << new_unit_instances_arrays
+       #storing units arrays, from which to create  units later
+      # *5
+      prior_selected_instances += new_unit_instances_arrays
+      }
+    end  # instances_events.each... # could do this recursively, using .select and passing subtracted array
+
+      # only create a unit if one had not existed prior
+      # unit = @existing_units.find { |unit|
+      #   unit.instances.map(&:events) & events
+      # }
+      # if unit then unit_id = unit.id else unit_id = Unit.create.id end
+       #can do this after, by creating a unit for each of new_units_arrays_all
+
+      inserted_units = create_units(new_units_arrays)
+      inserted_instances = create_instances(inserted_units, new_units_arrays)
+
+      associate_events_to_instances(inserted_instances, new_units_arrays.flatten(1))
   end
+
+  def create_units (units_arrays) #instances_events_arrays, changes
+
+    made_units = units_arrays.map { |unit|
+      Hash[
+        created_at: Time.now,
+        updated_at: Time.now
+      ]
+    }
+
+    units_changes = SQLOperations.sql_insert_all("units", made_units)
+
+    inserted_units = Unit.order(id: :desc).limit(units_changes)
+  end
+
+  def create_instances (inserted_units, units_arrays)
+    #  input units ids into each of instances hashes array
+    # insert units; get units; ...
+
+    made_instances = []
+    inserted_units.reverse.each_with_index { |unit, i|
+      made_instances += units_arrays[i].map { |instance|
+        Hash[
+          unit_id: unit.id,
+          start_time: (start_time = instance.max_by(&:start_time).start_time ),
+          duration: TimeOperation.new(:-, start_time, instance.min_by(&:end_time).end_time).result,
+          created_at: Time.now,
+          updated_at: Time.now
+        ]
+      } # *3
+    }
+
+    instances_changes = SQLOperations.sql_insert_all("instances", made_instances)
+
+    inserted_instances = Instance.order(id: :desc).limit(instances_changes)
+  end
+
+
+  def associate_events_to_instances(inserted_instances, new_instances)
+    # insert instances; get instances; ...
+
+    made_associations = inserted_instances.reverse.map.with_index { |instance, i|
+      new_instances[i].map { |event|
+        Hash[
+          instance_id: instance.id,
+          event_id: event.id
+        ]
+      }
+    }.flatten
+
+    SQLOperations.sql_insert_all("events_instances", made_associations)
+  end
+
 # private
 
 
   def process_special_events (team, roster, game)
     @team, @roster, @game = team, roster, game
 
-    special_events = Event.includes( :log_entries).where("events.event_type != 'shift' AND events.game_id = '#{@game.id}'").references(:log_entries)
+    special_events = Event.includes( :log_entries).where("events.event_type != 'shift' AND events.game_id = '#{@game.id}'")
 
     opposing_team_events = special_events.select { |event|
         @roster.players.any? { |player|
@@ -125,7 +146,7 @@ module CreateUnitsAndInstances
 
     # add the events and their tallies for each instance
     special_events.each do |event|
-        game_instances = Instance.includes("events").where(events: { game_id: "#{@game.id}"})
+        game_instances = Instance.includes("events").where(events: { game_id: @game.id})
 
         cspdg_instance = game_instances.find { |instance|
           instance_end_time = TimeOperation.new(:+, instance.start_time, instance.duration).result
@@ -174,7 +195,7 @@ module CreateUnitsAndInstances
   # get the shifts for the roster
   def get_shifts roster_sample
     # any player in the roster match each shift event's player profile(s)?
-    game_events = @game.events #single load for performance
+    game_events = @game.events
     shifts = game_events.select { |event|
         roster_sample.any? { |player|
             event.player_profiles.any? {|profile|
@@ -251,37 +272,41 @@ unit criteria– why no larger minimum overlap time?
           base_shift.end_time > shift.start_time && base_shift.start_time < shift.end_time
       }
     end
-
     overlap_test.all? #all true values in array? #{ |iteration| iteration }
   end
 
-  module_function :get_lines_from_shifts, :process_special_events
+  module_function :get_lines_from_shifts, :process_special_events, :get_roster_sample, :get_shifts, :make_units_events, :shifts_into_periods, :mutual_overlap, :create_instances, :create_units, :make_units_and_instances, :associate_events_to_instances
 end
+#
+# =begin
+#
+# *1—
+# instance.events.map { |event| event.log_entries.where(action_type: "shift").player_profile_id) }.sort.
+#   --re: player_id_num
+#
+# instance.events.map { |event| event.log_entries.map(&:player_profile_id) }.flatten.uniq.sort
+#
+# *2-
+# processing special events and shift events in same flow / methods
+#
+#   nui-
+#   note: simply remove the NON-SHIFT / special events (with .compact?) for this step, if temporally processing all events together
+#
+# *3-
+# instance start times derive, from the start of the overlap among all the involved players' shifts
+# duration measures the time spanned in this overlap
+#
+# *4-
+# # process_special_events # no real need to do this separately from units_instances creation pipeline. integration could help tallying +/-
+#
+# *5- (pattern)
+# situation: if doing a live-update, one may need to update new instances for a unit
+# - could use a different API for this however (w/ similar code)
+# create instances for new instances_events only
+#
 
-=begin
+# ///////////// extra ///////////// #
 
-*1—
-instance.events.map { |event| event.log_entries.where(action_type: "shift").player_profile_id) }.sort.
-  --re: player_id_num
 
-instance.events.map { |event| event.log_entries.map(&:player_profile_id) }.flatten.uniq.sort
 
-*2-
-processing special events and shift events in same flow / methods
-
-  nui-
-  note: simply remove the NON-SHIFT / special events (with .compact?) for this step, if temporally processing all events together
-
-*3-
-instance start times derive, from the start of the overlap among all the involved players' shifts
-duration measures the time spanned in this overlap
-
-*4-
-# process_special_events # no real need to do this separately from units_instances creation pipeline. integration could help tallying +/-
-
-*5- (pattern)
-situation: if doing a live-update, one may need to update new instances for a unit
-- could use a different API for this however (w/ similar code)
-create instances for new instances_events only
-
-=end
+# =end

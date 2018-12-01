@@ -19,7 +19,8 @@ module NHLGameEventsAPI
     end
 
     def create_game_events
-      if Event.where(game_id: game.game_id) then return true end
+byebug
+      if Event.where(game_id: @game.id).any? then return true end
         # grab and subtract from API events, if live-updating
 
       events = fetch_data(get_shifts_url)["data"]
@@ -56,7 +57,7 @@ module NHLGameEventsAPI
       # map log entries for each event
         # (these players and profiles should already exist by now)
       new_log_entries_array = inserted_events.map do |event|
-        records_hash = get_player_and_profile_by ({
+        records_hash = get_profile_by ({
             player_id_num: event.player_id_num
           })
 
@@ -69,7 +70,7 @@ module NHLGameEventsAPI
         ] #*3
       end
       # insert events
-      log_entries_changes = SQLOperations.sql_insert_all("events", new_events_array )
+      log_entries_changes = SQLOperations.sql_insert_all("log_entries", new_log_entries_array )
       # grab events
       if log_entries_changes > 0
         # inserted_events = Event.where("game_id: '#{@game.id}'", "event_type = 'shift'")
@@ -100,11 +101,12 @@ module NHLGameEventsAPI
         ]
       end
 
+      byebug
       events_changes = SQLOperations.sql_insert_all("events", new_events_array )
 
       # just use value of Changes() and ORDER DESC LIMIT ...
       num_queries = new_events_array.map {
-          "player_id_num = ? AND end_time = ?"
+          "player_id_num = ? AND end_time = ? AND (event_type = 'SHG' OR event_type = 'PPG' OR event_type = 'EVG')"
         }
       inserted_events = Event.find_by_sql ["
         SELECT * FROM events
@@ -120,7 +122,7 @@ module NHLGameEventsAPI
             i_evnt.end_time == event["endTime"]
           }
         # get roster player's game profile by matching to info from API data- 'event'
-        records_hash = get_player_and_profile_by({
+        records_hash = get_profile_by({
             player_id_num: event["playerId"]
           })
         new_scorer_log_entry = Hash[
@@ -139,7 +141,7 @@ module NHLGameEventsAPI
         new_assister_log_entries = assisters.map {
             |player|
             action_type = ''
-            records_hash = get_player_and_profile_by ({
+            records_hash = get_profile_by ({
                 first_name: player["first_name"],
                 last_name: player["last_name"]
               })
@@ -154,7 +156,7 @@ module NHLGameEventsAPI
                 updated_at: Time.now
               ]
           }
-
+        byebug
         new_log_entries_array += [new_scorer_log_entry] + new_assister_log_entries
       end
       log_entries_changes = SQLOperations.sql_insert_all("log_entries", new_log_entries_array )
@@ -163,7 +165,7 @@ module NHLGameEventsAPI
 
     # get game's player_profile, of roster player (via  NHLRosterAPI.rb)
     # roster > players; game > player_profiles; player > player_profiles
-    def get_player_and_profile_by (**search_hash)
+    def get_profile_by (**search_hash)
       #cross-reference (inserted) event with roster player
       player = @roster.players.find { |player|
         search_hash.keys.map do |method|
