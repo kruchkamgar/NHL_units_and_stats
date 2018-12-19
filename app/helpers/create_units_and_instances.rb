@@ -195,8 +195,8 @@ module CreateUnitsAndInstances
   # get the shifts for the roster
   def get_shifts roster_sample
     # any player in the roster match each shift event's player profile(s)?
-    game_events = @game.events
-    shifts = game_events.select { |event|
+
+    shifts = @game.events.select { |event|
         roster_sample.any? { |player|
             event.player_profiles.any? {|profile|
               profile.player_id == player.id
@@ -220,6 +220,7 @@ module CreateUnitsAndInstances
   end
 
   def make_units_events (p_chron, unit_size)
+    # also acts to filter non-shift events
     minimum_shift_length = "00:15" # __ perhaps use a std deviation from median shift length
 
     instances_events = []
@@ -233,7 +234,6 @@ module CreateUnitsAndInstances
           ...test mutual overlap
 =end
       while i < (period_shifts.length-1)
-        if period_shifts[i].duration == nil then byebug end
         if period_shifts[i].duration > minimum_shift_length
           shift = period_shifts[i..-1].first(unit_size)
           if mutual_overlap (shift)

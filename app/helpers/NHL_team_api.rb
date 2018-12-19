@@ -13,9 +13,10 @@ module NHLTeamAPI
 
   class Adapter
 
-    def initialize (name: nil, team_id:, year: Date.current.year, season: nil, start_date: nil, end_date: nil)
-      @name, @team_id, @year, @season, @start_date, @end_date = name, team_id, year, season, start_date, end_date
-      get_season unless @season
+    def initialize (name: nil, team_id:, season: nil, start_date: nil, end_date: nil)
+      @name, @team_id, @season, @start_date, @end_date = name, team_id, season, start_date, end_date
+      get_season unless @season # string
+      @year = Date.current.year
     end
 
     def create_team
@@ -43,24 +44,30 @@ module NHLTeamAPI
     end
 
     def get_sched_url
-      if @start_date || @end_date  == nil
-          @start_date = "#{@year-1}-09-01"
-          @end_date = "#{@year}-07-01"
+      if @start_date == nil
+        start_date = "#{@season[0, 4]}-09-01"
+      else
+        start_date = "#{@season[0, 4]}-#{@start_date}"
       end
 
-      "#{SCHEDULE_URL}?teamId=#{@team_id}&startDate=#{@start_date}&endDate=#{@end_date}"
+      if @end_date == nil
+        end_date = "#{@season[4, 4]}-07-01"
+      else
+        end_date = "#{@season[4, 4]}-#{@end_date}"
+      end
+
+      "#{SCHEDULE_URL}?teamId=#{@team_id}&startDate=#{start_date}&endDate=#{end_date}"
     end
 
 
     # /////////////////////  helpers  /////////////////////#
     def get_season
-      if Date.current.month > 9
-        @season = "#{@year}#{@year+1}"
-      else
-        @season = "#{@year-1}#{@year}"
-      end
+        if Date.current.month > 9
+          @season = "#{@year}#{@year+1}"
+        else
+          @season = "#{@year-1}#{@year}"
+        end
     end
-
 
   end
 end

@@ -24,7 +24,7 @@ module Test
     game_id = date_hash["games"].first["gamePk"]
       unless game_id then byebug end
 
-      # game API may deliver two teams' players
+      # note: game API could deliver two teams' players
       game, teams_hash = NHLGameAPI::Adapter.new(game_id: $game_id).create_game
 
       # create a roster for the team
@@ -43,3 +43,9 @@ module Test
   module_function :create_units, :process_special_events, :create_game_roster, :create_game_events
 
 end
+
+# unit_array = Unit.all.map {|unit| [unit.instances.count, *unit.instances.map{|inst| inst.events.count}]}
+
+# unit_ = Unit.all.map {|unit| if unit.instances.map{|inst| inst.events.count}.first == 4 then [unit.instances.first.events[0..-1].map(&:player_profiles).map {|p| p[0].player.last_name }, unit.instances.count, unit.instances.first.events.count] end}.compact
+
+# Unit.all[-100].instances.first.events[0..-1].map(&:player_profiles).map {|p| p[0].player.last_name }

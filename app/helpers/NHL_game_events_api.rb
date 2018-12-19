@@ -104,16 +104,16 @@ byebug
       byebug
       events_changes = SQLOperations.sql_insert_all("events", new_events_array )
 
-      # just use value of Changes() and ORDER DESC LIMIT ...
-      num_queries = new_events_array.map {
-          "player_id_num = ? AND end_time = ? AND (event_type = 'SHG' OR event_type = 'PPG' OR event_type = 'EVG')"
-        }
-      inserted_events = Event.find_by_sql ["
-        SELECT * FROM events
-        WHERE #{num_queries.join(' OR ')}", *new_events_array.map { |event|
-          [event[:player_id_num], event[:end_time]]
-        }.flatten ]
-        #gets select events, based on their individual data for given fields
+          # just use value of Changes() and ORDER DESC LIMIT ...
+          num_queries = new_events_array.map {
+              "player_id_num = ? AND end_time = ? AND (event_type = 'SHG' OR event_type = 'PPG' OR event_type = 'EVG')"
+            }
+          inserted_events = Event.find_by_sql ["
+            SELECT * FROM events
+            WHERE #{num_queries.join(' OR ')}", *new_events_array.map { |event|
+              [event[:player_id_num], event[:end_time]]
+            }.flatten ]
+            #gets select events, based on their individual data for given fields
 
       new_log_entries_array = []
       # create associated log_entries for each created event
