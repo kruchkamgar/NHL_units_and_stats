@@ -15,8 +15,8 @@ module NHLTeamAPI
 
     def initialize (name: nil, team_id:, season: nil, start_date: nil, end_date: nil)
       @name, @team_id, @season, @start_date, @end_date = name, team_id, season, start_date, end_date
-      get_season unless @season # string
       @year = Date.current.year
+      get_season unless @season # string
     end
 
     def create_team

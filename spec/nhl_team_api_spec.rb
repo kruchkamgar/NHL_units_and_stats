@@ -5,6 +5,7 @@ describe NHLTeamAPI do
 
   describe 'NHLTeamAPI::Adapter' do
     let(:team) { NHLTeamAPI::Adapter.new(:team_id => 1, :season => "20172018") }
+    let(:no_season) { NHLTeamAPI::Adapter.new(:team_id => 1) }
 
       describe '#initialize' do
 
@@ -21,31 +22,25 @@ describe NHLTeamAPI do
             fixed = Date.new(2018, 10)
             allow(Date).to receive(:current).and_return(fixed)
 
-            expect(team.instance_variable_get(:@season)).to eq("20182019")
+            expect(no_season.instance_variable_get(:@season)).to eq("20182019")
           end
 
           it 'gets a correct season, for spring' do
-            fixed = Date.new(2018, 1)
+            fixed = Date.new(2017, 1)
             allow(Date).to receive(:current).and_return(fixed)
 
-            expect(team.instance_variable_get(:@season)).to eq("20172018")
+            expect(no_season.instance_variable_get(:@season)).to eq("20162017")
           end
         end # without custom options
 
       end # #initialize
 
-      describe '#get_sched_url' do
+      describe '#fetch_data, with season options only.' do
 
-        it 'returns the team url' do
-          expect(team.get_sched_url).to eq('https://statsapi.web.nhl.com/api/v1/schedule?teamId=1&startDate=
+        it 'fetches data for correct year.' do
+          expect(team.fetch_data["dates"].first["date"]).to include("2017")
         end
-      end
 
-      describe '#fetch_data' do
-
-        it 'returns data' do
-
-        end
       end
 
 
