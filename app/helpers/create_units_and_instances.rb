@@ -1,6 +1,8 @@
 =begin
 - get shifts by team, for a game
+- create instances [of units], by processing shifts
 
+- process the special events, tallying results to instances fields
 =end
 
 
@@ -24,8 +26,12 @@ module CreateUnitsAndInstances
     UNIT_HASH.each do |unit_size, unit_type|
 
       roster_sample = get_roster_sample (unit_type)
-      shifts = get_shifts(roster_sample) #find the shifts matching the roster sample
-      period_chronology = shifts_into_periods (shifts)
+
+      #find the shifts matching the roster sample
+      shifts = get_shifts(roster_sample)
+
+      # sort shifts by start time, for each period
+      period_chronology = shifts_into_periods (shifts) # {[period1 shifts], [period 2 shifts] ...}
 
       #find all unit instances by shift events' temporal overlaps (format: array of arrays)
       instances_events_arrays = make_units_events(period_chronology, unit_size)
@@ -129,8 +135,6 @@ module CreateUnitsAndInstances
     SQLOperations.sql_insert_all("events_instances", made_associations)
   end
 
-# private
-
 
   def process_special_events (team, roster, game)
     @team, @roster, @game = team, roster, game
@@ -148,6 +152,7 @@ module CreateUnitsAndInstances
     special_events.each do |event|
         game_instances = Instance.includes("events").where(events: { game_id: @game.id})
 
+        # find the special event's corresponding instance
         cspdg_instance = game_instances.find { |instance|
           instance_end_time = TimeOperation.new(:+, instance.start_time, instance.duration).result
           # byebug if instance.id == 8392 && event.end_time == "19:32"
@@ -158,6 +163,8 @@ module CreateUnitsAndInstances
         event.instances << cspdg_instance
 
         # event_log = Event.includes("log_entries").where(log_entries: { event: event })
+
+        #edit tallies, based on whether this special event matches an opposing team event or not
         event.log_entries.each { |entry|
           if opposing_team_events.any? { |event|
             event.log_entries.include? entry

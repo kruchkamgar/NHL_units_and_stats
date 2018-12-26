@@ -1,8 +1,6 @@
 =begin
 Get the shifts events from API and call SynthesizeUnits functionality
 -
-
-make this a standalone or mixin-only module for gameAPI module?
 =end
 
 
@@ -21,7 +19,7 @@ module NHLGameEventsAPI
     def create_game_events
 byebug
       if Event.where(game_id: @game.id).any? then return true end
-        # grab and subtract from API events, if live-updating
+        # To add new events, grab events w/ game id, and subtract from API events (for ex: live-updating)
 
       events = fetch_data(get_shifts_url)["data"]
       events_by_team = events.select { |event|
@@ -80,7 +78,6 @@ byebug
       events.any?
     end #create_game_events
 
-    private
 
     # create events; and then log entries for player_profiles involved in the event
     def create_special_game_events(special_events)

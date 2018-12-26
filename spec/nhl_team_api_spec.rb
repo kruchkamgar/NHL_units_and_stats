@@ -1,4 +1,3 @@
-require 'rails_helper'
 require 'NHL_Team_API'
 
 describe NHLTeamAPI do
@@ -42,15 +41,6 @@ describe NHLTeamAPI do
         end
 
       end
-
-
-        # it 'creates a team' do
-        #   #test create team
-        # end
-        #
-        # it 'fetches a schedule url' do
-        #   #....
-        # end
 
   end
 end

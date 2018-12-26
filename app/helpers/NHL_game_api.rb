@@ -16,7 +16,6 @@ module NHLGameAPI
 
     def initialize (game_id: )
       @game_id = game_id #2017020019
-      # author_name_split = author.split(" ") # ["Roald", "Dahl"]
     end
 
     def create_game
@@ -31,16 +30,14 @@ module NHLGameAPI
       return [game, teams_hash]
     end
 
+  private
+
     def get_game_url
       "#{GAME_BASE_URL}#{@game_id}/boxscore"
     end
 
     def fetch_data (url = nil)
       data = JSON.parse(RestClient.get(url))
-    end
-
-    def pretty_generate (item)
-      puts JSON.pretty_generate(item)
     end
 
   end
