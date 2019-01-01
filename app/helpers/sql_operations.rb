@@ -15,10 +15,6 @@ module SQLOperations
     rescue StandardError => e
       puts "\n\n error: \n\n #{e}"
     end
-    # if updates to database occurred (inserts)
-    # if ApplicationRecord.connection.execute("SELECT Changes()").first["changes()"] == 1
-    #   # ...
-    # end
 
     ApplicationRecord.connection.execute("SELECT Changes()").first["Changes()"]
   end

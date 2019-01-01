@@ -31,7 +31,7 @@ module CreateRoster
   end
 
   def self.roster_and_players_creation_logic (team_hash, team, game)
-    @team_hash, @team, @game = team_hash, game
+    @team_hash, @team, @game = team_hash, team, game
 
     # check if roster already exists [to save on work] *3
     # "players" : { "ID8474709" : { "person" : { "id" : 8474709,
@@ -39,19 +39,17 @@ module CreateRoster
 
     roster_exists = Roster.includes(players: [:player_profiles]).where(players: { player_id_num: player_id_nums }).references(:players).first #*1
 
+      # collect potential new players, if roster exists
       if roster_exists
         new_player_id_nums = player_id_nums.reject { |id_num|
           roster_exists.players.map(&:player_id_num).include? id_num
         }
       else new_player_id_nums = player_id_nums end
 
-    #build new roster and create new players, if absent a matching roster
-
-    # && roster.game (no new players if includes game)
-    if roster_exists && roster_exists.games.include? @game # !roster_exists || new_player_id_nums.any?
+    if roster_exists && roster_exists.games.include?(@game) # && roster.game (no new players if includes game). !roster_exists || new_player_id_nums.any?
       @roster = roster_exists
       @players = roster_exists.players
-    else
+    elsif new_player_id_nums.any?
       @roster = team.rosters.build
 
 # >>? check first if player exists, as opposed to letting database handle uniqueness for player_id_nums
@@ -72,7 +70,9 @@ module CreateRoster
       players_changes = SQLOperations.sql_insert_all("players", new_players_array )
 
       if players_changes > 0
-        inserted_players = Player.where(player_id_num: new_player_id_nums) #if inserted_players == 1
+        inserted_players = Player.order(id: :desc).limit(players_changes)
+
+        # Player.where(player_id_num: new_player_id_nums) #if inserted_players == 1
         @roster.save
         @players = @roster.players << inserted_players
       end
@@ -81,18 +81,18 @@ module CreateRoster
     end # if roster_exists
   end
 
-  # check if selected roster already associates to this game, before adding duplicatively
   def self.add_game_to_roster
     @roster.games << @game
   end
 
   # create new profile for player, if team_hash (via player_hash) contains new position. *4
   def self.create_new_profiles
-    new_profiles_array = @players.map do |player|
+    new_profiles_array = @players.map do
+        |player|
         # find the player by playerId in the team_hash
-        player_hash = team_hash["players"].find {|id,
-          plyr_hash|
-          plyr_hash["person"]["id"] == player.player_id_num
+        player_hash = team_hash["players"].find {
+          |id, plyr_hash|
+          player.player_id_num == plyr_hash["person"]["id"]
         }[1]
         # skip if player's player_profile already exists; compare by position
         next if player.player_profiles.map(&:position).include? player_hash["position"]["name"]
@@ -117,11 +117,14 @@ module CreateRoster
         player = players.find { |player|
             player.player_id_num == player_hash["person"]["id"]
           }
+        # return the matching player_profile
         player.player_profiles.find { |profile|
           profile.position == player_hash["position"]["name"]
         }
       end
-    @game.player_profiles += player_profiles if (@game.player_profiles & player_profiles).empty? # '&' operator tests array overlap
+    @game.player_profiles += (player_profiles - @game.player_profiles)
+
+     # if (@game.player_profiles & player_profiles).empty? # '&' operator tests array overlap
   end
 
 
