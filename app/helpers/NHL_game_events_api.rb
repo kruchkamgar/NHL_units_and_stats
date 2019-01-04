@@ -18,7 +18,7 @@ module NHLGameEventsAPI
 
     def create_game_events_and_log_entries
 byebug
-      if Event.where(game_id: @game.id).any? then return true end
+      # if Event.where(game_id: @game.id).any? then return true end
         # for 'add new events' functionality: grab events w/ game id, and subtract from API events (for ex: live-updating)
 
       events = fetch_data(get_shifts_url)["data"]
@@ -34,11 +34,10 @@ byebug
       create_log_entries (inserted_events)
 
       inserted_goal_events = create_goal_events goal_events
-      create_goal_log_entries (goal_events, inserted_goal_events)
+      create_goal_log_entries(goal_events, inserted_goal_events)
     end
 
     def create_events (shift_events_by_team)
-
       new_events_array = shift_events_by_team.map do |event|
 
         Hash[
@@ -64,15 +63,19 @@ byebug
 
     # map log entries for each event
     # (these players and profiles should already exist by now)
-    def create_log_entries ()
-      new_log_entries_data = inserted_events.map do |event|
+    def create_log_entries (inserted_events)
+      new_log_entries_data =
+      inserted_events.
+      map do |event|
         records_hash = get_profile_by ({
-            player_id_num: event.player_id_num
-          })
-          [event, records_hash]
-        end
+          player_id_num: event.player_id_num
+        })
+        [event, records_hash]
+      end
 
-      new_log_entries_array = new_log_entries_data.map do |event, records_hash|
+      new_log_entries_array =
+      new_log_entries_data.
+      map do |event, records_hash|
         Hash[
           event_id: event.id,
           player_profile_id: records_hash[:profile].id,
@@ -87,14 +90,16 @@ byebug
       if log_entries_changes > 0
       end
 
-      events.any?
+      inserted_events.any?
     end #create_game_events
 
 
     # create events; and then log entries for player_profiles involved in the event
     def create_goal_events(goal_events)
 
-      new_events_array = goal_events.map do |event|
+      new_events_array =
+      goal_events.
+      map do |event|
         Hash[
           event_type: event["eventDescription"],
           duration: event["duration"] || "null",
@@ -110,7 +115,9 @@ byebug
       end
 
       byebug
-      events_changes = SQLOperations.sql_insert_all("events", new_events_array )
+      events_changes =
+      SQLOperations.
+      sql_insert_all("events", new_events_array )
 
       # just use value of Changes() and ORDER DESC LIMIT ...
       num_queries = new_events_array.map {
@@ -127,50 +134,54 @@ byebug
 
     def create_goal_log_entries(goal_events, inserted_events)
 
-      @api_events_with_created_events = goal_events.map do |api_event|
-        created_event = inserted_events.find { |ins_evnt|
-            ins_evnt.end_time == api_event["endTime"]
-          }
+      @api_and_created_events_coupled =
+      goal_events.
+      map do |api_event|
+        created_event = inserted_events.find do |ins_evnt|
+          ins_evnt.end_time == api_event["endTime"] end
 
-          [api_event, created_event]
-        end
+        [api_event, created_event]
+      end
 
       # aggregate prepared log_entries' hash arrays
-      new_log_entries_array = get_new_scorer_log_entries + get_new_assisters_log_entries
+      made_log_entries_array = make_new_scorers_log_entries + make_new_assisters_log_entries
 
-      log_entries_changes = SQLOperations.sql_insert_all("log_entries", new_log_entries_array )
+      log_entries_changes = SQLOperations.sql_insert_all("log_entries", made_log_entries_array )
     end
 
-    def get_new_scorers_log_entries
+    def make_new_scorers_log_entries
       # retrieve event and player_profile records
-      new_scorers_data = @api_events_with_created_events.map do |api_event, created_evt|
-          records_hash = get_profile_by({
-              player_id_num: api_event["playerId"]
-            })
-          [created_evt, records_hash]
-        end
+      made_scorers_data = @api_and_created_events_coupled.
+      map do |api_event, created_evt|
+        records_hash = get_profile_by({
+            player_id_num: api_event["playerId"]
+          })
+        [created_evt, records_hash]
+      end
 
-      new_scorers_log_entries = new_scorers_data.map do |created_evt, records_hash|
-          Hash[
-            event_id: created_evt.id,
-            player_profile_id: records_hash[:profile].id,
-            action_type: "goal",
-            created_at: Time.now,
-            updated_at: Time.now
-          ]
-        end
+      made_scorers_log_entries =
+      made_scorers_data.
+      map do |created_evt, records_hash|
+        Hash[
+          event_id: created_evt.id,
+          player_profile_id: records_hash[:profile].id,
+          action_type: "goal",
+          created_at: Time.now,
+          updated_at: Time.now
+        ]
+      end
     end
 
-    def get_new_assisters_log_entries
+    def make_new_assisters_log_entries
 
-      new_assisters_data = @api_events_with_created_events.map do |api_event, created_evt|
+      made_assisters_data = @api_and_created_events_coupled.map do |api_event, created_evt|
           next unless api_event["eventDetails"]
           assisters = []
 
           # get UP TO two full names separated by comma and space
           api_event["eventDetails"].gsub(/(?<player_name>(?<first_name>[^,\s]+)\s(?<last_name>[^,]+))/) { |m|
              assisters << $~
-           }
+           } # use %w( <firstName> <lastName> )
 
           # retrieve player profile records
           assisters_data = assisters.map do
@@ -189,7 +200,7 @@ byebug
           [created_evt, assisters_data]
         end
 
-      new_assisters_log_entries = new_assisters_data.map do |created_evt, assisters_data|
+      made_assisters_log_entries = made_assisters_data.map do |created_evt, assisters_data|
         assisters_data.map { |assister|
           Hash[
             event_id: created_evt.id,
@@ -206,10 +217,13 @@ byebug
     # get game's player_profile, of roster player (via  NHLRosterAPI.rb)
     # roster > players; game > player_profiles; player > player_profiles
     def get_profile_by (**search_hash)
-      #cross-reference (inserted) event with roster player
-      player = @roster.players.find { |player|
-        search_hash.keys.map do |method|
-          search_hash[method] == player.send(method)
+      #cross-reference passed values with roster players
+      player =
+      @roster.players.
+      find { |plyr|
+        search_hash.keys.
+        map do |key|
+          search_hash[key] == plyr.send(key)
         end.all?
       }
         byebug unless player
@@ -232,6 +246,8 @@ byebug
     end
 
   end #class Adapter
+
+
 end
 
 

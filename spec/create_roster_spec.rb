@@ -1,6 +1,6 @@
 require 'create_roster'
 require_relative './data/team_hash'
-require_relative './data/players'
+require_relative './data/players_and_profiles'
 
 # create game
 # create roster w/ and without the game; (roster could exist without this game)
@@ -10,7 +10,6 @@ describe CreateRoster do
   before(:context) do
     Team.destroy_all
     @team = Team.create(id: 100, team_id: 1, name: "New Jersey Devils", created_at: Time.now, updated_at: Time.now)
-    byebug
 
     @sample_players = sample_players.map do |player|
       Player.new(player) end
@@ -28,7 +27,7 @@ describe CreateRoster do
 
   context 'where roster has game:' do
     before(:context) do
-      @roster = Roster.new(team_id: 1)
+      @roster = Roster.new(team_id: 100)
       @game = Game.new(id: 1, home_side: "New Jersey Devils")
     end
 
@@ -50,7 +49,7 @@ describe CreateRoster do
 
   context 'does not have game:' do
     before(:context) do
-      @roster = Roster.new(team_id: 1)
+      @roster = Roster.new(team_id: 100)
       @players_sample = @players.first(5).clone
       # @roster.players << @players_sample # 5 players
       # # let(:team_hash_players) { team_hash["players"]}
@@ -82,7 +81,7 @@ describe CreateRoster do
     end
   end # context 'does not have game'
 
-  context '...' do
+  context '-' do
 
     before(:context) do
       # CreateRoster.instance_variable_get(:@roster).games.destroy_all
@@ -108,7 +107,9 @@ describe CreateRoster do
 
         allow(SQLOperations).to receive(:sql_insert_all).with(
           "player_profiles", a_collection_including(
-              a_hash_including(player_id: 4, player_id: 5)
+             hash_including(player_id: 5),
+             hash_including(player_id: 4),
+             hash_excluding(player_id: 3)
             )
         ).and_return(2)
 

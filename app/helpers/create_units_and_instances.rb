@@ -34,7 +34,7 @@ module CreateUnitsAndInstances
       period_chronology = shifts_into_periods (shifts) # {[period1 shifts], [period 2 shifts] ...}
 
       #find all unit instances by shift events' temporal overlaps (format: array of arrays)
-      instances_events_arrays = make_units_events(period_chronology, unit_size)
+      instances_events_arrays = make_instances_events(period_chronology, unit_size)
 # performance: group instances_events from all periods before calling 'create'
       make_units_and_instances (instances_events_arrays)
     end
@@ -187,7 +187,7 @@ module CreateUnitsAndInstances
     end
   end
 
-  # get only certain types of players (see UNIT_HASH)
+  # filter to get certain player types (see UNIT_HASH)
   def get_roster_sample (player_types)
 
     roster_sample = @roster.players.select { |player|
@@ -226,7 +226,7 @@ module CreateUnitsAndInstances
     period_chron
   end
 
-  def make_units_events (p_chron, unit_size)
+  def make_instances_events (p_chron, unit_size)
     # also acts to filter non-shift events
     minimum_shift_length = "00:15" # __ perhaps use a std deviation from median shift length
 
@@ -282,7 +282,7 @@ unit criteria– why no larger minimum overlap time?
     overlap_test.all? #all true values in array? #{ |iteration| iteration }
   end
 
-  module_function :get_lines_from_shifts, :process_special_events, :get_roster_sample, :get_shifts, :make_units_events, :shifts_into_periods, :mutual_overlap, :create_instances, :create_units, :make_units_and_instances, :associate_events_to_instances
+  module_function :get_lines_from_shifts, :process_special_events, :get_roster_sample, :get_shifts, :make_instances_events, :shifts_into_periods, :mutual_overlap, :create_instances, :create_units, :make_units_and_instances, :associate_events_to_instances
 end
 #
 # =begin

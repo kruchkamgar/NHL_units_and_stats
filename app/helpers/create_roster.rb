@@ -30,6 +30,19 @@ module CreateRoster
     @roster
   end
 
+  def self.query_for_roster_and_id_new_plyrs
+    player_id_nums = team_hash["players"].keys.map { |key| key.match(/\d+/)[0].to_i }
+
+    roster_exists = Roster.includes(players: [:player_profiles]).where(players: { player_id_num: player_id_nums }).references(:players).first #*1
+
+      # collect potential new players, if roster exists
+      if roster_exists
+        new_player_id_nums = player_id_nums.reject { |id_num|
+          roster_exists.players.map(&:player_id_num).include? id_num
+        }
+      else new_player_id_nums = player_id_nums end
+  end
+
   def self.roster_and_players_creation_logic (team_hash, team, game)
     @team_hash, @team, @game = team_hash, team, game
 
@@ -87,25 +100,32 @@ module CreateRoster
 
   # create new profile for player, if team_hash (via player_hash) contains new position. *4
   def self.create_new_profiles
-    new_profiles_array = @players.map do
-        |player|
-        # find the player by playerId in the team_hash
-        player_hash = team_hash["players"].find {
-          |id, plyr_hash|
-          player.player_id_num == plyr_hash["person"]["id"]
-        }[1]
-        # skip if player's player_profile already exists; compare by position
-        next if player.player_profiles.map(&:position).include? player_hash["position"]["name"]
+    new_profiles_data = @players.
+    map do
+      |player|
+      # find the player by playerId in the team_hash
+      api_player_hash = team_hash["players"].find {
+        |id, plyr_hash|
+        player.player_id_num == plyr_hash["person"]["id"]
+      }[1]
 
-          # then create hash if not exists
-          Hash[
-            position: player_hash["position"]["name"],
-            position_type: player_hash["position"]["type"],
-            player_id: player.id,
-            created_at: Time.now,
-            updated_at: Time.now
-          ]
-      end.compact
+      [player, api_player_hash]
+    end.
+    reject do |player, api_player_hash|
+      # reject if player's player_profile already exists
+      player.player_profiles.map(&:position).include? api_player_hash["position"]["name"]
+    end
+
+    new_profiles_array = new_profiles_data.map do |player, api_player_hash|
+        # then create hash if not exists
+        Hash[
+          position: api_player_hash["position"]["name"],
+          position_type: api_player_hash["position"]["type"],
+          player_id: player.id,
+          created_at: Time.now,
+          updated_at: Time.now
+        ]
+      end
 
     profiles_changes = SQLOperations.sql_insert_all("player_profiles", new_profiles_array ) unless new_profiles_array.empty? # *3 (incomplete)
   end

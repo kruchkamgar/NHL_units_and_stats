@@ -34,13 +34,13 @@ module Test
       )
   end
 
-  def create_game_events
+  def create_game_events_and_log_entries
 
     events = NHLGameEventsAPI::Adapter.new(team:
-      @team, game: $game, roster: @roster).create_game_events
+      @team, game: $game, roster: @roster).create_game_events_and_log_entries
   end
 
-  module_function :create_units, :process_special_events, :create_game_roster, :create_game_events
+  module_function :create_units, :process_special_events, :create_game_roster, :create_game_events_and_log_entries
 
 end
 
