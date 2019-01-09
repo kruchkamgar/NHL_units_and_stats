@@ -2,17 +2,17 @@ require_relative './team_hash'
 
 def sample_players
   [
-    { first_name: "Bill", last_name: "Williams", player_id_num: 101 },
-    { first_name: "Frances", last_name: "Baggins", player_id_num: 102 },
-    { first_name: "Jacques", last_name: "Cousteau", player_id_num: 103 }
+    { id: 1, first_name: "Bill", last_name: "Williams", player_id_num: 101 },
+    { id: 2, first_name: "Frances", last_name: "Baggins", player_id_num: 102 },
+    { id: 3, first_name: "Jacques", last_name: "Cousteau", player_id_num: 103 }
   ]
 end
 
 def sample_profiles
   [
-    { id: 1, player_id: 101, position: "Defenseman", position_type: "Defenseman", created_at: nil, updated_at: nil},
-    { id: 2, player_id: 102, position: "Right Wing", position_type: "Forward" },
-    { id: 3, player_id: 103, position: "Defenseman", position_type: "Defenseman" }
+    { id: 1, player_id: 1, position: "Defenseman", position_type: "Defenseman", created_at: nil, updated_at: nil},
+    { id: 2, player_id: 2, position: "Right Wing", position_type: "Forward" },
+    { id: 3, player_id: 3, position: "Defenseman", position_type: "Defenseman" }
   ]
 end
 

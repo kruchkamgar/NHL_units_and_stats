@@ -3,7 +3,7 @@
 module Utilities
 
   class TimeOperation
-    include Utilities
+    include Utilities # access to Utilities methods
     attr_reader :result
 
     def initialize (operator, *times)
