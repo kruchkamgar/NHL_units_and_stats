@@ -187,100 +187,83 @@ module CreateUnitsAndInstances
     end
   end
 
+  # ////////////////// prep methods ////////////////// #
+
   # filter to get certain player types (see UNIT_HASH)
   def get_roster_sample (player_types)
-
-    roster_sample = @roster.players.select { |player|
-      player_types.include? (
-        @game.player_profiles.find { |profile|
-         profile.player_id == player.id
-        }.position_type
+    roster_sample =
+    @roster.players.
+    select do |player|
+      player_types.
+      include? (
+        @game.player_profiles.
+        find do |profile|
+         profile.player_id == player.id end.
+        position_type
       )
-    }
+    end
   end
 
   # get the shifts for the roster
   def get_shifts roster_sample
     # any player in the roster match each shift event's player profile(s)?
-
-    shifts = @game.events.select { |event|
-        roster_sample.any? { |player|
-            event.player_profiles.any? {|profile|
-              profile.player_id == player.id
-            }
-        }
-      }
-  end
+    shifts = @game.events.
+    select do |event|
+      roster_sample.
+      any? do |player|
+          event.player_profiles.
+          any? do |profile|
+            profile.player_id == player.id end
+      end
+    end
+  end #get_shifts
 
   def shifts_into_periods (shift_events)
-    period_chron = {1 => nil, 2 => nil, 3 => nil}
+    period_chron =
+    shift_events.group_by do |event|
+      event.period end.
+    each do |period, events|
+      events.sort! do |shft_a, shft_b|
+        shft_a.start_time <=> shft_b.start_time end
+    end
 
-    period_chron.each { |period, v|
-
-      period_chron[period] = shift_events.select { |event|
-        event.period == period
-      }.sort { |shft_a, shft_b|
-        shft_a.start_time <=> shft_b.start_time
-      }
-    }
-    period_chron
-  end
+  end #shifts_into_periods
 
   def make_instances_events (p_chron, unit_size)
-    # also acts to filter non-shift events
-    minimum_shift_length = "00:15" # __ perhaps use a std deviation from median shift length
-
-    instances_events = []
-    p_chron.each { |period|
-      i=0; period_shifts = period[1]
-
-=begin (rewrite)
-      period_shifts.each_with_index do |shift, i|
-        next unless shift.duration > minimum_shift_length
-          period_shifts[i...(i+unit_size)]
-          ...test mutual overlap
-=end
-      while i < (period_shifts.length-1)
-        if period_shifts[i].duration > minimum_shift_length
-          shift = period_shifts[i..-1].first(unit_size)
-          if mutual_overlap (shift)
-            instances_events << shift
-          end
-        end
-        i+=1
+    # currently also acts to filter non-shift events
+    min_shift_length = "00:15" # __ perhaps use a std deviation from median shift length
+    p_chron.
+    map do |period, events|
+      events.delete_if do |event|
+        event.duration <= min_shift_length end
+      events.
+      select.with_index do |shift, i|
+        iteration = ( i...(i+unit_size) )
+        mutual_overlap ( events[iteration] )
       end
-    }
-    instances_events
-  end
+    end
+  end #make_instances_events
 
   def mutual_overlap (shift_group)
     # refine: set minimum ice-time shared
     shifts_array = shift_group.clone
-    overlap_test = []
-
-    #make comparisons in a factorial-fashion pattern
-=begin (rewrite)
-  shifts_array.each_with_index { |shift, i|
-    shifts_array[(i+1)..-1].all? { |overlaps?|
-      shift.end_time > overlaps?.start_time && shift.start_time < overlaps?.end_time
-    } if i < shifts_array.size - 1
-  }
+=begin (comments)
 
 unit criteria– why no larger minimum overlap time?
   - even a 2-second overlap can make a difference in the play (relevant unit criteria)
   - if using minimum overlap time, use on top of 2 or 4 plyrs (3, or 5-man unit)
 =end
-    while shifts_array.length > 1
-      base_shift = shifts_array.shift
-      overlap_test << shifts_array.all? { |shift|
-          #shift overlap definition:
-          #shift ends after base shift starts
-          #...without starting after base shift ends
-          base_shift.end_time > shift.start_time && base_shift.start_time < shift.end_time
-      }
-    end
-    overlap_test.all? #all true values in array? #{ |iteration| iteration }
-  end
+
+# overlap defined: shift ends after its comparison starts
+#...without starting after the comparison shift ends
+    shifts_array.
+    map.with_index do |shift, i|
+      shifts_array[(i+1)..-1].# +1 past index of "shift"
+      all? do |overlaps|
+        shift.end_time > overlaps.start_time && overlaps.end_time > shift.start_time
+      end if i < shifts_array.size - 1
+    end.compact.all?
+  end #mutual_overlap
 
   module_function :get_lines_from_shifts, :process_special_events, :get_roster_sample, :get_shifts, :make_instances_events, :shifts_into_periods, :mutual_overlap, :create_instances, :create_units, :make_units_and_instances, :associate_events_to_instances
 end

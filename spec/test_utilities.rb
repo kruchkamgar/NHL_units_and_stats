@@ -9,8 +9,8 @@ def get_random_and_end_indices (array, iteration_count=5)
   values
 end
 
-def get_hashes_array_sorted_values (array_of_hashes, keys_array, method)
-  array_of_hashes.
+def get_hashes_array_sorted_values (array_of_entities, keys_array, method)
+  array_of_entities.
   map do |evt|
     evt.send(method).
     select do |key|

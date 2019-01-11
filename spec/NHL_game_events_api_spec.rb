@@ -1,6 +1,6 @@
 require 'NHL_game_events_api'
 require_relative './shared_examples/an_SQL_insert'
-require_relative './data/shift_events'
+require_relative './data/events_hashes'
 require_relative './data/players_and_profiles'
 
 describe 'NHLGameEventsAPI' do
@@ -11,7 +11,6 @@ describe 'NHLGameEventsAPI' do
     @roster = Roster.new(team_id: 100)
 
     @roster.players << team_hash_players.clone
-    API = Event::API
   end
 
   let(:adapter) {

@@ -133,7 +133,8 @@ describe CreateRoster do
           player.player_profiles << @player_profiles[i] end
       end
 
-      it 'adds profiles' do
+      it 'adds profiles' do # *1 *2
+
         subject.instance_variable_set(:@players,
         Player)
 
@@ -148,3 +149,11 @@ describe CreateRoster do
   end
 
 end
+
+=begin
+  *1 - (refactor)
+  use doubles to reflect intentions - readability?
+
+  *2 -
+  could also use generic seeds, used across multiple tests
+=end

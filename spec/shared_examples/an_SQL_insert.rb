@@ -1,6 +1,7 @@
 require_relative '../test_utilities.rb'
 
-shared_examples_for('an SQL insert') do
+
+shared_examples_for('an SQL insert') do # *1
 
   let(:ends_and_randoms) {
      get_random_and_end_indices(insert_queue) }
@@ -24,3 +25,7 @@ shared_examples_for('an SQL insert') do
       )
   end
 end
+
+
+#*1-
+# perhaps generate events for comparison [instead of comparing created/inserted with hashes], because other tests require created events also.
