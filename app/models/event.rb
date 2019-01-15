@@ -1,6 +1,6 @@
 class Event < ApplicationRecord
   belongs_to :game
-  has_and_belongs_to_many :instances
+  has_and_belongs_to_many :instances # *1
   has_many :log_entries
   has_many :player_profiles, through: :log_entries # perhaps a player may get injured, and that would result or explain an event.
 
@@ -18,3 +18,9 @@ class Event < ApplicationRecord
   ]
 
 end
+
+
+# *1
+  # a scoring event belongs to at least two instances (scorer and scored-on)
+# *2
+#   may want to consider moving player_id_num to log_entries, for semiotic cleanliness ...(if works out w/ code structure)

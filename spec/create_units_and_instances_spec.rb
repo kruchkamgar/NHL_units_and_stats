@@ -67,7 +67,7 @@ describe 'CreateUnitsAndInstances' do
       allow(CreateUnitsAndInstances).to receive(:mutual_overlap).with(
         a_collection_including(
           a_kind_of(Event)
-        ) 
+        )
       ) { true }
 
       expect(
@@ -101,4 +101,100 @@ describe 'CreateUnitsAndInstances' do
           ).to eq( false )
         end
   end
+
+  let(:units_groups_hash) {
+    sample_events = Event.all.sample(3)
+    player_id_nums = sample_events.map(&:player_id_num)
+    Hash[
+      [123, 234, 345] => [ Event.all.sample(3), Event.all.sample(3) ],
+      [543, 432, 321] => [ Event.all.sample(3), Event.all.sample(3) ],
+      player_id_nums => [ sample_events ]
+    ]
+  }
+  let(:units) {
+    units_groups_hash.
+    keys.map.with_index do |unit, i|
+      Unit.new(id: i) end }
+  let(:existing_units) {
+    instance = Instance.create(id: 100)
+    instance.
+    events << units_groups_hash.values.last.flatten(1)
+    unit =
+    Unit.new(id:1); unit.instances << instance; unit
+  }
+
+  describe '#get_preexisting_units' do
+    it 'makes an array sequenced with pre-existing units, and nils for new units' do
+      allow(Unit).to receive(:includes).with(instances: [ :events ]) { [existing_units] }
+
+      expect(
+        CreateUnitsAndInstances.get_preexisting_units(units_groups_hash.keys)
+      ).
+      to include(nil, nil, existing_units)
+    end
+  end
+
+  describe '#create_units' do
+    it '#inserts and retrieves units' do
+      allow(CreateUnitsAndInstances).to receive(:get_preexisting_units).with(a_kind_of(Array)) { [nil] }
+      expect(
+        CreateUnitsAndInstances.create_units(units_groups_hash.keys)
+      ).
+      to include(
+        a_kind_of(Unit)
+      )
+    end
+  end
+
+  describe '#create_instances' do
+    it '#inserts and retrieves instances' do
+      expect(
+        CreateUnitsAndInstances.create_instances(units.reverse, units_groups_hash.values)
+
+      ).
+      to include(
+        a_kind_of(Instance),
+        have_attributes(
+          unit_id: 0,
+          start_time: units_groups_hash.values.first.
+
+          first.max_by(&:start_time).start_time # check for correct unit-instance mapping, to verify order of insertion
+        )
+      )
+    end
+  end
+
+  #after .flatten(1): [ [event1, 2, 3], [event1, 2, 3], ... ]
+  let(:new_instances) { units_groups_hash.values.flatten(1) }
+  let(:inserted_instances) {
+    Array.new(new_instances.size) do |index|
+      Instance.new(id: index) end }
+
+  describe '#associate_events_to_instances' do
+    #test that instance_event at insert_index, matches sample instance's id.
+    it 'calls sql_insert_all with made associations' do
+      sample_instance_index = 3
+      sample_instance = inserted_instances.reverse[sample_instance_index]
+      # (made_associations index)
+      sample_index =
+      new_instances[0...sample_instance_index].
+      inject(0) do |counts, instance|
+        counts + instance.size end
+
+      expect(SQLOperations).
+      to receive(:sql_insert_all).with("events_instances",
+        an_object_satisfying do |obj|
+          obj[sample_index][:instance_id] == sample_instance.id end
+      )
+
+      CreateUnitsAndInstances.
+      associate_events_to_instances(
+        inserted_instances,
+        new_instances
+      )
+    end
+  end
+
+  describe '#'
+
 end # CreateUnitsAndInstances
