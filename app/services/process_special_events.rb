@@ -14,7 +14,7 @@ module ProcessSpecialEvents
     tally_special_events(opposing_data)
     tally_special_events(team_data, true)
   end
-
+ 
   def get_special_events_data
     @game_instances =
     Instance.includes(:events).

@@ -6,3 +6,4 @@ class Instance < ApplicationRecord
   # nil for +/- as initialization state. useful?
 
 end
+ 

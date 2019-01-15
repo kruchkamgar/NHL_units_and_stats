@@ -12,7 +12,7 @@ class Game < ApplicationRecord
 
 end
 
-
+ 
 # *1-
 # direct assocation - instead of through rosters - because only a subset of a roster's manifest units, may manifest in a particular game
 

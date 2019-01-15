@@ -9,3 +9,4 @@ class Unit < ApplicationRecord
   # has_many :rosters, through: :games
   has_one :tally
 end
+ 
