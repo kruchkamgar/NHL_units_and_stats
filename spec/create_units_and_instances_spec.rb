@@ -4,8 +4,14 @@ require_relative './data/players_and_profiles'
 
 describe 'CreateUnitsAndInstances' do
   before(:context) do
-    create_events_sample
-    Event.all.
+    create_events_sample #just use seeds 'create_events_sampling' perhaps
+    @roster = CreateUnitsAndInstances.instance_variable_set(
+      :@roster, Roster.where(team_id: 1).first
+    )
+    player_id_nums =
+    @roster.players.
+    map(&:player_id_num)
+    Event.where(player_id_num: player_id_nums ).
     each do |event|
       LogEntry.create(
         event_id: event.id,
@@ -13,13 +19,9 @@ describe 'CreateUnitsAndInstances' do
         player_profile_id:
           Player.find_by(player_id_num: event.player_id_num).player_profiles.first.id
       ) end
-    @roster = CreateUnitsAndInstances.instance_variable_set(:@roster, Roster.first)
+
     @game = CreateUnitsAndInstances.instance_variable_set(:@game, Game.first)
   end
-
-  # describe 'make_units_and_instances' do
-  #
-  # end
 
   describe '#get_roster_sample' do
     let(:player_types) { UNIT_HASH[3] }
@@ -59,8 +61,8 @@ describe 'CreateUnitsAndInstances' do
 
   describe '#make_instances_events' do
     let(:period_hash) { Hash[
-        1 => Event.all.sample(6),
-        2 => Event.all.sample(6)
+        1 => Event.where(event_type: 'shift' ).sample(6),
+        2 => Event.where(event_type: 'shift' ).sample(6)
       ] }
 
     it 'makes array of arrays of events' do
@@ -194,7 +196,5 @@ describe 'CreateUnitsAndInstances' do
       )
     end
   end
-
-  describe '#'
 
 end # CreateUnitsAndInstances

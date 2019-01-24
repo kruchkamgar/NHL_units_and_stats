@@ -47,26 +47,27 @@ module NHLGameEventsAPI
     end
 
     def create_events (shift_events_by_team)
-    made_events_array = shift_events_by_team.map do |event|
-
-      Hash[
-        event_type: event["eventDescription"] || "shift", #API lists null, except for goals
-        duration: event["duration"],
-        start_time: event["startTime"],
-        end_time: event["endTime"],
-        shift_number: event["shiftNumber"],
-        period: event["period"],
-        player_id_num: event["playerId"],
-        game_id: @game.id,
-        created_at: Time.now,
-        updated_at: Time.now
-      ]
-    end
+      made_events_array =
+      shift_events_by_team.
+      map do |event|
+        Hash[
+          event_type: event["eventDescription"] || "shift", #API lists null, except for goals
+          duration: event["duration"],
+          start_time: event["startTime"],
+          end_time: event["endTime"],
+          shift_number: event["shiftNumber"],
+          period: event["period"],
+          player_id_num: event["playerId"],
+          game_id: @game.id,
+          created_at: Time.now,
+          updated_at: Time.now
+        ]
+      end
       # insert events
       events_changes = SQLOperations.sql_insert_all("events", made_events_array )
       # grab events
       if events_changes > 0
-        inserted_events = Event.where("game_id = '#{@game.id}'", "event_type = 'shift'") #*2
+        inserted_events = Event.order(id: :desc).limit(events_changes) #*2
       end
     end
 
@@ -118,20 +119,16 @@ module NHLGameEventsAPI
           updated_at: Time.now
         ]
       end
-      # byebug
+
       events_changes =
       SQLOperations.
       sql_insert_all("events", made_events_array )
       # just use value of Changes() and ORDER DESC LIMIT ...
-      num_queries = made_events_array.map {
-          "player_id_num = ? AND end_time = ? AND (event_type = 'SHG' OR event_type = 'PPG' OR event_type = 'EVG')"
-        }
-      inserted_events = Event.find_by_sql ["
-        SELECT * FROM events
-        WHERE #{num_queries.join(' OR ')}", *made_events_array.map { |event|
-          [event[:player_id_num], event[:end_time]]
-        }.flatten ]
-        #gets select events, based on their individual data for given fields
+
+      if events_changes > 0
+        inserted_events =
+        Event.order(id: :desc).limit(events_changes)
+      end
     end
 
     def create_goal_log_entries

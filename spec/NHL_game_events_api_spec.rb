@@ -5,6 +5,7 @@ require_relative './data/players_and_profiles'
 
 describe 'NHLGameEventsAPI' do
   before(:context) do
+    @init_index = 100
     @team = Team.new(id: 100, team_id: 1)
     @game_id = 2017020019
     @game = Game.new(id: 1, home_side: "New Jersey Devils")
@@ -20,9 +21,9 @@ describe 'NHLGameEventsAPI' do
     NHLGameEventsAPI::Adapter.new(team:
     @team, game: @game, roster: @roster)
   }
-  let(:sample_profile) { PlayerProfile.new(sample_profiles.first) }
-  let(:get_profile_by_stub) {
-    allow(adapter).to receive(:get_profile_by) { {profile: sample_profile} }
+
+  let(:stub_for_get_profile_by) {
+    allow(adapter).to receive(:get_profile_by) { {profile: sample_profiles.first} }
   }
 
   let(:test_keys) { ["start_time", "end_time", "period", "player_id_num"] }
@@ -46,7 +47,6 @@ describe 'NHLGameEventsAPI' do
     let(:inserted_records) { adapter.create_events(@shift_events_by_team) }
     before (:example) { @sample_event = @shift_events_by_team.sample }
 
-
   describe '#create_events' do
     it 'makes an array of hashed events' do
       allow(SQLOperations).to receive(:sql_insert_all).with(
@@ -56,7 +56,7 @@ describe 'NHLGameEventsAPI' do
             test_inclusion_hash[@sample_event]
         ) )
       ).and_return(1)
-      allow(Event).to receive(:where) { false }
+      allow(Event).to receive_message_chain(:order, :limit) { false }
 
       expect(adapter.create_events(@shift_events_by_team)).to eq( false )
     end
@@ -70,7 +70,7 @@ describe 'NHLGameEventsAPI' do
   describe '#create_log_entries' do
 
     it 'makes an array of hashed log entries data, returning "true"' do
-      get_profile_by_stub
+      stub_for_get_profile_by
 
       allow(SQLOperations).to receive(:sql_insert_all).with(
         "log_entries",
@@ -101,7 +101,7 @@ describe 'NHLGameEventsAPI' do
             test_inclusion_hash[@sample_event]
         ) )
       ).and_return(1)
-      allow(Event).to receive(:find_by_sql) { false }
+      allow(Event).to receive_message_chain(:order, :limit) { false }
 
       expect(inserted_records).to eq( false )
     end
@@ -119,7 +119,7 @@ describe 'NHLGameEventsAPI' do
   describe '#make_new_assisters_log_entries' do
     it 'makes array of hashed log entries data' do
 
-      get_profile_by_stub
+      stub_for_get_profile_by
       adapter.instance_variable_set(:@api_and_created_events_coupled, api_and_created)
 
       expect(adapter.make_new_assisters_log_entries).
@@ -134,7 +134,7 @@ describe 'NHLGameEventsAPI' do
   describe '#make_new_scorers_log_entries' do
     it 'makes array of hashed log entries data' do
 
-      get_profile_by_stub
+      stub_for_get_profile_by
       adapter.instance_variable_set(:@api_and_created_events_coupled, api_and_created)
       # test if has the assister fed, and for its correct action_type
       # prob just pass in 2 'created events' w/ api events
@@ -155,21 +155,14 @@ describe 'NHLGameEventsAPI' do
 
   end # context 'for goal events:'
 
-  let(:profile_search_hash) {
-    Hash[ player_id_num: 101, last_name: "Williams" ] }
   before (:example) do
-    @test_players =
-    Array.new(sample_players.size) { |index|
-       Player.new(sample_players[index]) }
-    @test_profiles =
-    Array.new(sample_profiles.size) { |index|
-      PlayerProfile.new(sample_profiles[index]) }
-    @test_players.
-    each_with_index do |plyr, index|
-      plyr.player_profiles << @test_profiles[index] end
-    @game.player_profiles << @test_profiles
+    @test_players = Player.first(3)
+    @test_profiles = @test_players.map(&:player_profiles).flatten
   end
-
+  let(:profile_search_hash) {
+    player = @test_players.first
+    Hash[ player_id_num: player.player_id_num, last_name: player.last_name ] }
+  # get profile by [player] search hash
   describe '#get_profile_by' do
     it 'returns a hash of key :profile' do
       roster_dbl = double('roster')
@@ -179,18 +172,11 @@ describe 'NHLGameEventsAPI' do
 
       adapter.instance_variable_set(:@roster, roster_dbl)
       adapter.instance_variable_set(:@game, game_dbl)
-
+    # byebug
       expect(adapter.get_profile_by(profile_search_hash)
     ).to eq(
       Hash[
-        profile: (
-          @test_players.
-          find do |player|
-            player.player_id_num == 101
-          end.
-          player_profiles.first
-        ) ]
-      )
+        profile: @test_players.first.player_profiles.first ] )
     end
   end
 

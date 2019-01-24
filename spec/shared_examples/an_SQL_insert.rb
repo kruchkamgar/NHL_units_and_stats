@@ -1,6 +1,6 @@
 require_relative '../test_utilities.rb'
 
-
+# compares the programmatically inserted records, with the input
 shared_examples_for('an SQL insert') do # *1
 
   let(:ends_and_randoms) {
@@ -18,7 +18,7 @@ shared_examples_for('an SQL insert') do # *1
       to eq(
         get_hashes_array_sorted_values(
           insert_queue,
-          insert_queue_test_keys,
+          insert_queue_test_keys, #test-specific constants
           :itself
         ).
         values_at(*ends_and_randoms)

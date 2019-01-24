@@ -27,23 +27,19 @@ module CreateUnitsAndInstances
 
     # iterate through units: 6-man, 5-man, 3-man
     UNIT_HASH.each do |unit_size, unit_type|
-
       roster_sample = get_roster_sample (unit_type)
-
       #find the shifts matching the roster sample
       shifts = get_shifts(roster_sample)
-
       # sort shifts by start time, for each period
-      period_chronology = shifts_into_periods (shifts) # {[period1 shifts], [period 2 shifts] ...}
-
+      # {[period1 event1, 2...], [p2 event1, 2, ...] ... }
+      period_chronology = shifts_into_periods (shifts)
       #find all unit instances by shift events' temporal overlaps (format: array of arrays)
       instances_events_arrays = make_instances_events(period_chronology, unit_size)
-# performance: group instances_events from all periods before calling 'create'
-      units_groups_hash = group_by_players(instances_events_arrays)
 
+      units_groups_hash = group_by_players(instances_events_arrays)
       make_units_and_instances (units_groups_hash)
     end
-  end #get_units_from_shifts
+  end #create_records_from_shifts
 
   def make_units_and_instances units_groups_hash
 
@@ -124,9 +120,7 @@ module CreateUnitsAndInstances
   end
 
 
-
   # ////////////////// prep methods ////////////////// #
-
 
   # filter to get certain player types (see UNIT_HASH)
   def get_roster_sample (player_types)
@@ -228,7 +222,6 @@ unit criteria– why no larger minimum overlap time?
   end #group_by_players
 
   module_function :create_records_from_shifts,
-   :process_special_events,
    :get_roster_sample,
    :get_shifts,
    :make_instances_events,
@@ -239,6 +232,7 @@ unit criteria– why no larger minimum overlap time?
    :create_instances,
    :create_units,
    :make_units_and_instances, :associate_events_to_instances
+
 end
 #
 # =begin

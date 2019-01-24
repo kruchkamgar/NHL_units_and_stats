@@ -7,6 +7,8 @@
 #   Character.create(name: 'Luke', movie: movies.first)
 
 require './spec/data/team_hash'
+require './spec/data/events_hashes'
+# require './lib/utilities.rb'
 
 def run_seeds
   destroy_all_db
@@ -14,6 +16,8 @@ def run_seeds
   create_game
   create_team
   create_roster
+  create_events_sampling
+  create_instances
 end
 
 def destroy_all_db
@@ -90,5 +94,51 @@ def create_roster
   roster = Roster.create(team_id: 1)
   roster.players << team_hash_players #find_or_create_by
 end
+
+def create_events_sampling
+
+  ( events_hashes[0..-20].
+    sample(5) +
+    all_goal_events ).
+  each do |event|
+    Event.find_or_create_by(
+      event_type: event["eventDescription"] || "shift", duration: event["duration"],
+      start_time: event["startTime"],
+      end_time: event["endTime"],
+      shift_number: event["shiftNumber"],
+      period: event["period"],
+      player_id_num: event["playerId"],
+      game_id: 1
+    )
+  end
+end
+
+def create_instances
+  all_goal_events.each do |event|
+    instance =
+    Instance.find_or_create_by(
+      duration: "01:00",
+      start_time: Utilities::TimeOperation.new(:-, "00:30", event["startTime"]).result
+    )
+
+    add_events_to_instance (instance)
+  end
+end
+
+# //////////////// helper methods ///////////////// #
+def add_events_to_instance (instance)
+  instance_end_time =
+  Utilities::TimeOperation.new(:+, instance.duration, instance.start_time).result
+
+  concurrent_events =
+  Event.
+  where.not(event_type: "shift").
+  select do |event|
+    event.end_time > instance.start_time && event.end_time <= instance_end_time
+  end
+
+  instance.events << concurrent_events
+end
+
 
 run_seeds

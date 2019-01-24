@@ -8,20 +8,27 @@ def sample_players
   ]
 end
 
+# used by: create_roster_spec, NHL_game_events_api_spec
 def sample_profiles
-  [
-    { id: 1, player_id: 1, position: "Defenseman", position_type: "Defenseman", created_at: nil, updated_at: nil},
-    { id: 2, player_id: 2, position: "Right Wing", position_type: "Forward" },
-    { id: 3, player_id: 3, position: "Defenseman", position_type: "Defenseman" }
-  ]
+  team_hash_02["players"].first(3).
+  map.with_index do |id, index|
+    plyr_hash = team_hash_02["players"]["#{id[0]}"]
+
+    PlayerProfile.new(
+      id: (index + @init_index),
+      position: plyr_hash["position"]["name"],
+      position_type: plyr_hash["position"]["type"],
+      player_id: (index + @init_index)
+    )
+  end
 end
 
 def team_hash_players
    team_hash["players"].
-   map.with_index(1) do |id, index|
+   map.with_index do |id, index|
       plyr_hash = team_hash["players"]["#{id[0]}"]
       Player.new(
-        id: index,
+        id: (index+1),
         first_name: plyr_hash["firstName"],
         last_name: plyr_hash["lastName"],
         player_id_num: plyr_hash["person"]["id"]
@@ -31,14 +38,14 @@ end
 
 def team_hash_player_profiles
   team_hash["players"].
-  map.with_index(1) do |id, index|
+  map.with_index do |id, index|
     plyr_hash = team_hash["players"]["#{id[0]}"]
 
     PlayerProfile.new(
-      id: index,
+      id: (index+1),
       position: plyr_hash["position"]["name"],
       position_type: plyr_hash["position"]["type"],
-      player_id: index
+      player_id: (index+1)
     )
   end
 end

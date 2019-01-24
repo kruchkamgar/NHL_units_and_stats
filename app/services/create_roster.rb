@@ -50,13 +50,15 @@ module CreateRoster
     # "players" : { "ID8474709" : { "person" : { "id" : 8474709,
     player_id_nums = team_hash["players"].keys.map { |key| key.match(/\d+/)[0].to_i }
 
-    roster_exists = Roster.includes(players: [:player_profiles]).where(players: { player_id_num: player_id_nums }).references(:players).first #*1
+    roster_exists =
+    Roster.includes(players: [:player_profiles]).where(players: { player_id_num: player_id_nums }).references(:players).first #*1
 
       # collect potential new players, if roster exists
       if roster_exists
-        new_player_id_nums = player_id_nums.reject { |id_num|
+        new_player_id_nums =
+        player_id_nums.reject do |id_num|
           roster_exists.players.map(&:player_id_num).include? id_num
-        }
+        end
       else new_player_id_nums = player_id_nums end
 
     if roster_exists && roster_exists.games.include?(@game) # && roster.game (no new players if includes game). !roster_exists || new_player_id_nums.any?
@@ -67,18 +69,17 @@ module CreateRoster
 
 # >>? check first if player exists, as opposed to letting database handle uniqueness for player_id_nums
 # - team_hash players.any? { |player| Player.all.include? player }
-      new_players_array = team_hash["players"].map {
-          |id, player_hash|
-          person = player_hash["person"]
-
-          Hash[
-            first_name: person["firstName"],
-            last_name: person["lastName"],
-            player_id_num: person["id"],
-            created_at: Time.now,
-            updated_at: Time.now
-          ]
-        }
+      new_players_array =
+      team_hash["players"].map do |id, player_hash|
+        person = player_hash["person"]
+        Hash[
+          first_name: person["firstName"],
+          last_name: person["lastName"],
+          player_id_num: person["id"],
+          created_at: Time.now,
+          updated_at: Time.now
+        ]
+      end
 
       players_changes = SQLOperations.sql_insert_all("players", new_players_array )
 
@@ -100,11 +101,12 @@ module CreateRoster
 
   # create new profile for player, if team_hash (via player_hash) contains new position. *4
   def self.create_new_profiles
-    new_profiles_data = @players.
-    map do
-      |player|
+    new_profiles_data =
+    @players.
+    map do |player|
       # find the player by playerId in the team_hash
-      api_player_hash = team_hash["players"].find {
+      api_player_hash =
+      @team_hash["players"].find {
         |id, plyr_hash|
         player.player_id_num == plyr_hash["person"]["id"]
       }[1]
