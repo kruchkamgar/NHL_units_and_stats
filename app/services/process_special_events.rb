@@ -1,3 +1,5 @@
+# process special events per game, for one side
+
 module ProcessSpecialEvents
   include Utilities
 
@@ -5,7 +7,8 @@ module ProcessSpecialEvents
     @team, @roster, @game = team, roster, game
 
     get_special_events_data
-    @team_events = @special_events - @opposing_team_events
+    @team_events =
+    @special_events - @opposing_team_events
 
     opposing_data = associate_events_to_instances(@opposing_team_events)
     team_data =
@@ -22,7 +25,9 @@ module ProcessSpecialEvents
     # add the events and their tallies for each instance
 
     @special_events =
-    Event.includes(:log_entries). where( events: { game_id: @game.id } ). where.not( events: { event_type: 'shift'} )
+    Event.includes(:log_entries).
+    where( events: { game_id: @game.id } ).
+    where.not( events: { event_type: 'shift'} )
 
     @opposing_team_events =
     @special_events.

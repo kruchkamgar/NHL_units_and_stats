@@ -15,16 +15,19 @@ module NHLTeamAPI
 
     def initialize (name: nil, team_id:, season: nil, start_date: nil, end_date: nil)
       @name, @team_id, @season, @start_date, @end_date = name, team_id, season, start_date, end_date
-      @year = Date.current.year
+
       get_season unless @season # string
     end
 
     def create_team
-      team = Team.find_or_create_by(
+      team =
+      Team.find_or_create_by(
         team_id: @team_id,
         season: @season
       )
-      team.name = @name ||= (@name = get_team_name["teams"][0]["name"])
+
+      team.name = @name ||=
+      (@name = get_team_name["teams"][0]["name"])
       team.save
       [team, self]
     end
@@ -34,7 +37,7 @@ module NHLTeamAPI
       sched_data = JSON.parse(RestClient.get(get_sched_url))
     end
 
-    private
+  private
 
     # def get_roster_url
     #   "#{BASE_URL}#{@team_id}/roster"
@@ -62,11 +65,12 @@ module NHLTeamAPI
 
     # /////////////////////  helpers  /////////////////////#
     def get_season
-        if Date.current.month > 9
-          @season = "#{@year}#{@year+1}"
-        else
-          @season = "#{@year-1}#{@year}"
-        end
+      year = Date.current.year
+      if Date.current.month > 9
+        @season = "#{year}#{year+1}"
+      else
+        @season = "#{year-1}#{year}"
+      end
     end
 
   end

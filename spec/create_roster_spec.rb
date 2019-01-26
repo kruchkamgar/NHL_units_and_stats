@@ -14,9 +14,9 @@ describe CreateRoster do
 
     @sample_players = sample_players.map do |player|
       Player.new(player) end
-    @players = team_hash_02["players"].
+    @players = @team_hash["players"].
     map.with_index(0) do |id, index|
-        plyr_hash = team_hash_02["players"]["#{id[0]}"]
+        plyr_hash = @team_hash["players"]["#{id[0]}"]
         Player.new(
           id: (index + @init_index),
           first_name: plyr_hash["firstName"],
@@ -26,61 +26,80 @@ describe CreateRoster do
       end
   end
 
+  let(:initializer) {
+    CreateRoster.instance_variable_set(:@team_hash, @team_hash)
+    CreateRoster.instance_variable_set(:@team, @team)
+  }
+  let(:run_logic) { subject.roster_and_players_creation_logic(@data) }
 
   context 'where roster has game:' do
-    before(:context) do
-      @roster = Roster.new(team_id: 101)
-      @game = Game.new(id: 2, home_side: "New York Islanders")
-    end
+  before(:context) do
+    @roster = Roster.new(team_id: 101)
+    @game = Game.new(id: 2, home_side: "New York Islanders") end
+  # seems to destroy it automatically -- after(:context) do @game.destroy end 
 
-    describe '#roster_and_players_creation_logic' do
-      it 'sets @roster and @players' do
-        roster_w_game = @roster
-        roster_w_game.games << @game
-        roster_w_game.players << @sample_players
+  describe '#query_for_roster_and_new_plyrs' do
+    it 'retrieves matching roster record from db' do
+      initializer
 
-        allow(Roster).to receive_message_chain(:includes, :where, :references, :first) { roster_w_game }
+      roster_w_game = @roster
+      roster_w_game.games << @game
+      roster_w_game.players << @sample_players
 
-        subject.roster_and_players_creation_logic(team_hash_02, @team, @game)
+      allow(Roster).
+      to receive_message_chain(:includes, :where, :references, :first).
+      and_return roster_w_game
 
-        expect(subject.instance_variable_get(:@roster)).to eq(roster_w_game)
-        expect(subject.instance_variable_get(:@players)).to eq(@sample_players)
-      end
+      expect(CreateRoster.query_for_roster_and_new_plyrs).
+      to include(
+        roster_record: a_kind_of(Roster),
+        pids: a_collection_including(
+          a_kind_of(Integer) )
+      )
     end
   end
 
+    before(:example) do
+      @data = Hash[roster_record: @roster, pids: []]
+    end
+    # CreateRoster.instance_variable_set(:@game, @game)
+    describe '#roster_and_players_creation_logic' do
+      it 'sets @roster and @players' do
+        CreateRoster.instance_variable_set(:@game, @game)
+
+       run_logic
+        expect(subject.instance_variable_get(:@roster)).to eq(@roster)
+        expect(subject.instance_variable_get(:@players)).to eq(@sample_players)
+      end
+    end
+  end # context 'where roster has game'
+
   context 'does not have game:' do
     before(:context) do
-      @roster = Roster.new(team_id: 101)
       @players_sample = @players.first(5).clone
-      # @roster.players << @players_sample # 5 players
-      # # let(:team_hash_02_players) { team_hash_02["players"]}
-      @game = Game.new(id: 2, home_side: "New York Islanders")
+
+      @data = Hash[roster_record: @roster, pids: [12345, 23456]]
     end
 
-    after(:context) do @roster.destroy end
-
     describe '#roster_and_players_creation_logic' do
+      before(:example) do
+        @game = Game.new(id: 2, home_side: "New York Islanders")
+        CreateRoster.instance_variable_set(:@game, @game)
+      end
 
       it 'builds roster and adds game' do
-        allow(Roster).to receive_message_chain(:includes, :where, :references, :first) { @roster }
-
-        subject.roster_and_players_creation_logic(team_hash_02, @team, @game)
-
+        run_logic
         expect(subject.instance_variable_get(:@roster)).to be_kind_of(Roster)
         expect(subject.instance_variable_get(:@roster).games).to include(@game)
       end
 
-      # before do Player.destroy_all end
       it 'creates players' do
-
         allow(SQLOperations).to receive(:sql_insert_all).with("players", an_object_satisfying { |collection| collection.size == 22 }).and_return(17)
 
         allow(Player).to receive_message_chain(:order, :limit).with(17).and_return(@players_sample)
-
-        subject.roster_and_players_creation_logic(team_hash_02, @team, @game)
-
-        expect(subject.instance_variable_get(:@players)).to eq(@players_sample)
+        run_logic
+        expect(subject.instance_variable_get(:@players)).
+        to eq(@players_sample)
       end
     end
   end # context 'does not have game'
@@ -125,8 +144,8 @@ describe CreateRoster do
     describe '#add_profiles_to_game' do
       before(:example) do
         # for some reason, 'creates players' example above results in 'created_at / updated_at' fields on @player_profiles, having non-nil values...
-        @player_profiles = team_hash_02["players"].map.with_index do |id, index|
-            plyr_hash = team_hash_02["players"]["#{id[0]}"]
+        @player_profiles = @team_hash["players"].map.with_index do |id, index|
+            plyr_hash = @team_hash["players"]["#{id[0]}"]
             PlayerProfile.new(
               id: (index + @init_index),
               position: plyr_hash["position"]["name"],

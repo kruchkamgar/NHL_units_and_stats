@@ -17,16 +17,16 @@ module NHLGameEventsAPI
     end
 
     def create_game_events_and_log_entries
-      byebug
       # if Event.where(game_id: @game.id).any? then return true end
         # for 'add new events' functionality: grab events w/ game id, and subtract from API events (for ex: live-updating)
 
       events = fetch_data(get_shifts_url)["data"]
+      byebug unless events.any?
       events_by_team =
       events.
-      select { |event|
-        event["teamId"] == @team.team_id
-      }
+      select do |event|
+        event["teamId"] == @team.team_id end
+
       goal_events =
       events_by_team.
       select { |event|
@@ -80,6 +80,7 @@ module NHLGameEventsAPI
         records_hash = get_profile_by ({
           player_id_num: event.player_id_num
         })
+        byebug if records_hash[:profile] == nil
         [event, records_hash]
       end
 
@@ -99,7 +100,6 @@ module NHLGameEventsAPI
       # grab events
 
     end #create_game_events
-
 
     # create events; and then log entries for player_profiles involved in the event
     def create_goal_events(goal_events)
@@ -212,14 +212,15 @@ module NHLGameEventsAPI
 
     end #get_new_assisters_log_entries
 
-    def couple_api_and_created_events
+    def couple_api_and_created_events(api_events, inserted_events)
       @api_and_created_events_coupled =
-      goal_events.
-      map do |api_event|
-        created_event = inserted_events.find do |ins_evnt|
-          ins_evnt.end_time == api_event["endTime"] end
-
-        [api_event, created_event]
+      api_events.
+      map do |evnt|
+        created_event =
+        inserted_events.
+        find do |ins_evnt|
+          ins_evnt.end_time == evnt["endTime"] end
+        [evnt, created_event]
       end
     end
 
@@ -239,9 +240,11 @@ module NHLGameEventsAPI
       @game.player_profiles.
       find do |profile|
           profile.player_id == player.id end
+
+      byebug unless player_profile
       Hash[ profile: player_profile ]
     end
-
+    # http://www.nhl.com/stats/rest/shiftcharts?cayenneExp=gameId=2018020008
     def get_shifts_url
       "#{SHIFT_CHARTS_URL}?cayenneExp=gameId=#{@game.game_id}"
     end
