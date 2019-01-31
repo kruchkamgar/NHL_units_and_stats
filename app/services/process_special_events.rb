@@ -44,12 +44,13 @@ module ProcessSpecialEvents
       # find the special event's corresponding instance
       cspg_instance =
       @game_instances.
-      find do |instance| # *1
-        instance_end_time =
-        TimeOperation.new(:+, instance.start_time, instance.duration).result
-
-        event.end_time > instance.start_time && event.end_time <= instance_end_time && instance.events.first.period == event.period
+      find do |instance|
+        true
+        # instance_end_time = TimeOperation.new(:+, instance.start_time, instance.duration).result
+        #
+        # (event.end_time > instance.start_time && event.end_time <= instance_end_time && instance.events.first.period == event.period)
       end
+      byebug
       cspg_instance.events << event if (cspg_instance.events & [event]).empty?
 
       Hash[instance: cspg_instance, event: event]
@@ -83,7 +84,7 @@ module ProcessSpecialEvents
   end #(method)
 
   module_function :get_special_events_data,
-  :associate_events_to_instances, :tally_special_events
+  :associate_events_to_instances, :tally_special_events, :process_special_events
 end
 
 

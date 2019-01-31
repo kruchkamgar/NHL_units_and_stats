@@ -60,9 +60,16 @@ describe 'CreateUnitsAndInstances' do
   end
 
   describe '#make_instances_events' do
+    let(:forwards) {
+      @roster.players.
+      select do |plyr|
+        plyr.player_profiles.first.
+        position_type == "Forward" end.
+      map(&:player_id_num) }
     let(:period_hash) { Hash[
-        1 => Event.where(event_type: 'shift' ).sample(6),
-        2 => Event.where(event_type: 'shift' ).sample(6)
+        1 => Event.where(event_type: 'shift', period: 1 ).
+        where(player_id_num: forwards).order(start_time: :asc).limit(12).to_a,
+        2 => Event.where(event_type: 'shift' ).first(12)
       ] }
 
     it 'makes array of arrays of events' do
@@ -70,14 +77,17 @@ describe 'CreateUnitsAndInstances' do
         a_collection_including(
           a_kind_of(Event)
         )
-      ) { true }
+      ).and_return(true, false, false, true, false, false, true)
 
       expect(
         CreateUnitsAndInstances.make_instances_events(period_hash, UNIT_HASH.keys.first)
       ).
       to a_collection_including(
         a_collection_including(
-          a_kind_of(Event)
+          a_kind_of(Event),
+          an_object_satisfying { |event|
+            event.start_time == "00:37"
+          }
       ) )
     end
   end
@@ -124,7 +134,6 @@ describe 'CreateUnitsAndInstances' do
     unit =
     Unit.new(id:1); unit.instances << instance; unit
   }
-
   describe '#get_preexisting_units' do
     it 'makes an array sequenced with pre-existing units, and nils for new units' do
       allow(Unit).to receive(:includes).with(instances: [ :events ]) { [existing_units] }
@@ -148,6 +157,7 @@ describe 'CreateUnitsAndInstances' do
     end
   end
 
+  # unit_players_names = Unit.all.select do |unit| unit.instances.any? end.map(&:instances).map do |inst| inst.map(&:events).map do |event| event.map do |event| Player.find_by(player_id_num: event.player_id_num).last_name end end end
   describe '#create_instances' do
     it '#inserts and retrieves instances' do
       expect(

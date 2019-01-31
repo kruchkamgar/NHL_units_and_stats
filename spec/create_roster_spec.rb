@@ -36,7 +36,7 @@ describe CreateRoster do
   before(:context) do
     @roster = Roster.new(team_id: 101)
     @game = Game.new(id: 2, home_side: "New York Islanders") end
-  # seems to destroy it automatically -- after(:context) do @game.destroy end 
+  # seems to destroy it automatically -- after(:context) do @game.destroy end
 
   describe '#query_for_roster_and_new_plyrs' do
     it 'retrieves matching roster record from db' do
@@ -158,16 +158,26 @@ describe CreateRoster do
       end
 
       it 'adds profiles' do # *1 *2
+        roster_players_dbl =
+        double('@roster.players')
 
         subject.instance_variable_set(:@players,
-        Player)
-
+        roster_players_dbl)
         subject.instance_variable_set(:@game,
         Game.new)
 
-        allow(Player).to receive(:includes).and_return(@players)
+        allow(roster_players_dbl).
+        to receive(:includes).
+        and_return(@players)
 
-        expect(subject.add_profiles_to_game.first(3).map(&:position)).to eq(@sample_profiles.map(&:position))
+        # sample_profiles contains first (3) @player_profiles?
+        expect(
+          subject.
+          add_profiles_to_game.first(3).
+          map(&:position) ).
+        to eq(
+          @sample_profiles.
+          map(&:position) )
       end
     end
   end

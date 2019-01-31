@@ -17,7 +17,8 @@ module NHLGameEventsAPI
     end
 
     def create_game_events_and_log_entries
-      # if Event.where(game_id: @game.id).any? then return true end
+      goal_events_inserted = Event.where(game_id: @game).any?
+
         # for 'add new events' functionality: grab events w/ game id, and subtract from API events (for ex: live-updating)
 
       events = fetch_data(get_shifts_url)["data"]
@@ -27,24 +28,28 @@ module NHLGameEventsAPI
       select do |event|
         event["teamId"] == @team.team_id end
 
-      goal_events =
+      shift_events_by_team =
       events_by_team.
-      select { |event|
-        event["typeCode"] == 505
-      }
-      shift_events_by_team = events_by_team - goal_events
+      reject do |event|
+        event["typeCode"] == 505 end
 
       inserted_events =
       create_events (shift_events_by_team)
       create_log_entries (inserted_events)
 
-      inserted_goal_events =
-      create_goal_events goal_events
-      couple_api_and_created_events(goal_events, inserted_goal_events)
-      create_goal_log_entries
+      unless goal_events_inserted
+        goal_events =
+        events.
+        select do |event|
+          event["typeCode"] == 505 end
+        inserted_goal_events =
+        create_goal_events goal_events
+        couple_api_and_created_events(goal_events, inserted_goal_events)
+        create_goal_log_entries()
+      end
 
       inserted_events.any?
-    end
+    end #create_game_events_and_log_entries
 
     def create_events (shift_events_by_team)
       made_events_array =
@@ -134,7 +139,7 @@ module NHLGameEventsAPI
     def create_goal_log_entries
       # aggregate prepared log_entries' hash arrays
       made_log_entries_array =
-      make_new_scorers_log_entries + make_new_assisters_log_entries
+      make_new_scorers_log_entries() + make_new_assisters_log_entries()
 
       log_entries_changes = SQLOperations.sql_insert_all("log_entries", made_log_entries_array )
     end
@@ -143,6 +148,7 @@ module NHLGameEventsAPI
       # retrieve event and player_profile records
       made_scorers_data = @api_and_created_events_coupled.
       map do |api_event, created_evt|
+        # byebug
         records_hash = get_profile_by({
             player_id_num: api_event["playerId"]
           })
@@ -229,13 +235,15 @@ module NHLGameEventsAPI
     def get_profile_by (**search_hash)
       #cross-reference passed attributes (search_hash keys) with roster players
       player =
-      @roster.players.
+      @game.rosters.
+      map(&:players).flatten(1).
       find do |plyr|
         search_hash.keys.
         map do |key|
           search_hash[key] == plyr.send(key)
         end.all?
       end
+      byebug unless player
       player_profile =
       @game.player_profiles.
       find do |profile|

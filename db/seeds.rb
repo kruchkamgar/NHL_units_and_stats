@@ -48,12 +48,12 @@ end
 def team_hash_players
    team_hash["players"].
    map.with_index(1) do |id, index|
-      plyr_hash = team_hash["players"]["#{id[0]}"]
+      plyr_hash = team_hash["players"]["#{id[0]}"]["person"]
       Player.find_or_create_by(
         id: index,
         first_name: plyr_hash["firstName"],
         last_name: plyr_hash["lastName"],
-        player_id_num: plyr_hash["person"]["id"]
+        player_id_num: plyr_hash["id"]
       )
     end
 end

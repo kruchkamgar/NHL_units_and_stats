@@ -11,6 +11,32 @@ module NHLTeamAPI
   BASE_URL = 'https://statsapi.web.nhl.com/api/v1/teams/'
   SCHEDULE_URL = 'https://statsapi.web.nhl.com/api/v1/schedule'
 
+  def create_all_teams_by_season
+    # get_season
+    make_teams_data
+  end
+
+  def make_teams_data
+    teams_data =
+    JSON.parse(RestClient.get(TEAM_URL))
+
+    made_teams_array =
+    teams_data["teams"].
+    map do |info_hash|
+      Hash[
+        team_id: info_hash["id"],
+        name: info_hash["name"],
+        season: @season,
+        created_at: Time.now, updated_at: Time.now ]
+    end
+    teams_changes =
+    SQLOperations.sql_insert_all("teams", made_teams_array )
+    # grab teams
+    if teams_changes > 0
+      inserted_teams = Team.order(id: :desc).limit(teams_changes)
+    end
+  end
+
   class Adapter
 
     def initialize (name: nil, team_id:, season: nil, start_date: nil, end_date: nil)
@@ -63,15 +89,15 @@ module NHLTeamAPI
     end
 
 
-    # /////////////////////  helpers  /////////////////////#
-    def get_season
-      year = Date.current.year
-      if Date.current.month > 9
-        @season = "#{year}#{year+1}"
-      else
-        @season = "#{year-1}#{year}"
-      end
-    end
+    # /////////////////////  helpers  ///////////////////// #
+  end
 
+  def get_season
+    year = Date.current.year
+    if Date.current.month > 9
+      @season = "#{year}#{year+1}"
+    else
+      @season = "#{year-1}#{year}"
+    end
   end
 end

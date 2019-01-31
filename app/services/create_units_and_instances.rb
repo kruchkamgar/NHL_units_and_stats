@@ -1,10 +1,13 @@
 =begin
--- TODO -- add units-rosters relationship? (alt. find by roster players for Units' shift-events only)
+
 
 - get shifts by team, for a game
 - create instances [of units], by processing shifts
 
-- process the special events, tallying results to instances fields
+- note: will NOT look for previous instances, will create duplicates; (does look for existing units)
+
+
+-- TODO -- add units-rosters relationship? (alt. find by roster players for Units' shift-events only)
 =end
 
 
@@ -35,40 +38,28 @@ module CreateUnitsAndInstances
       period_chronology = shifts_into_periods (shifts)
       #find all unit instances by shift events' temporal overlaps (format: array of arrays)
       instances_events_arrays = make_instances_events(period_chronology, unit_size)
-
       units_groups_hash = group_by_players(instances_events_arrays)
+
       make_units_and_instances (units_groups_hash)
     end
   end #create_records_from_shifts
 
   def make_units_and_instances units_groups_hash
-
     inserted_units =
     create_units(units_groups_hash.keys)
-    inserted_instances = create_instances(inserted_units, units_groups_hash.values)
+
+    # byebug
+    inserted_instances =
+    create_instances(inserted_units, units_groups_hash.values)
 
     associate_events_to_instances(inserted_instances, units_groups_hash.values.flatten(1))
   end
 
-  def get_preexisting_units (units)
-    @existing_units = Unit.includes( instances: [ :events ])
-    ex_units_and_nils =
-    units.
-    map do |unit|
-      existing_unit =
-      @existing_units.
-      select do |ex_unit|
-        ex_unit.instances.first.events.
-        map(&:player_id_num).sort == unit.sort end
-      existing_unit.first unless existing_unit.empty?
-    end
-  end
 
   def create_units (units) #instances_events_arrays, changes
-    ex_units_and_nils =
-    get_preexisting_units(units)
+    new_units, ex_units_and_nils = get_preexisting_units(units)
     made_units =
-    units.map do |unit|
+    new_units.map do |unit|
       Hash[
         created_at: Time.now,
         updated_at: Time.now ] end
@@ -77,7 +68,32 @@ module CreateUnitsAndInstances
     inserted_units =
     Unit.order(id: :desc).limit(units_changes)
 
-    ex_units_and_nils.zip(inserted_units).flatten.compact
+    inserted_units.reverse.
+    each do |unit|
+      ex_units_and_nils[
+        ex_units_and_nils.index(nil)] = unit end
+
+    ex_units_and_nils
+    # ex_units_and_nils.zip(inserted_units).flatten.compact
+  end
+
+  def get_preexisting_units (units)
+    @existing_units = Unit.includes( instances: [ :events ])
+    new_units = units.clone
+    ex_units_and_nils =
+    units.
+    map do |unit|
+      existing_unit =
+      @existing_units.
+      select do |ex_unit|
+        if ex_unit.instances.first.events.map(&:player_id_num).sort == unit.sort
+          new_units.delete_at(units.index(ex_unit))
+          true end
+      end
+        existing_unit.first unless existing_unit.empty?
+    end
+
+    [new_units, ex_units_and_nils]
   end
 
   def create_instances (inserted_units, units_groups)
@@ -87,6 +103,7 @@ module CreateUnitsAndInstances
     made_instances =
     inserted_units.reverse.
     map.with_index do |unit, i|
+      byebug unless units_groups[i]
       units_groups[i]. # coincident index from source: units_grouped_instances
       map do |instance| # [ event1, event2, ... ]
         Hash[
@@ -156,32 +173,39 @@ module CreateUnitsAndInstances
     shift_events.group_by do |event|
       event.period end.
     each do |period, events|
-      events.sort! do |shft_a, shft_b|
-        shft_a.start_time <=> shft_b.start_time end
+      events.sort_by! do |shft|
+        [shft.start_time, shft.end_time] end
     end
 
   end #shifts_into_periods
 
 
   def make_instances_events (p_chron, unit_size) # *4
-
     # currently also acts to filter non-shift events
-    min_shift_length = "00:15" # __ perhaps use a std deviation from median shift length
-    p_chron.
+    min_shift_length = "00:03" # __ perhaps use a std deviation from median shift length
+    this = p_chron.
     map do |period, events|
       events.delete_if do |event|
         event.duration <= min_shift_length end
+      selected =
       events.
       select.with_index do |shift, i|
         iteration = ( i...(i+unit_size) )
-        mutual_overlap ( events[iteration] )
+        mutual_overlap ( events[iteration] ) if events[iteration].size == unit_size
       end
-    end
+      instances =
+      selected.
+      map do |event|
+        i = events.index(event)
+        iteration = ( i...(i+unit_size) )
+        events[iteration] end
+    end.flatten(1)
   end #make_instances_events
 
   def mutual_overlap (shift_group)
     # refine: set minimum ice-time shared
     shifts_array = shift_group.clone
+
 =begin (comments)
 
 unit criteria– why no larger minimum overlap time?
@@ -191,13 +215,15 @@ unit criteria– why no larger minimum overlap time?
 
 # overlap defined: shift ends after its comparison starts
 #...without starting after the comparison shift ends
-    shifts_array.
+    this = shifts_array.
     map.with_index do |shift, i|
       shifts_array[(i+1)..-1].# +1 past index of "shift"
       all? do |overlaps|
         shift.end_time > overlaps.start_time && overlaps.end_time > shift.start_time
       end if i < shifts_array.size - 1
     end.compact.all?
+    # byebug if shift_group.any? { |event| event.start_time == "10:37"}
+    this
   end #mutual_overlap
 
   def group_by_players(instances_events_arrays)
