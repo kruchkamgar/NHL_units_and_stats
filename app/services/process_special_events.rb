@@ -8,28 +8,38 @@ module ProcessSpecialEvents
 
     get_special_events_data
     @team_events =
-    @special_events - @opposing_team_events
+    @special_events - @opposing_events
+    opposing_sans_ppg =
+    @opposing_events.
+    reject do |event|
+      event.event_type == "PPG" end
 
-    opposing_data = associate_events_to_instances(@opposing_team_events)
+    opposing_data = associate_events_to_instances(opposing_sans_ppg)
     team_data =
     associate_events_to_instances(@team_events)
 
-    tally_special_events(opposing_data)
-    tally_special_events(team_data, true)
+    opposing_data.
+    each do |data|
+      tally_special_events(data) end
+    team_data.
+    each do |data|
+      tally_special_events(data, true) end
   end
 
   def get_special_events_data
     @game_instances =
     Instance.includes(:events).
-    where(events: { game_id: @game.id})
+    where(events: { game_id: @game.id}).
+    where(events: { player_id_num:
+      @roster.players.map(&:player_id_num) })
     # add the events and their tallies for each instance
 
-    @special_events =
+    @special_events = #*2
     Event.includes(:log_entries).
     where( events: { game_id: @game.id } ).
     where.not( events: { event_type: 'shift'} )
 
-    @opposing_team_events =
+    @opposing_events =
     @special_events.
     reject do |event|
       @roster.players.
@@ -43,14 +53,13 @@ module ProcessSpecialEvents
     map do |event|
       # find the special event's corresponding instance
       cspg_instance =
-      @game_instances.
+      @game_instances.to_a.
       find do |instance|
-        true
-        # instance_end_time = TimeOperation.new(:+, instance.start_time, instance.duration).result
-        #
-        # (event.end_time > instance.start_time && event.end_time <= instance_end_time && instance.events.first.period == event.period)
+        instance_end_time = TimeOperation.new(:+, instance.start_time, instance.duration).result
+
+        event.end_time > instance.start_time && event.end_time <= instance_end_time && instance.events.first.period == event.period
       end
-      byebug
+      byebug unless cspg_instance
       cspg_instance.events << event if (cspg_instance.events & [event]).empty?
 
       Hash[instance: cspg_instance, event: event]
@@ -94,3 +103,8 @@ end
 #  add an event into an instance_events array within create_units_and_instances
 
   # integration means only tally +/- per game rather than for each team
+
+# *2- spickermann says that I may enhance performance by performing the PPG filter-out with a SQL condition instead.
+# Event.joins(player_profiles: {player: {rosters: :team}}).where(teams: {team_id: 1})
+#
+# --https://stackoverflow.com/questions/54471373/detect-and-find-return-nil-whereas-find-all-and-select-return-a-result

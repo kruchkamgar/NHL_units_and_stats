@@ -45,10 +45,10 @@ module CreateUnitsAndInstances
   end #create_records_from_shifts
 
   def make_units_and_instances units_groups_hash
+
     inserted_units =
     create_units(units_groups_hash.keys)
 
-    # byebug
     inserted_instances =
     create_instances(inserted_units, units_groups_hash.values)
 
@@ -65,13 +65,16 @@ module CreateUnitsAndInstances
         updated_at: Time.now ] end
     units_changes =
     SQLOperations.sql_insert_all("units", made_units)
-    inserted_units =
-    Unit.order(id: :desc).limit(units_changes)
+    if units_changes > 0
+      inserted_units =
+      Unit.order(id: :desc).limit(units_changes) end
 
     inserted_units.reverse.
     each do |unit|
+      byebug unless ex_units_and_nils.index(nil)
       ex_units_and_nils[
-        ex_units_and_nils.index(nil)] = unit end
+        ex_units_and_nils.index(nil)] = unit
+    end if inserted_units.any?
 
     ex_units_and_nils
     # ex_units_and_nils.zip(inserted_units).flatten.compact
@@ -87,10 +90,10 @@ module CreateUnitsAndInstances
       @existing_units.
       select do |ex_unit|
         if ex_unit.instances.first.events.map(&:player_id_num).sort == unit.sort
-          new_units.delete_at(units.index(ex_unit))
+          new_units.delete_at(new_units.index(unit))
           true end
       end
-        existing_unit.first unless existing_unit.empty?
+      existing_unit.first unless existing_unit.empty?
     end
 
     [new_units, ex_units_and_nils]
@@ -222,7 +225,7 @@ unit criteria– why no larger minimum overlap time?
         shift.end_time > overlaps.start_time && overlaps.end_time > shift.start_time
       end if i < shifts_array.size - 1
     end.compact.all?
-    # byebug if shift_group.any? { |event| event.start_time == "10:37"}
+
     this
   end #mutual_overlap
 

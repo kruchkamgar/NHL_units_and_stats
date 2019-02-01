@@ -1,4 +1,7 @@
 module DestroyDb
+
+  # require './db/destroy_db'; include DestroyDb; destroy_all_db
+
   def destroy_all_db
     LogEntry.destroy_all
     Circumstance.destroy_all
