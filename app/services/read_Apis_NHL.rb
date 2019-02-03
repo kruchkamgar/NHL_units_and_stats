@@ -52,7 +52,7 @@ module ReadApisNHL
 
       game, teams_hash =
       NHLGameAPI::Adapter.
-      new(game_id: game_id).
+      new(game_id: 2018020048).
       create_game
       # game API may deliver two teams' players
 
@@ -67,6 +67,7 @@ module ReadApisNHL
         @team, game: game, roster: roster).
       create_game_events_and_log_entries # *1
 
+      byebug
       if events_boolean
         CreateUnitsAndInstances.
         create_records_from_shifts(@team, roster, game)

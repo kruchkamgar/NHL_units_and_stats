@@ -23,7 +23,6 @@ module CreateUnitsAndInstances
   }
 
   def create_records_from_shifts (team, roster, game)
-
     @team = team
     @game = Game.where(id: game).includes(events: [:player_profiles])[0]
     @roster = Roster.where(id: roster).includes(:players)[0]
@@ -58,6 +57,7 @@ module CreateUnitsAndInstances
 
   def create_units (units) #instances_events_arrays, changes
     new_units, ex_units_and_nils = get_preexisting_units(units)
+    # byebug
     made_units =
     new_units.map do |unit|
       Hash[
@@ -160,15 +160,17 @@ module CreateUnitsAndInstances
   # get the shifts for the roster
   def get_shifts roster_sample
     # any player in the roster match each shift event's player profile(s)?
-    shifts = @game.events.
+    shifts =
+    @game.events.
     select do |event|
+      event.event_type == "shift" &&
       roster_sample.
       any? do |player|
           event.player_profiles.
           any? do |profile|
             profile.player_id == player.id end
       end
-    end
+    end #select
   end #get_shifts
 
   def shifts_into_periods (shift_events)
@@ -185,23 +187,31 @@ module CreateUnitsAndInstances
 
   def make_instances_events (p_chron, unit_size) # *4
     # currently also acts to filter non-shift events
-    min_shift_length = "00:03" # __ perhaps use a std deviation from median shift length
-    this = p_chron.
+    min_shift_length = "00:03" # *6
+    p_chron.
     map do |period, events|
-      events.delete_if do |event|
-        event.duration <= min_shift_length end
-      selected =
+      overlap_events =
       events.
-      select.with_index do |shift, i|
-        iteration = ( i...(i+unit_size) )
-        mutual_overlap ( events[iteration] ) if events[iteration].size == unit_size
-      end
-      instances =
-      selected.
-      map do |event|
-        i = events.index(event)
-        iteration = ( i...(i+unit_size) )
-        events[iteration] end
+      map.with_index do |event, ind|
+        overlaps = []
+        inc = ind+1
+        for comparison in events[inc..-1]
+          if event.end_time > comparison.start_time
+            overlaps.push comparison
+          else break overlaps end
+        end
+        byebug if unit_size == 6
+        instances =
+        overlaps.
+        combination(unit_size-1).to_a.
+        map do |combination|
+          instance =
+          [event, *combination].sort do |a,b|
+            a.start_time <=> b.start_time end
+          instance if mutual_overlap(instance)
+        end.compact
+      end.reject(&:empty?).flatten(1)
+
     end.flatten(1)
   end #make_instances_events
 
@@ -209,24 +219,15 @@ module CreateUnitsAndInstances
     # refine: set minimum ice-time shared
     shifts_array = shift_group.clone
 
-=begin (comments)
-
-unit criteria– why no larger minimum overlap time?
-  - even a 2-second overlap can make a difference in the play (relevant unit criteria)
-  - if using minimum overlap time, use on top of 2 or 4 plyrs (3, or 5-man unit)
-=end
-
-# overlap defined: shift ends after its comparison starts
-#...without starting after the comparison shift ends
-    this = shifts_array.
+    # overlap defined: shift ends after its comparison starts
+    #...without starting after the comparison shift ends
+    shifts_array.
     map.with_index do |shift, i|
       shifts_array[(i+1)..-1].# +1 past index of "shift"
-      all? do |overlaps|
-        shift.end_time > overlaps.start_time && overlaps.end_time > shift.start_time
+      all? do |comparison|
+        shift.end_time > comparison.start_time && comparison.end_time > shift.start_time
       end if i < shifts_array.size - 1
     end.compact.all?
-
-    this
   end #mutual_overlap
 
   def group_by_players(instances_events_arrays)
@@ -294,6 +295,11 @@ end
 # - could use a different API for this however (w/ similar code)
 # create instances for new instances_events only
 #
+
+# *6- (requirements)
+# unit criteria– why no larger minimum overlap time?
+#   - even a 2-second overlap can make a difference in the play (relevant unit criteria)
+#   - if using minimum overlap time, use on top of 2 or 4 plyrs (3, or 5-man unit)
 
 # ///////////// extra ///////////// #
 

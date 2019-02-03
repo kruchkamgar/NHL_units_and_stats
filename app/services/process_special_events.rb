@@ -52,6 +52,7 @@ module ProcessSpecialEvents
     events.
     map do |event|
       # find the special event's corresponding instance
+      byebug if @game.game_id == 2018020048
       cspg_instance =
       @game_instances.to_a.
       find do |instance|

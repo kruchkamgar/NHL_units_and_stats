@@ -68,16 +68,16 @@ describe 'CreateUnitsAndInstances' do
       map(&:player_id_num) }
     let(:period_hash) { Hash[
         1 => Event.where(event_type: 'shift', period: 1 ).
-        where(player_id_num: forwards).order(start_time: :asc).limit(12).to_a,
-        2 => Event.where(event_type: 'shift' ).first(12)
+        where(player_id_num: forwards).order(start_time: :asc).limit(12).to_a
+        # 2 => Event.where(event_type: 'shift' ).first(12)
       ] }
 
-    it 'makes array of arrays of events' do
-      allow(CreateUnitsAndInstances).to receive(:mutual_overlap).with(
-        a_collection_including(
-          a_kind_of(Event)
-        )
-      ).and_return(true, false, false, true, false, false, true)
+    it 'makes array of arrays of events', :overlaps do
+      # allow(CreateUnitsAndInstances).to receive(:mutual_overlap).with(
+      #   a_collection_including(
+      #     a_kind_of(Event)
+      #   )
+      # ).and_return(true, false, false, true, false, false, true)
 
       expect(
         CreateUnitsAndInstances.make_instances_events(period_hash, UNIT_HASH.keys.first)

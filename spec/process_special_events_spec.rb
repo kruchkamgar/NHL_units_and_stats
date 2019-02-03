@@ -62,7 +62,7 @@ describe 'ProcessSpecialEvents' do
   end
 
   # ["00:00", 3, ["Palmieri", "Hischier", "Hall"]]—-
-  # this = @game_instances.map do |inst| inst end.to_a.map do |inst| x = inst.events.first\; [x.start_time, x.period , inst.events.map do |event| Player.find_by_player_id_num(event.player_id_num).last_name end ] end
+  # ok = @game_instances.sort_by do |inst| [inst.events.map(&:player_id_num).uniq.size, inst.events.first.period, inst.start_time] end.map do |inst| inst end.to_a.map do |inst| x = inst.events.first\; [x.start_time, x.period , inst.events.map do |event| Player.find_by_player_id_num(event.player_id_num).last_name end ] end
 
   let(:instance) { instance = Instance.new(); }
   let(:data) {
