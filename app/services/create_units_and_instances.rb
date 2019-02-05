@@ -60,7 +60,7 @@ module CreateUnitsAndInstances
   end
 
   def create_units (units) #instances_events_arrays, changes
-    formed_units, ex_and_formed_u_nils = get_preexisting_units(units)
+    formed_units, ordered_unit_array = get_preexisting_units(units)
 
     # if ex_and_formed_u_nils.include? (Unit.all.to_a.find do |u| u.instances.first.events.map(&:player_id_num).sort == [8471233, 8475151, 8475791] end)
     #   byebug end
@@ -68,7 +68,12 @@ module CreateUnitsAndInstances
     #   any? do |u| u.sort == [8471233, 8475151, 8475791] end
     #   puts "formed_units––\n"
     #   byebug end
+    if ordered_unit_array.any? nil
+      ordered_unit_array = insert_units(formed_units, ordered_unit_array)
+    else ordered_unit_array end
+  end
 
+  def insert_units(formed_units, ex_and_formed_u_nils)
     prepared_units =
     formed_units.
     map do |unit|
@@ -87,7 +92,7 @@ module CreateUnitsAndInstances
       nil_ind = ex_and_formed_u_nils.index(nil)
       if nil_ind
         ex_and_formed_u_nils[nil_ind] = unit end
-    end if inserted_units.any?
+      end #if inserted_units.any?
 
     ex_and_formed_u_nils
   end
@@ -284,6 +289,7 @@ module CreateUnitsAndInstances
    :mutual_overlap,
    :group_by_players,
    :get_preexisting_units,
+   :insert_units,
    :create_instances,
    :create_units,
    :form_units_and_instances, :associate_events_to_instances

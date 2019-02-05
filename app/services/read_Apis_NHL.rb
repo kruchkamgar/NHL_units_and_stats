@@ -1,7 +1,7 @@
 module ReadApisNHL
   include NHLTeamAPI
 
-  #  create class/ Adapter for each team, process games only once per team (@@games)
+  #  create class/ Adapter for each team, to enable processing games only once per team (@processed_games)
     # -- can then replace NHLGameEventsAPI gate
 
   def create_teams_for_season
