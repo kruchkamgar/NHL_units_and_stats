@@ -19,6 +19,7 @@ module ReadApisNHL
     Hash[
       ids: teams_data.transpose.first,
       hash_data: teams_data.transpose.second ]
+
     team_records =
     Team.where(team_id: hashed[:ids])
     hashed[:hash_data].
@@ -35,7 +36,7 @@ module ReadApisNHL
 
   def read_NHL_APIs
 
-    create_teams_for_season
+    create_teams_for_season()
     # create team and get its schedule
     @team, team_adapter = NHLTeamAPI::Adapter.new(team_id: 1).create_team
     schedule_hash =
@@ -52,12 +53,11 @@ module ReadApisNHL
 
       game, teams_hash =
       NHLGameAPI::Adapter.
-      new(game_id: 2018020048).
+      new(game_id: game_id).
       create_game
       # game API may deliver two teams' players
 
       rosters = create_roster(game, teams_hash)
-
       roster = rosters.find do |roster|
         roster.team.eql?(@team) end
 
@@ -67,7 +67,7 @@ module ReadApisNHL
         @team, game: game, roster: roster).
       create_game_events_and_log_entries # *1
 
-      byebug
+      # byebug
       if events_boolean
         CreateUnitsAndInstances.
         create_records_from_shifts(@team, roster, game)

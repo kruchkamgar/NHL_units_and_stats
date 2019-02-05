@@ -9,14 +9,19 @@ module ProcessSpecialEvents
     get_special_events_data
     @team_events =
     @special_events - @opposing_events
+    team_sans_shg =
+    @team_events.
+    reject do |event|
+      event.event_type == "SHG" end
     opposing_sans_ppg =
     @opposing_events.
     reject do |event|
       event.event_type == "PPG" end
 
+# only working for 3-man unit
     opposing_data = associate_events_to_instances(opposing_sans_ppg)
     team_data =
-    associate_events_to_instances(@team_events)
+    associate_events_to_instances(team_sans_shg)
 
     opposing_data.
     each do |data|
@@ -48,11 +53,12 @@ module ProcessSpecialEvents
     end
   end #get_special_events_data
 
+  # should skip SHGs for; PPGs against, until 2/4-man
   def associate_events_to_instances (events)
+# only working for 3-man unit
     events.
     map do |event|
       # find the special event's corresponding instance
-      byebug if @game.game_id == 2018020048
       cspg_instance =
       @game_instances.to_a.
       find do |instance|
@@ -61,7 +67,7 @@ module ProcessSpecialEvents
         event.end_time > instance.start_time && event.end_time <= instance_end_time && instance.events.first.period == event.period
       end
       byebug unless cspg_instance
-      cspg_instance.events << event if (cspg_instance.events & [event]).empty?
+      cspg_instance.events << event if (cspg_instance.events & [event]).empty? # adds even events by the OPPOSING team
 
       Hash[instance: cspg_instance, event: event]
     end

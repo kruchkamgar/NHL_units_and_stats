@@ -49,12 +49,13 @@ module CreateRoster
     else new_player_id_nums = player_id_nums end
     Hash[
       roster_record: roster_record,
-      pids: new_player_id_nums ]
+      n_p_ids: new_player_id_nums,
+      p_ids: player_id_nums ]
   end
 
   # if new players exist (and no matching roster found, therefore) @game brings a NEW roster
   def self.roster_and_players_creation_logic (data)
-    roster_record = data[:roster_record]; new_player_id_nums = data[:pids]
+    roster_record = data[:roster_record]; new_player_id_nums = data[:n_p_ids];
 
     if new_player_id_nums.any? &&
       !( roster_record.games.include?(@game) if roster_record )# blocks api game roster update contingency, which could bring new players
@@ -62,29 +63,29 @@ module CreateRoster
 # >>? check first if player exists, as opposed to letting database handle uniqueness for player_id_nums
 # - team_hash players.any? { |player| Player.all.include? player }
       new_players_array =
-      @team_hash["players"].map do |id, player_hash|
+      @team_hash["players"].
+      select do |id, player_hash|
+        new_player_id_nums.include? player_hash["person"]["id"] end.
+      map do |id, player_hash|
         person = player_hash["person"]
         Hash[
           first_name: person["firstName"],
           last_name: person["lastName"],
           player_id_num: person["id"],
           created_at: Time.now,
-          updated_at: Time.now
-        ]
+          updated_at: Time.now ]
       end
       players_changes = SQLOperations.sql_insert_all("players", new_players_array )
-      if players_changes > 0
-        inserted_players = Player.order(id: :desc).limit(players_changes)
-        @roster.players << inserted_players
-      end
 
+      @roster.players <<
+      Player.where(player_id_num: data[:p_ids] )
       @roster.games << @game
       @roster.save
     else
       @roster = roster_record
       @roster.games << @game unless @roster.games.include?(@game)
     end # if ...
-  end
+  end #roster_and_players_creation_logic
 
   def self.map_player_records_to_api
     @player_records_to_api =
@@ -129,6 +130,7 @@ module CreateRoster
 
   # add all the database profiles found in team_hash, to @game
   def self.add_profiles_to_game (inserted_profiles)
+
     # players_records =
     # @roster.players.
     # includes(:player_profiles)
@@ -155,11 +157,8 @@ module CreateRoster
     @game.player_profiles +=
     (
       game_profiles +
-      (inserted_profiles || []) - @game.player_profiles )
-
-     # if (@game.player_profiles & player_profiles).empty? # '&' operator tests array overlap
+      (inserted_profiles || []) - @game.player_profiles ) # existing + inserted - pre-existing
   end
-
 
   # ////////////////// fetch roster(s) from API ////////////////// #
 
@@ -176,22 +175,19 @@ module CreateRoster
     def fetch_roster
       roster = JSON.parse(RestClient.get(get_url))
 
-      roster["teams"].each { |roster_hash|
-        roster_hash["roster"]["roster"].each { |player|
-
-          player_name = /(?<first_name>[^\s]+)\s(?<last_name>[^\s]+)/.match(
-            player["person"]["fullName"]
-          )
-
-          Player.find_or_create_by(
+      roster["teams"].
+      each do |roster_hash|
+        roster_hash["roster"]["roster"].
+        each do |player|
+          player_name = /(?<first_name>[^\s]+)\s(?<last_name>[^\s]+)/.
+          match( player["person"]["fullName"] )
+          Player.
+          find_or_create_by(
             player_id: player["person"]["id"],
             first_name: player_name["first_name"],
-            last_name: player_name["last_name"]
-          )
-        }
-      }
-
-      # return roster hash; or call # self.class.create_game_roster, first
+            last_name: player_name["last_name"] )
+        end
+      end #each
     end
 
     def get_url

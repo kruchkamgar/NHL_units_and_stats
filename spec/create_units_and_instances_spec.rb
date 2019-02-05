@@ -115,24 +115,26 @@ describe 'CreateUnitsAndInstances' do
   end
 
   let(:units_groups_hash) {
-    sample_events = Event.all.sample(3)
-    player_id_nums = sample_events.map(&:player_id_num)
+    abc_events = Event.all.sample(3)
+    abc_player_id_nums =
+    abc_events.map(&:player_id_num)
     Hash[
       [123, 234, 345] => [ Event.all.sample(3), Event.all.sample(3) ],
       [543, 432, 321] => [ Event.all.sample(3), Event.all.sample(3) ],
-      player_id_nums => [ sample_events ]
+      abc_player_id_nums => [ abc_events ]
     ]
   }
   let(:units) {
-    units_groups_hash.
-    keys.map.with_index do |unit, i|
+    units_groups_hash.keys.
+    map.with_index do |unit, i|
       Unit.new(id: i) end }
   let(:existing_units) {
     instance = Instance.create(id: 100)
-    instance.
-    events << units_groups_hash.values.last.flatten(1)
+    instance.events << units_groups_hash.
+                       values.last.flatten(1)
     unit =
-    Unit.new(id:1); unit.instances << instance; unit
+    Unit.new(id:1); unit.instances << instance;
+    unit
   }
   describe '#get_preexisting_units' do
     it 'makes an array sequenced with pre-existing units, and nils for new units' do
@@ -141,7 +143,9 @@ describe 'CreateUnitsAndInstances' do
       expect(
         CreateUnitsAndInstances.get_preexisting_units(units_groups_hash.keys)
       ).
-      to include(nil, nil, existing_units)
+      to a_collection_including(
+        include(nil, nil, existing_units)
+      )
     end
   end
 

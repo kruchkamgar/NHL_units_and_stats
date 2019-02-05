@@ -17,7 +17,7 @@ module NHLGameEventsAPI
     end
 
     def create_game_events_and_log_entries
-      goal_events_inserted = Event.where(game_id: @game).any?
+      game_record = Event.where(game_id: @game).any?
 
         # for 'add new events' functionality: grab events w/ game id, and subtract from API events (for ex: live-updating)
 
@@ -37,7 +37,7 @@ module NHLGameEventsAPI
       create_events (shift_events_by_team)
       create_log_entries (inserted_events)
 
-      unless goal_events_inserted
+      unless game_record
         goal_events =
         events.
         select do |event|

@@ -17,9 +17,10 @@ module CreateUnitsAndInstances
 
   UNIT_HASH = {
     # 2 => ["Defenseman"]
+    2 => ["Forward"], #4-on-4 (EVGs), SH
     3 => ["Forward"],
     5 => ["Forward", "Defenseman"],
-    6 => ["Forward", "Defenseman", "Goalie"]
+    # 6 => ["Forward", "Defenseman", "Goalie"], #6-skater
   }
 
   def create_records_from_shifts (team, roster, game)
@@ -36,14 +37,18 @@ module CreateUnitsAndInstances
       # {[period1 event1, 2...], [p2 event1, 2, ...] ... }
       period_chronology = shifts_into_periods (shifts)
       #find all unit instances by shift events' temporal overlaps (format: array of arrays)
-      instances_events_arrays = make_instances_events(period_chronology, unit_size)
+      instances_events_arrays = form_instances_events(period_chronology, unit_size)
       units_groups_hash = group_by_players(instances_events_arrays)
 
-      make_units_and_instances (units_groups_hash)
+      form_units_and_instances (units_groups_hash)
     end
   end #create_records_from_shifts
 
-  def make_units_and_instances units_groups_hash
+  def form_units_and_instances units_groups_hash
+
+              # if units_groups_hash.keys.
+              # any? do |key| key.sort == [8471233, 8475151, 8475791] end
+              #   byebug; ok = true; end
 
     inserted_units =
     create_units(units_groups_hash.keys)
@@ -54,59 +59,70 @@ module CreateUnitsAndInstances
     associate_events_to_instances(inserted_instances, units_groups_hash.values.flatten(1))
   end
 
-
   def create_units (units) #instances_events_arrays, changes
-    new_units, ex_units_and_nils = get_preexisting_units(units)
-    # byebug
-    made_units =
-    new_units.map do |unit|
+    formed_units, ex_and_formed_u_nils = get_preexisting_units(units)
+
+    # if ex_and_formed_u_nils.include? (Unit.all.to_a.find do |u| u.instances.first.events.map(&:player_id_num).sort == [8471233, 8475151, 8475791] end)
+    #   byebug end
+    # if formed_units.
+    #   any? do |u| u.sort == [8471233, 8475151, 8475791] end
+    #   puts "formed_units––\n"
+    #   byebug end
+
+    prepared_units =
+    formed_units.
+    map do |unit|
       Hash[
         created_at: Time.now,
-        updated_at: Time.now ] end
+        updated_at: Time.now ]
+    end
     units_changes =
-    SQLOperations.sql_insert_all("units", made_units)
+    SQLOperations.sql_insert_all("units", prepared_units)
     if units_changes > 0
       inserted_units =
-      Unit.order(id: :desc).limit(units_changes) end
-
+      Unit.order(id: :desc).limit(units_changes)
+    end
     inserted_units.reverse.
     each do |unit|
-      byebug unless ex_units_and_nils.index(nil)
-      ex_units_and_nils[
-        ex_units_and_nils.index(nil)] = unit
+      nil_ind = ex_and_formed_u_nils.index(nil)
+      if nil_ind
+        ex_and_formed_u_nils[nil_ind] = unit end
     end if inserted_units.any?
 
-    ex_units_and_nils
-    # ex_units_and_nils.zip(inserted_units).flatten.compact
+    ex_and_formed_u_nils
   end
 
   def get_preexisting_units (units)
-    @existing_units = Unit.includes( instances: [ :events ])
-    new_units = units.clone
-    ex_units_and_nils =
+    @existing_units =
+    Unit.includes( instances: [ :events ]).
+    where(instances: {events: {event_type: "shift"}})
+    formed_units = units.clone
+    # nils act as placeholders for queued new units. swaps pre-existing units with their records from db.
+    ex_and_formed_u_nils =
     units.
     map do |unit|
       existing_unit =
       @existing_units.
       select do |ex_unit|
         if ex_unit.instances.first.events.map(&:player_id_num).sort == unit.sort
-          new_units.delete_at(new_units.index(unit))
-          true end
+          # byebug if unit.sort == [8471233, 8475151, 8475791]
+          formed_units.delete_at(formed_units.index(unit))
+          true
+        end
       end
       existing_unit.first unless existing_unit.empty?
     end
 
-    [new_units, ex_units_and_nils]
+    [formed_units, ex_and_formed_u_nils]
   end
 
   def create_instances (inserted_units, units_groups)
     #  input units ids into each of instances hashes array
     # insert units; get units; ...
 
-    made_instances =
-    inserted_units.reverse.
+    prepared_instances =
+    inserted_units. #create_units already reverses them
     map.with_index do |unit, i|
-      byebug unless units_groups[i]
       units_groups[i]. # coincident index from source: units_grouped_instances
       map do |instance| # [ event1, event2, ... ]
         Hash[
@@ -118,17 +134,20 @@ module CreateUnitsAndInstances
       end # *3
     end.flatten(1)
 
-    instances_changes = SQLOperations.sql_insert_all("instances", made_instances)
+    instances_changes = SQLOperations.sql_insert_all("instances", prepared_instances)
 
-    inserted_instances = Instance.order(id: :desc).limit(instances_changes)
+    inserted_instances =
+    Instance.order(id: :desc).limit(instances_changes).reverse
   end
 
-  def associate_events_to_instances(inserted_instances, new_instances)
+  def associate_events_to_instances(inserted_instances, formed_instances)
     # insert instances; get instances; ...
-    made_associations =
-    inserted_instances.reverse.
+    prepared_associations =
+    inserted_instances.
     map.with_index do |instance, i|
-      new_instances[i].map do |event|
+      formed_instances[i].map do |event|
+        # byebug if formed_instances[i].to_a.
+        # map(&:player_id_num).sort == [8471233, 8475151, 8475791]
         Hash[
           instance_id: instance.id,
           event_id: event.id
@@ -136,7 +155,7 @@ module CreateUnitsAndInstances
       end
     end.flatten
 
-    SQLOperations.sql_insert_all("events_instances", made_associations)
+    SQLOperations.sql_insert_all("events_instances", prepared_associations)
   end
 
 
@@ -151,15 +170,17 @@ module CreateUnitsAndInstances
       include? (
         @game.player_profiles.
         find do |profile|
-         profile.player_id == player.id end.
+        profile.player_id == player.id end.
         position_type
       )
     end
   end
 
+  # roster -< players -< player_profiles
+  # game -< player_profiles
   # get the shifts for the roster
   def get_shifts roster_sample
-    # any player in the roster match each shift event's player profile(s)?
+    # select shifts by matching to roster sample's player_profiles
     shifts =
     @game.events.
     select do |event|
@@ -175,19 +196,25 @@ module CreateUnitsAndInstances
 
   def shifts_into_periods (shift_events)
     period_chron =
-    shift_events.group_by do |event|
+    shift_events.
+    group_by do |event|
       event.period end.
     each do |period, events|
       events.sort_by! do |shft|
         [shft.start_time, shft.end_time] end
     end
-
   end #shifts_into_periods
 
-
-  def make_instances_events (p_chron, unit_size) # *4
+  def form_instances_events (p_chron, unit_size) # *4
     # currently also acts to filter non-shift events
     min_shift_length = "00:03" # *6
+
+                    #detect number of players on ice (3, 4 (SH), 5, 6-skaters)
+
+    # exclude power-plays by detecting 4-fwds on ice
+      # - do the 5-man units first;
+      # - and when 4-fwds, reject concurrent 3-man instances
+    # look for the goalie changes and derive new instances from 5-man units.
     p_chron.
     map do |period, events|
       overlap_events =
@@ -200,7 +227,6 @@ module CreateUnitsAndInstances
             overlaps.push comparison
           else break overlaps end
         end
-        byebug if unit_size == 6
         instances =
         overlaps.
         combination(unit_size-1).to_a.
@@ -211,9 +237,8 @@ module CreateUnitsAndInstances
           instance if mutual_overlap(instance)
         end.compact
       end.reject(&:empty?).flatten(1)
-
     end.flatten(1)
-  end #make_instances_events
+  end #form_instances_events
 
   def mutual_overlap (shift_group)
     # refine: set minimum ice-time shared
@@ -236,14 +261,14 @@ module CreateUnitsAndInstances
       @existing_game_instances = Instance.includes("events").where( events: { game_id: @game.id })
 
       # subtract events of existing game instances
-      @new_instances_events = instances_events_arrays - @existing_game_instances.map(&:events)
+      @formed_instances_events = instances_events_arrays - @existing_game_instances.map(&:events)
     end
 
     # {
       # [instance1 player_id_nums] =>
       # [ [instance_events 1], [...2] ]  }
     units_groups_hash =
-    @new_instances_events.
+    @formed_instances_events.
     group_by do |events|
       events.
       map do |event|
@@ -254,14 +279,14 @@ module CreateUnitsAndInstances
   module_function :create_records_from_shifts,
    :get_roster_sample,
    :get_shifts,
-   :make_instances_events,
+   :form_instances_events,
    :shifts_into_periods,
    :mutual_overlap,
    :group_by_players,
    :get_preexisting_units,
    :create_instances,
    :create_units,
-   :make_units_and_instances, :associate_events_to_instances
+   :form_units_and_instances, :associate_events_to_instances
 
 end
 #
@@ -296,10 +321,12 @@ end
 # create instances for new instances_events only
 #
 
-# *6- (requirements)
+# *6-
+# (requirements)
 # unit criteria– why no larger minimum overlap time?
-#   - even a 2-second overlap can make a difference in the play (relevant unit criteria)
-#   - if using minimum overlap time, use on top of 2 or 4 plyrs (3, or 5-man unit)
+#   - even a 2-second overlap can form a difference in the play (relevant unit criteria)
+
+#   -? if using minimum overlap time, use on top of 2 or 4 plyrs (3, or 5-man unit)
 
 # ///////////// extra ///////////// #
 
