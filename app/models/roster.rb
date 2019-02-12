@@ -4,7 +4,7 @@ class Roster < ApplicationRecord
 
   has_and_belongs_to_many :games # a game has two rosters, one for either team.
   has_and_belongs_to_many :players # *1
-  has_many :units, through: :games
+  has_and_belongs_to_many :units
   belongs_to :team
 
 end
@@ -14,4 +14,3 @@ end
 # *1-
 # has_many players through player_profiles
 # - if/when creating roster based on player_profile (defined by player primary position)
- 
