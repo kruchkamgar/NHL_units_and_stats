@@ -45,11 +45,6 @@ module CreateUnitsAndInstances
   end #create_records_from_shifts
 
   def form_units_and_instances units_groups_hash
-
-              # if units_groups_hash.keys.
-              # any? do |key| key.sort == [8471233, 8475151, 8475791] end
-              #   byebug; ok = true; end
-
     inserted_units =
     create_units(units_groups_hash.keys)
 
@@ -62,12 +57,6 @@ module CreateUnitsAndInstances
   def create_units (units) #instances_events_arrays, changes
     formed_units, ordered_unit_array = get_preexisting_units(units)
 
-    # if ex_and_formed_u_nils.include? (Unit.all.to_a.find do |u| u.instances.first.events.map(&:player_id_num).sort == [8471233, 8475151, 8475791] end)
-    #   byebug end
-    # if formed_units.
-    #   any? do |u| u.sort == [8471233, 8475151, 8475791] end
-    #   puts "formed_units––\n"
-    #   byebug end
     if ordered_unit_array.any? nil
       ordered_unit_array = insert_units(formed_units, ordered_unit_array)
     else ordered_unit_array end

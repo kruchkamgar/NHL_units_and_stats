@@ -149,6 +149,13 @@ describe 'CreateUnitsAndInstances' do
     end
   end
 
+  # if ex_and_formed_u_nils.include? (Unit.all.to_a.find do |u| u.instances.first.events.map(&:player_id_num).sort == [8471233, 8475151, 8475791] end)
+  #   byebug end
+  # if formed_units.
+  #   any? do |u| u.sort == [8471233, 8475151, 8475791] end
+  #   puts "formed_units––\n"
+  #   byebug end
+
   describe '#create_units' do
     it '#inserts and retrieves units' do
       allow(CreateUnitsAndInstances).to receive(:get_preexisting_units).with(a_kind_of(Array)) { [nil] }

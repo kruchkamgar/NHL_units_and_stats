@@ -7,15 +7,15 @@ module ProcessSpecialEvents
     @team, @roster, @game = team, roster, game
 
     get_special_events_data
+    @special_events.reject do |event|
+      event.event_type == "Shootout" end
     @team_events =
     @special_events - @opposing_events
     team_sans_shg =
-    @team_events.
-    reject do |event|
+    @team_events.reject do |event|
       event.event_type == "SHG" end
     opposing_sans_ppg =
-    @opposing_events.
-    reject do |event|
+    @opposing_events.reject do |event|
       event.event_type == "PPG" end
 
 # only working for 3-man unit
