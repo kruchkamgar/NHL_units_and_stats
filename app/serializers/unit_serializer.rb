@@ -1,5 +1,5 @@
 class UnitSerializer < ActiveModel::Serializer
-  attributes :id, :created_at, :instances
+  attributes :id, :created_at, :instances #, :plus_minus
 
   has_many :instances
   def instances

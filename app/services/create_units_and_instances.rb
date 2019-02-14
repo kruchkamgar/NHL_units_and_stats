@@ -23,8 +23,8 @@ module CreateUnitsAndInstances
     # 6 => ["Forward", "Defenseman", "Goalie"], #6-skater
   }
 
-  def create_records_from_shifts (team, roster, game)
-    @team = team
+  def create_records_from_shifts (team, roster, game, units)
+    @team, @units_includes_events = team, units
     @game = Game.where(id: game).includes(events: [:player_profiles])[0]
     @roster = Roster.where(id: roster).includes(:players)[0]
 
@@ -40,29 +40,37 @@ module CreateUnitsAndInstances
       instances_events_arrays = form_instances_events(period_chronology, unit_size)
       units_groups_hash = group_by_players(instances_events_arrays)
 
-      form_units_and_instances (units_groups_hash)
+      create_units_and_instances (units_groups_hash)
     end
+
+    @units_includes_events
   end #create_records_from_shifts
 
-  def form_units_and_instances units_groups_hash
-    inserted_units =
-    create_units(units_groups_hash.keys)
+  def create_units_and_instances (units_groups_hash)
+    units_records =
+    find_or_create_units(units_groups_hash.keys)
 
-    inserted_instances =
-    create_instances(inserted_units, units_groups_hash.values)
+    instances_records =
+    create_instances(units_records, units_groups_hash.values)
 
-    associate_events_to_instances(inserted_instances, units_groups_hash.values.flatten(1))
+    associate_events_to_instances(instances_records, units_groups_hash.values.flatten(1))
+
+    @units_includes_events +=
+    ( @inserted_units.includes( instances: [ :events ]).
+    where(instances: {events: {event_type: "shift"}}).to_a - @units_includes_events ) if @inserted_units
   end
 
-  def create_units (units) #instances_events_arrays, changes
+  def find_or_create_units (units)
     formed_units, ordered_unit_array = get_preexisting_units(units)
 
+    # nils stand for new units [absent from records]
     if ordered_unit_array.any? nil
-      ordered_unit_array = insert_units(formed_units, ordered_unit_array)
+      ordered_unit_array =
+      insert_units(formed_units, ordered_unit_array)
     else ordered_unit_array end
   end
 
-  def insert_units(formed_units, ex_and_formed_u_nils)
+  def insert_units(formed_units, ordered_unit_array)
     prepared_units =
     formed_units.
     map do |unit|
@@ -72,31 +80,33 @@ module CreateUnitsAndInstances
     end
     units_changes =
     SQLOperations.sql_insert_all("units", prepared_units)
+
     if units_changes > 0
-      inserted_units =
+      @inserted_units =
       Unit.order(id: :desc).limit(units_changes)
     end
-    inserted_units.reverse.
+    @inserted_units.reverse.
     each do |unit|
-      nil_ind = ex_and_formed_u_nils.index(nil)
+      nil_ind = ordered_unit_array.index(nil)
       if nil_ind
-        ex_and_formed_u_nils[nil_ind] = unit end
+        ordered_unit_array[nil_ind] = unit end
       end #if inserted_units.any?
 
-    ex_and_formed_u_nils
+    ordered_unit_array
   end
 
+  # performance: store [loaded] units for team in instance variable
   def get_preexisting_units (units)
-    @existing_units =
-    Unit.includes( instances: [ :events ]).
-    where(instances: {events: {event_type: "shift"}})
+    # @existing_units =
+    # Unit.includes( instances: [ :events ]).
+    # where(instances: {events: {event_type: "shift"}})
     formed_units = units.clone
     # nils act as placeholders for queued new units. swaps pre-existing units with their records from db.
     ex_and_formed_u_nils =
     units.
     map do |unit|
       existing_unit =
-      @existing_units.
+      @units_includes_events.
       select do |ex_unit|
         if ex_unit.instances.first.events.map(&:player_id_num).sort == unit.sort
           # byebug if unit.sort == [8471233, 8475151, 8475791]
@@ -280,8 +290,8 @@ module CreateUnitsAndInstances
    :get_preexisting_units,
    :insert_units,
    :create_instances,
-   :create_units,
-   :form_units_and_instances, :associate_events_to_instances
+   :find_or_create_units,
+   :create_units_and_instances, :associate_events_to_instances
 
 end
 #
