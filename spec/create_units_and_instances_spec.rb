@@ -59,7 +59,7 @@ describe 'CreateUnitsAndInstances' do
     end
   end
 
-  describe '#make_instances_events' do
+  describe '#form_instances_of_events' do
     let(:forwards) {
       @roster.players.
       select do |plyr|
@@ -72,7 +72,7 @@ describe 'CreateUnitsAndInstances' do
         # 2 => Event.where(event_type: 'shift' ).first(12)
       ] }
 
-    it 'makes array of arrays of events', :overlaps do
+    it 'forms array of arrays of events', :overlaps do
       # allow(CreateUnitsAndInstances).to receive(:mutual_overlap).with(
       #   a_collection_including(
       #     a_kind_of(Event)
@@ -80,7 +80,7 @@ describe 'CreateUnitsAndInstances' do
       # ).and_return(true, false, false, true, false, false, true)
 
       expect(
-        CreateUnitsAndInstances.make_instances_events(period_hash, UNIT_HASH.keys.first)
+        CreateUnitsAndInstances.form_instances_of_events(period_hash, UNIT_HASH.keys.first)
       ).
       to a_collection_including(
         a_collection_including(
@@ -137,7 +137,7 @@ describe 'CreateUnitsAndInstances' do
     unit
   }
   describe '#get_preexisting_units' do
-    it 'makes an array sequenced with pre-existing units, and nils for new units' do
+    it 'forms an array sequenced with pre-existing units, and nils for new units' do
       allow(Unit).to receive(:includes).with(instances: [ :events ]) { [existing_units] }
 
       expect(

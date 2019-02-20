@@ -29,7 +29,7 @@ app summary ––
 
 FUNCTIONALITY
 
-* retrieve game data and process player shifts into lines
+* retrieve game data and process player shifts into units
 
 * update database with new games
 

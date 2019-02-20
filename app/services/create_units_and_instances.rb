@@ -37,8 +37,8 @@ module CreateUnitsAndInstances
       # {[period1 event1, 2...], [p2 event1, 2, ...] ... }
       period_chronology = shifts_into_periods (shifts)
       #find all unit instances by shift events' temporal overlaps (format: array of arrays)
-      instances_events_arrays = form_instances_events(period_chronology, unit_size)
-      units_groups_hash = group_by_players(instances_events_arrays)
+      instances_of_events_arrays = form_instances_of_events(period_chronology, unit_size)
+      units_groups_hash = group_by_players(instances_of_events_arrays)
 
       create_units_and_instances (units_groups_hash)
     end
@@ -209,16 +209,37 @@ module CreateUnitsAndInstances
     end
   end #shifts_into_periods
 
-  def form_instances_events (p_chron, unit_size) # *4
+  def form_instances_of_events (p_chron, unit_size) # *4
     # currently also acts to filter non-shift events
     min_shift_length = "00:03" # *6
 
                     #detect number of players on ice (3, 4 (SH), 5, 6-skaters)
 
+  # ? suspect logic
     # exclude power-plays by detecting 4-fwds on ice
-      # - do the 5-man units first;
-      # - and when 4-fwds, reject concurrent 3-man instances
+      # - do the 5-man units first; (reject 4-fwds)
+    # - on 3-man, reject when concurrent with 4-fwds
     # look for the goalie changes and derive new instances from 5-man units.
+
+
+    #[only] 2 man overlaps (not more)
+=begin
+    # if 2nd (n+1) overlap, overlaps 1st with a later start time,
+      # 1st comparison
+         then use the second overlap's start time as the instance end time.
+      # 2nd comparison
+          if 1st overlap has an earlier end time than both 2nd and basis, then use 1st's end time [and basis end time] for instance bounds [of 2nd and basis].
+      if...
+
+      find next event after last comparison.
+        # overlaps.max_by end time; index(last comparison) + 1
+
+=end
+
+    # while index of queue_head + 1 exists
+      # do recursion
+      # move queue_head to start of next frame-(first event w/ end_time past the initial in overlap set)
+    # end
     p_chron.
     map do |period, events|
       overlap_events =
@@ -231,18 +252,109 @@ module CreateUnitsAndInstances
             overlaps.push comparison
           else break overlaps end
         end
-        instances =
-        overlaps.
-        combination(unit_size-1).to_a.
-        map do |combination|
-          instance =
-          [event, *combination].sort do |a,b|
-            a.start_time <=> b.start_time end
-          instance if mutual_overlap(instance)
-        end.compact
+
+        byebug
+        instances = []
+        instances_proc = Proc.new do |inst|
+          (instances.push inst if inst) || instances end
+        @overlap_set = overlaps.unshift(event)
+        results = call_overlap_test(
+          @overlap_set.first,
+          @overlap_set.second,
+          instances: instances_proc )
+        byebug
+        #
+        # instances =
+        # overlaps.
+        # combination(unit_size-1).to_a.
+        # map do |combination|
+        #   instance =
+        #   [event, *combination].sort do |a,b|
+        #     a.start_time <=> b.start_time end
+        #   instance if mutual_overlap(instance)
+        # end.compact
       end.reject(&:empty?).flatten(1)
     end.flatten(1)
-  end #form_instances_events
+  end #form_instances_of_events
+
+  def call_overlap_test(basis_data, comparison_data, instances: )
+    basis = make_event_hash( *basis_data )
+    comparison = make_event_hash( *comparison_data )
+    overlap_test(basis, comparison, instances: instances)
+  end
+
+  def make_event_hash (event=nil, st=nil, et=nil)
+    Hash[
+      start_time: (st || event.start_time),
+      end_time: (et || event.end_time),
+      event: event ] if event
+  end
+
+  def overlap_test( basis, comparison, instances: )
+
+    # basis = @overlap_set[n]; comparison = @overlap_set[n+1]
+    n = @overlap_set.index(basis[:event])
+
+    min_by_et = Proc.new { @overlap_set.min_by(&:end_time) }
+
+    if comparison == nil
+      if basis[:event] == @overlap_set.first
+        return "wtf?"
+      elsif min_by_et.call.end_time == @overlap_set.first.end_time # last frame
+        instances.call(
+          Hash[
+            events: @overlap_set,
+            start_time: basis[:start_time],
+            end_time: min_by_et.call.end_time ] )
+        return instances
+      else #next frame
+        instances.call(
+          Hash[
+            events: @overlap_set,
+            start_time: basis[:start_time],
+            end_time: min_by_et.call.end_time ] )
+        call_overlap_test(
+          [@overlap_set.first, min_by_et.call],
+          @overlap_set.second,
+          instances: instances )
+      end
+    elsif basis[:start_time] == comparison[:start_time]
+    # increment--
+      call_overlap_test(
+        comparison[:event],
+        @overlap_set[n+2],
+        instances: instances )
+    elsif basis[:start_time] < comparison[:start_time] &&
+      comparison[:start_time] < min_by_et.call
+    # call, increment--
+      basis_i = @overlap_set.index(basis[:event])
+      instances.call(
+        Hash[
+          events: @overlap_set[0..basis_i],
+          start_time: basis[:start_time],
+          end_time: comparison[:start_time] ] )
+      # comparison becomes new basis
+      call_overlap_test(
+        comparison[:event],
+        @overlap_set[n+2],
+        instances: instances ) # if n+2
+       # if min_by_et.call< "20:00"
+    elsif (end_time = min_by_et.call.end_time) <= comparison[:start_time] #min_by_et != initial [ or esle this would evaluate false, per overlap.push criteria]
+      instances.call(
+        Hash[
+          events: @overlap_set[0..basis_i],
+          start_time: basis[:start_time],
+          end_time: end_time ] )
+      @overlap_set.delete_at( @overlap_set.index() )
+      basis_i = @overlap_set.index( basis[:event] )
+      # n = events.index(@overlap_set.first)
+      call_overlap_test(
+        [@overlap_set.first, min_by_et.call.end_time],
+        @overlap_set.second,
+        instances: instances )
+    end
+
+  end
 
   def mutual_overlap (shift_group)
     # refine: set minimum ice-time shared
@@ -259,20 +371,20 @@ module CreateUnitsAndInstances
     end.compact.all?
   end #mutual_overlap
 
-  def group_by_players(instances_events_arrays)
-    # [  [instance_events 1], [...2], [...3]  ]
-    if instances_events_arrays
+  def group_by_players(instances_of_events_arrays)
+    # [  [instance_of_events 1], [...2], [...3]  ]
+    if instances_of_events_arrays
       @existing_game_instances = Instance.includes("events").where( events: { game_id: @game.id })
 
       # subtract events of existing game instances
-      @formed_instances_events = instances_events_arrays - @existing_game_instances.map(&:events)
+      @formed_instances_of_events = instances_of_events_arrays - @existing_game_instances.map(&:events)
     end
 
     # {
       # [instance1 player_id_nums] =>
-      # [ [instance_events 1], [...2] ]  }
+      # [ [instance_of_events 1], [...2] ]  }
     units_groups_hash =
-    @formed_instances_events.
+    @formed_instances_of_events.
     group_by do |events|
       events.
       map do |event|
@@ -283,7 +395,10 @@ module CreateUnitsAndInstances
   module_function :create_records_from_shifts,
    :get_roster_sample,
    :get_shifts,
-   :form_instances_events,
+   :form_instances_of_events,
+   :call_overlap_test,
+   :make_event_hash,
+   :overlap_test,
    :shifts_into_periods,
    :mutual_overlap,
    :group_by_players,
@@ -315,7 +430,7 @@ end
 #
 # *4- (improvement?)
 #  process special events for a game instead of per team
-#  add an event into an instance_events array
+#  add an event into an instance_of_events array
 
   # integration means only tally +/- per game rather than for each team
 
@@ -323,7 +438,7 @@ end
 # *5- (pattern)
 # situation: if doing a live-update, one may need to update new instances for a unit
 # - could use a different API for this however (w/ similar code)
-# create instances for new instances_events only
+# create instances for new instances_of_events only
 #
 
 # *6-

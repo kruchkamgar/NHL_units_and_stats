@@ -1,0 +1,26 @@
+def overlap_test(basis, comparison, running_end_time)
+
+    if basis start time == comparison start time
+      overlap_test(n, n+1, min_by*)
+    elsif basis start time < comparison start time
+    && comparison start time < running_end_time
+      ** return / call proc?
+      //n becomes: next n, @start time: comparison start time [which becomes n]--
+      overlap_test(n, n+1, min_by*) (if < 20:00?)
+    elsif min_by* end time < comparison start time
+      //n becomes: initial basis, @start time: comparison end time--
+      overlap_test(n, n+1, min_by)
+    elsif
+    else
+      ** return / call proc? //no more overlapping shifts
+      drop min_by from array
+      //n becomes: initial basis, @start time: comparison end time--
+      overlap_test(n, n+1, min_by*) (if < 20:00?)
+    end
+end
+
+
+* min_by end time of basis and comparison
+** return / call proc? (if # on-ice players matches unit_sizes)
+  - index(n+1) - index(initial) // # on-ice players
+  - instance bounds: [basis start time, comparison start time]
