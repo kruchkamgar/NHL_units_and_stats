@@ -7,7 +7,7 @@
 #   Character.create(name: 'Luke', movie: movies.first)
 
 require './spec/data/team_hash'
-require './spec/data/events_hashes'
+require './spec/data/create_events_from_hashes'
 # require './lib/utilities.rb'
 
 def run_seeds

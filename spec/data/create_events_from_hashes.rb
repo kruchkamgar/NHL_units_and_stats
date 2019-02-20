@@ -1,5 +1,5 @@
 
-# redundant code with seeds.rb
+# redundant code with seeds.rb? or keep limited seed file to save time
 def create_events_sample
   single_team_events = events_hashes.select do |event|
     event["teamId"] == 1 end
@@ -14,7 +14,7 @@ def create_events_sample
 
   sorted_events.
   each do |period, group|
-    group.first(12).each do |event|
+    group.each do |event|
       Event.find_or_create_by( event_type: event["eventDescription"] || "shift", duration: event["duration"], start_time: event["startTime"], end_time: event["endTime"], shift_number: event["shiftNumber"], period: event["period"], player_id_num: event["playerId"], game_id: 1 )
       #API lists null, except for goals
     end

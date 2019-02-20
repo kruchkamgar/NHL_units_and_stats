@@ -1,16 +1,17 @@
 require 'create_units_and_instances'
-require_relative './data/events_hashes'
+require_relative './data/create_events_from_hashes'
 require_relative './data/players_and_profiles'
 
 describe 'CreateUnitsAndInstances' do
   before(:context) do
-    create_events_sample #just use seeds 'create_events_sampling' perhaps
+    create_events_sample #larger than sample from seeds
     @roster = CreateUnitsAndInstances.instance_variable_set(
       :@roster, Roster.where(team_id: 1).first
     )
     player_id_nums =
     @roster.players.
     map(&:player_id_num)
+    #from create_events_sample--
     Event.where(player_id_num: player_id_nums ).
     each do |event|
       LogEntry.create(
