@@ -67,9 +67,12 @@ describe 'CreateUnitsAndInstances' do
         plyr.player_profiles.first.
         position_type == "Forward" end.
       map(&:player_id_num) }
-    let(:period_hash) { Hash[
+    let(:period_hash) {
+      Hash[
         1 => Event.where(event_type: 'shift', period: 1 ).
-        where(player_id_num: forwards).order(start_time: :asc).limit(12).to_a
+        where(player_id_num: forwards).order(start_time: :asc).to_a.
+        sort_by! do |shft|
+          [shft.start_time, shft.end_time] end
         # 2 => Event.where(event_type: 'shift' ).first(12)
       ] }
 

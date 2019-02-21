@@ -191,9 +191,9 @@ module CreateUnitsAndInstances
       event.event_type == "shift" &&
       roster_sample.
       any? do |player|
-          event.player_profiles.
-          any? do |profile|
-            profile.player_id == player.id end
+        event.player_profiles.
+        any? do |profile|
+          profile.player_id == player.id end
       end
     end #select
   end #get_shifts
@@ -204,7 +204,8 @@ module CreateUnitsAndInstances
     group_by do |event|
       event.period end.
     each do |period, events|
-      events.sort_by! do |shft|
+      events.
+      sort_by! do |shft|
         [shft.start_time, shft.end_time] end
     end
   end #shifts_into_periods
@@ -268,7 +269,7 @@ module CreateUnitsAndInstances
           (instances.push inst if inst) || instances end
         end_time =
         call_overlap_test(
-          @overlap_set.first,
+          [ @overlap_set.first, start_time: end_time ],
           @overlap_set.second,
           instances: instances_proc )
         byebug
@@ -293,14 +294,13 @@ module CreateUnitsAndInstances
   end
 
   def load_next_frame(queue_head, events, end_time = nil)
-    overlaps = []
+    @overlap_set = []
     for comparison in events[queue_head..-1]
       if events[queue_head].end_time > comparison.start_time
-        overlaps.push comparison
-      else break overlaps end
-    end
-    @overlap_set = overlaps.unshift(events[queue_head])
-    # make_event_hashes/call_overlap_test with end_time as start_time
+        @overlap_set.push comparison
+      end
+    end # for
+    # byebug
   end
 
   def reset_queue_head(queue_head, events, end_time)
@@ -310,14 +310,16 @@ module CreateUnitsAndInstances
     else
       queue_event =
       events[queue_head..-1].
-      find do |event| end_time <= event.start_time end
+      find do |event|
+        end_time <= event.start_time end
       queue_head = events.index(queue_event)
     end
   end
 
   def overlap_test( basis, comparison, instances: )
     n = @overlap_set.index(basis[:event])
-    min_by_et = Proc.new { @overlap_set.min_by(&:end_time) }
+    min_by_et = Proc.new do
+      @overlap_set.min_by(&:end_time) end
 
     if comparison == nil
       if basis[:event] == @overlap_set.first
@@ -333,13 +335,15 @@ module CreateUnitsAndInstances
           event.end_time == end_time end
         return end_time
       else #next frame
+        byebug
+        byebug if @overlap_set.size ==1
         instances.call(
           Hash[
-            events: @overlap_set,
+            events: @overlap_set.clone,
             start_time: basis[:start_time],
             end_time: min_by_et.call.end_time ] )
         call_overlap_test(
-          [ @overlap_set.first, start_time: min_by_et.call ],
+          [ @overlap_set.first, start_time: min_by_et.call.end_time ],
           @overlap_set.second,
           instances: instances )
       end
@@ -349,13 +353,13 @@ module CreateUnitsAndInstances
         [ comparison[:event], start_time: basis[:start_time] ],
         @overlap_set[n+2],
         instances: instances )
-    elsif basis[:start_time] < comparison[:start_time] &&
-      comparison[:start_time] < min_by_et.call
+    elsif basis[:start_time] < comparison[:start_time] && comparison[:start_time] < min_by_et.call.end_time
     # call, increment--
       basis_i = @overlap_set.index(basis[:event])
+      byebug if @overlap_set[0..basis_i].size ==1
       instances.call(
         Hash[
-          events: @overlap_set[0..basis_i],
+          events: @overlap_set[0..basis_i].clone,
           start_time: basis[:start_time],
           end_time: comparison[:start_time] ] )
       # comparison becomes new basis
@@ -364,17 +368,17 @@ module CreateUnitsAndInstances
         @overlap_set[n+2],
         instances: instances ) # if n+2
        # if min_by_et.call< "20:00"
-    elsif (end_time = min_by_et.call.end_time) <= comparison[:start_time] #min_by_et != initial [ or else this would evaluate false, per overlap.push criteria]
+    elsif (min_et = min_by_et.call).end_time <= comparison[:start_time] #min_by_et != initial [ or else this would evaluate false, per overlap.push criteria]
+      basis_i = @overlap_set.index( basis[:event] )
+      byebug if @overlap_set[0..basis_i].size ==1
       instances.call(
         Hash[
-          events: @overlap_set[0..basis_i],
+          events: @overlap_set[0..basis_i].clone,
           start_time: basis[:start_time],
-          end_time: end_time ] )
-      @overlap_set.delete_at( @overlap_set.index() )
-      basis_i = @overlap_set.index( basis[:event] )
-      # n = events.index(@overlap_set.first)
+          end_time: min_et.end_time ] )
+      @overlap_set.delete_at( @overlap_set.index(min_et) )
       call_overlap_test(
-        [ @overlap_set.first, start_time: min_by_et.call.end_time ],
+        [ @overlap_set.first, start_time: min_et.end_time ],
         @overlap_set.second,
         instances: instances )
     end
