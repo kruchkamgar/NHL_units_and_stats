@@ -60,7 +60,10 @@ describe 'CreateUnitsAndInstances' do
     end
   end
 
-  describe '#form_instances_of_events' do
+  # insts = instances.call.map do |e| [e[:start_time], e[:end_time], e[:events].map do |ev| [ev.start_time, ev.end_time, Player.find_by_player_id_num(ev.player_id_num).last_name] end] end; pp insts
+
+  # insts = instances.map do |e| [e[:start_time], e[:end_time], e[:events].map do |ev| [e[:events].size, ev.start_time, ev.end_time, Player.find_by_player_id_num(ev.player_id_num).last_name] end ] end; pp insts
+  describe '#form_instances_by_events' do
     let(:forwards) {
       @roster.players.
       select do |plyr|
@@ -77,46 +80,40 @@ describe 'CreateUnitsAndInstances' do
       ] }
 
     it 'forms array of arrays of events', :overlaps do
-      # allow(CreateUnitsAndInstances).to receive(:mutual_overlap).with(
-      #   a_collection_including(
-      #     a_kind_of(Event)
-      #   )
-      # ).and_return(true, false, false, true, false, false, true)
-
       expect(
-        CreateUnitsAndInstances.form_instances_of_events(period_hash, UNIT_HASH.keys.first)
+        CreateUnitsAndInstances.form_instances_by_events(period_hash, UNIT_HASH.keys.first)
       ).
       to a_collection_including(
-        a_collection_including(
-          a_kind_of(Event),
-          an_object_satisfying { |event|
-            event.start_time == "00:37"
-          }
-      ) )
+        hash_including(
+          :events => a_collection_including(a_kind_of(Event))
+        ),
+        an_object_satisfying { |event|
+          event[:start_time] == "00:37" }
+      )
     end
   end
 
-  describe '#mutual_overlap' do
-    let(:shifts_overlap) {
-      events_with_db_keys(sample_shifts_overlap).map do |shift|
-        Event.new(shift) end
-      }
-      it "returns true, testing full array elements' overlap" do
-        expect(
-          CreateUnitsAndInstances.mutual_overlap(shifts_overlap)
-        ).to eq( true )
-      end
-
-      let(:shifts_disparate) {
-        events_with_db_keys(sample_shifts_disparate).map do |shift|
-          Event.new(shift) end
-        }
-        it "returns false, testing such overlap" do
-          expect(
-            CreateUnitsAndInstances.mutual_overlap(shifts_disparate)
-          ).to eq( false )
-        end
-  end
+  # describe '#mutual_overlap' do
+  #   let(:shifts_overlap) {
+  #     events_with_db_keys(sample_shifts_overlap).map do |shift|
+  #       Event.new(shift) end
+  #     }
+  #     it "returns true, testing full array elements' overlap" do
+  #       expect(
+  #         CreateUnitsAndInstances.mutual_overlap(shifts_overlap)
+  #       ).to eq( true )
+  #     end
+  #
+  #     let(:shifts_disparate) {
+  #       events_with_db_keys(sample_shifts_disparate).map do |shift|
+  #         Event.new(shift) end
+  #       }
+  #       it "returns false, testing such overlap" do
+  #         expect(
+  #           CreateUnitsAndInstances.mutual_overlap(shifts_disparate)
+  #         ).to eq( false )
+  #       end
+  # end
 
   let(:units_groups_hash) {
     abc_events = Event.all.sample(3)

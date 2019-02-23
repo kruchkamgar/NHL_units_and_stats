@@ -28,53 +28,63 @@ include NHLTeamAPI
       @season, @team_id = season, team.team_id
       @units_includes_events = []
     end
+
   include ReadApisNHL
     def create_records_from_APIs
       # create_teams_for_season()
       # create team and get its schedule
       @team, team_adapter = NHLTeamAPI::Adapter.new(team_id: @team_id).create_team
-      schedule_hash =
-      team_adapter.fetch_data
-      # create a game for each schedule date
+
+      schedule_hash = team_adapter.fetch_data
+      get_schedule_dates(schedule_hash).
+      each do |date_hash|
+        create_game_records(date_hash) end
+    end
+
+    def get_schedule_dates(schedule_hash)
       schedule_hash["dates"].
       reject do |date|
         # "1" means preseason
         date["games"].first["gamePk"].to_s.
-        slice(5) == "1" end.
-      each do |date_hash|
-        game_id = date_hash["games"].first["gamePk"]
-        unless game_id then byebug end
+        slice(5) == "1" end
+    end
 
-        game, teams_hash =
-        NHLGameAPI::Adapter.
-        new(game_id: game_id).
-        create_game
-        # game API may deliver two teams' players
+    def create_game_records(date_hash)
+    # create a game for each schedule date
+      game_id =
+      date_hash["games"].first["gamePk"]
+      unless game_id then byebug end
 
-        rosters = create_roster(game, teams_hash)
-        roster = rosters.find do |roster|
-          roster.team.eql?(@team) end
+      game, teams_hash =
+      NHLGameAPI::Adapter.
+      new(game_id: game_id).
+      create_game
+      # game API may deliver two teams' players
 
-        events_boolean =
-        NHLGameEventsAPI::Adapter.
-        new(team:
-          @team, game: game, roster: roster).
-        create_game_events_and_log_entries # *1
+      rosters = create_rosters(game, teams_hash)
+      roster =
+      rosters.find do |roster|
+        roster.team.eql?(@team) end
 
-        byebug
-        if events_boolean
-          @units_includes_events = CreateUnitsAndInstances.
-          create_records_from_shifts(@team, roster, game, @units_includes_events)
+      events_boolean =
+      NHLGameEventsAPI::Adapter.
+      new(team:
+        @team, game: game, roster: roster).
+      create_game_events_and_log_entries # *1
 
-          ProcessSpecialEvents.
-          process_special_events(@team, roster, game)
-        end
-      end # .each
-    end #create_records_from_APIs
+      byebug
+      if events_boolean
+        @units_includes_events = CreateUnitsAndInstances.
+        create_records_from_shifts(@team, roster, game, @units_includes_events)
+
+        ProcessSpecialEvents.
+        process_special_events(@team, roster, game)
+      end
+    end #create_game_records
 
     # create the main roster
     # NHLRosterAPI::Adapter.new(team.team_id, season: team.season).fetch_roster
-    def create_roster(game, teams_hash)
+    def create_rosters(game, teams_hash)
       teams_data =
       teams_hash.
       map do |side, side_hash|
