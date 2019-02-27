@@ -15,7 +15,7 @@ include NHLTeamAPI
       create_teams_for_season() end
 
 
-    teams[6..9].
+    teams.
     each do |team|
       @team_season =
       TeamSeason.new(season: 20182018, team: team)

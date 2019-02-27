@@ -129,7 +129,6 @@ module CreateUnitsAndInstances
   end
 
   def create_instances (queued_units, units_groups)
-
     prepared_instances =
     queued_units.
     map.with_index do |unit, i|

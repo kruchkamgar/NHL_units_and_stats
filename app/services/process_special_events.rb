@@ -8,8 +8,8 @@ module ProcessSpecialEvents
     @units_includes_events = units_includes_events
 
     get_special_events_data
-    @special_events.reject do |event|
-      event.event_type == "Shootout" end
+    # @special_events.reject do |event|
+    #   event.event_type == "Shootout" end
     @team_events =
     @special_events - @opposing_events
     team_sans_shg =
@@ -33,7 +33,7 @@ module ProcessSpecialEvents
   end
 
   def get_special_events_data
-    # "universal quantification": (not not, in place of ALL--absent from sqlite3)
+    # "universal quantification" –(not not, in place of ALL--absent from sqlite3)
     @game_instances =
     Instance.includes(:events).
     where.not(
@@ -48,7 +48,8 @@ module ProcessSpecialEvents
     @special_events = #*2
     Event.includes(:log_entries).
     where( events: { game_id: @game.id } ).
-    where.not( events: { event_type: 'shift'} )
+    where.not(
+      "events.event_type = ? OR events.event_type = ?", 'Shootout', 'shift' )
 
     @opposing_events =
     @special_events.

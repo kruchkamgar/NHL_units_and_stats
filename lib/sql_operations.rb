@@ -4,8 +4,9 @@ module SQLOperations
   def sql_insert_all (table, data_hash)
     insert_values = data_hash.map {
         |hash| "'#{hash.values.join('\',\'')}'"
+        # 'value','value','value' --of type String
       }
-
+      
     fields = data_hash.first.keys.map(&:to_s)
     # "VALUES (CSV string1),(string2),(string3)...
     sql_events = "INSERT INTO #{table} (#{fields.join(',')} )

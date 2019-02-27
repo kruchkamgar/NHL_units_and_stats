@@ -73,14 +73,14 @@ module CreateRoster
 # - team_hash players.any? { |player| Player.all.include? player }
       player_records =
       Player.where(player_id_num: data[:p_ids])
-      new_api_players =
+      new_players_api_data =
       @team_hash["players"].
       select do |id, player_hash|
         new_player_id_nums.include? player_hash["person"]["id"] end
       # new minus existing players
 
       new_players =
-      new_api_players.
+      new_players_api_data.
       reject do |id, player_hash|
         player_records.
         map(&:player_id_num).include? player_hash["person"]["id"] end
@@ -90,9 +90,21 @@ module CreateRoster
         new_players.
         map do |id, player_hash|
           person = player_hash["person"]
+
+          fN = person["firstName"]; lN = person["lastName"];
+
+          if fN.include?("'")
+            fN.insert(fN.index("'"), "'")
+            interrupt = true end
+          if lN.include?("'")
+            lN.insert(lN.index("'"), "'")
+            interrupt = true end
+
+          byebug if interrupt
+
           Hash[
-            first_name: person["firstName"],
-            last_name: person["lastName"],
+            first_name: fN,
+            last_name: lN,
             player_id_num: person["id"],
             created_at: Time.now,
             updated_at: Time.now ]
