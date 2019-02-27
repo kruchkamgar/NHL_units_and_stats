@@ -17,7 +17,7 @@ module CreateUnitsAndInstances
 
   UNIT_HASH = {
     # 2 => ["Defenseman"]
-    2 => ["Forward"], #4-on-4 (EVGs), SH
+    # 2 => ["Forward"] #4-on-4 (EVGs), SH
     3 => ["Forward"],
     5 => ["Forward", "Defenseman"],
     # 6 => ["Forward", "Defenseman", "Goalie"], #6-skater
@@ -37,7 +37,7 @@ module CreateUnitsAndInstances
       # {[period1 event1, 2...], [p2 event1, 2, ...] ... }
       period_chronology = shifts_into_periods (shifts)
       #find all unit instances by shift events' temporal overlaps (format: array of arrays)
-      instances_by_events_arrays = form_instances_by_events(period_chronology, unit_size)
+      instances_by_events_arrays = form_instances_by_events(period_chronology)
       units_groups_hash = group_by_players(instances_by_events_arrays)
 
       create_units_and_instances (units_groups_hash)
@@ -54,7 +54,17 @@ module CreateUnitsAndInstances
     queued_instances =
     create_instances(queued_units, units_groups_hash.values)
 
-    associate_events_to_instances(queued_instances, units_groups_hash.values.flatten(1))
+    # byebug
+    associate_events_to_instances(
+      queued_instances,
+      units_groups_hash.values.
+      map do |instances|
+        instances.
+        map do |inst_hash|
+        inst_hash[:events] end
+      end.flatten(1) )
+
+    associate_roster_to_units(queued_units)
 
     @units_includes_events +=
     ( @inserted_units.includes( instances: [ :events ]).
@@ -148,18 +158,26 @@ module CreateUnitsAndInstances
     queued_instances.
     map.with_index do |instance, i|
       formed_instances[i].map do |event|
-        # byebug if formed_instances[i].to_a.
-        # map(&:player_id_num).sort == [8471233, 8475151, 8475791]
         Hash[
           instance_id: instance.id,
-          event_id: event.id
-        ]
+          event_id: event.id ]
       end
     end.flatten
 
     SQLOperations.sql_insert_all("events_instances", prepared_associations)
   end
 
+  def associate_roster_to_units(queued_units)
+    prepared_rosters_units =
+    queued_units.
+    map do |unit|
+      Hash[
+        roster_id: @roster.id,
+        unit_id: unit.id ]
+    end
+
+    SQLOperations.sql_insert_all("rosters_units", prepared_rosters_units)
+  end
 
   # ////////////////// prep methods ////////////////// #
 
@@ -173,8 +191,7 @@ module CreateUnitsAndInstances
         @game.player_profiles.
         find do |profile|
         profile.player_id == player.id end.
-        position_type
-      )
+        position_type )
     end
   end
 
@@ -208,13 +225,14 @@ module CreateUnitsAndInstances
     end
   end #shifts_into_periods
 
-  def form_instances_by_events (p_chron, unit_size) # *4
-    this = p_chron.
+  def form_instances_by_events (p_chron) # *4
+
+    p_chron.
     map do |period, events|
       time_mark = "00:00"; queue_head = 0;
       instances = []
       while queue_head && events[queue_head]
-        load_next_frame(queue_head, events, time_mark)
+        load_next_overlaps(queue_head, events, time_mark)
         instances_proc =
         Proc.new do |inst|
           (instances.push inst if inst) || instances end
@@ -228,8 +246,6 @@ module CreateUnitsAndInstances
       end
       instances
     end.flatten(1)
-    byebug
-    this
   end #form_instances_by_events
 
   def call_overlap_test(basis_data, comparison_data, instances: )
@@ -245,13 +261,15 @@ module CreateUnitsAndInstances
       event: event ] if event
   end
 
-  def load_next_frame(queue_head, events, time_mark)
+  def load_next_overlaps(queue_head, events, time_mark)
+    # byebug if @interrupt
     @overlap_set = []
     for comparison in events[queue_head..-1]
       if events[queue_head].end_time > comparison.start_time
         if time_mark < comparison.end_time
           @overlap_set.push comparison end
       else break end
+      # byebug if @interrupt
     end # for
   end
 
@@ -272,11 +290,20 @@ module CreateUnitsAndInstances
     n = @overlap_set.index(basis[:event])
     min_by_et = Proc.new do
       @overlap_set.min_by(&:end_time) end
-
+    # queue_head at last shift--
     if comparison == nil
+      # only one player on ice (5v3s)
       if basis[:event] == @overlap_set.first
-        return "wtf?"
-      elsif min_by_et.call.end_time == (end_time = @overlap_set.first.end_time) # last frame
+        instances.call(
+          Hash[
+            events: @overlap_set.clone,
+            end_time: (end_time = basis[:end_time]),
+            start_time: basis[:start_time] ] )
+        @overlap_set = []
+        return end_time
+      # last frame--
+        # collect, delete,
+      elsif min_by_et.call.end_time == (end_time = @overlap_set.first.end_time)
         instances.call(
           Hash[
             events: @overlap_set.clone,
@@ -286,47 +313,55 @@ module CreateUnitsAndInstances
         delete_if do |event|
           event.end_time == end_time end
         return end_time
-      else #next frame
-        byebug
+      # next instance--
+        # collect, delete, return overlaps ending time
+      else
         instances.call(
           Hash[
             events: @overlap_set.clone,
             start_time: basis[:start_time],
-            end_time: min_by_et.call.end_time ] )
+            end_time: (end_time = min_by_et.call.end_time) ] )
+        @overlap_set.
+        delete_if do |event|
+          event.end_time == end_time end
         call_overlap_test(
           [ @overlap_set.first, start_time: min_by_et.call.end_time ],
           @overlap_set.second,
           instances: instances )
       end
-    elsif basis[:start_time] >= comparison[:start_time] #comparison, at start of new frame, could precede basis
-    # increment--
+    # set or instance start time--
+      # increment queue-head
+    elsif basis[:start_time] >= comparison[:start_time]
+    # notes: comparison, at start of new frame, could precede basis
       call_overlap_test(
         [ comparison[:event], start_time: basis[:start_time] ],
         @overlap_set[n+2],
         instances: instances )
+    #intervening start time--
     elsif basis[:start_time] < comparison[:start_time] && comparison[:start_time] < min_by_et.call.end_time
-    # call, increment--
+      # collect, increment queue-head
       basis_i = @overlap_set.index(basis[:event])
       instances.call(
         Hash[
           events: @overlap_set[0..basis_i].clone,
           start_time: basis[:start_time],
           end_time: comparison[:start_time] ] )
-      # comparison becomes new basis
       call_overlap_test(
         comparison[:event],
         @overlap_set[n+2],
-        instances: instances ) # if n+2
-       # if min_by_et.call< "20:00"
-    elsif (min_et = min_by_et.call).end_time <= comparison[:start_time] #min_by_et != initial [ or else this would evaluate false, per overlap.push criteria]
+        instances: instances )
+    #end of instance--
+    elsif (min_et = min_by_et.call).end_time <= comparison[:start_time]
       basis_i = @overlap_set.index( basis[:event] )
-      # byebug if @overlap_set[0..basis_i].size ==1
+      # collect, delete, reset queue-head
       instances.call(
         Hash[
           events: @overlap_set[0..basis_i].clone,
           start_time: basis[:start_time],
           end_time: min_et.end_time ] )
-      @overlap_set.delete_at( @overlap_set.index(min_et) )
+      @overlap_set.
+      delete_if do |event|
+        event[:end_time] == min_et.end_time end
       call_overlap_test(
         [ @overlap_set.first, start_time: min_et.end_time ],
         @overlap_set.second,
@@ -360,7 +395,7 @@ module CreateUnitsAndInstances
         # { :events => [instance_by_events_5], :start_time => "00:20", :end_time => "00:23" }
     # ] }
     units_groups_hash =
-    @formed_instances_by_events.
+    instances_by_events_hashes.
     group_by do |inst_hash|
       inst_hash[:events].
       map do |event|
@@ -373,7 +408,7 @@ module CreateUnitsAndInstances
    :get_shifts,
    :form_instances_by_events,
    :make_event_hash,
-   :load_next_frame,
+   :load_next_overlaps,
    :reset_queue_head,
    :call_overlap_test,
    :overlap_test,
@@ -383,7 +418,8 @@ module CreateUnitsAndInstances
    :insert_units,
    :create_instances,
    :find_or_create_units,
-   :create_units_and_instances, :associate_events_to_instances
+   :create_units_and_instances, :associate_events_to_instances,
+   :associate_roster_to_units
 
 end
 #

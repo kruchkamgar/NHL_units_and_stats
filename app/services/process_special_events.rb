@@ -3,8 +3,9 @@
 module ProcessSpecialEvents
   include Utilities
 
-  def process_special_events (team, roster, game)
+  def process_special_events (team, roster, game, units_includes_events)
     @team, @roster, @game = team, roster, game
+    @units_includes_events = units_includes_events
 
     get_special_events_data
     @special_events.reject do |event|
@@ -32,12 +33,17 @@ module ProcessSpecialEvents
   end
 
   def get_special_events_data
+    # "universal quantification": (not not, in place of ALL--absent from sqlite3)
     @game_instances =
     Instance.includes(:events).
-    where(events: { game_id: @game.id}).
-    where(events: { player_id_num:
-      @roster.players.map(&:player_id_num) })
-    # add the events and their tallies for each instance
+    where.not(
+      events_instances:
+        { event_id: Event.
+            where.not(
+              player_id_num: @roster.players.map(&:player_id_num) ) } ).
+    where(
+      events:
+        { game_id: @game.id, event_type: "shift" } )
 
     @special_events = #*2
     Event.includes(:log_entries).
@@ -76,7 +82,7 @@ module ProcessSpecialEvents
 
   def tally_special_events (data, team_event=false)
     event = data[:event]; instance = data[:instance];
-    delta = -1; instance.plus_minus ||= 0 # use default values for instances
+    delta = -1; # use default values for instances
 
     if team_event
       event.log_entries.
@@ -90,13 +96,20 @@ module ProcessSpecialEvents
         end
       end
     end
-
     case event.event_type
     when "EVG", "SHG"
+      instance.plus_minus ||= 0
       instance.plus_minus += delta
     end
-
     instance.save
+
+    byebug unless @units_includes_events.
+    find do |unit|
+      unit == instance.unit end
+
+    @units_includes_events.
+    find do |unit|
+      unit == instance.unit end.reload
   end #(method)
 
   module_function :get_special_events_data,

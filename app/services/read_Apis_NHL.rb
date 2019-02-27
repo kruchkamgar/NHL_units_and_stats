@@ -14,11 +14,13 @@ include NHLTeamAPI
     if teams.empty?
       create_teams_for_season() end
 
-    teams.
+
+    teams[6..9].
     each do |team|
-      season =
+      @team_season =
       TeamSeason.new(season: 20182018, team: team)
-      season.create_records_from_APIs
+      @team_season.create_records_from_APIs
+      @team_season.create_tallies
     end
   end
 
@@ -38,7 +40,7 @@ include NHLTeamAPI
       schedule_hash = team_adapter.fetch_data
       get_schedule_dates(schedule_hash).
       each do |date_hash|
-        create_game_records(date_hash) end
+        create_game_records(date_hash); break; end
     end
 
     def get_schedule_dates(schedule_hash)
@@ -72,13 +74,13 @@ include NHLTeamAPI
         @team, game: game, roster: roster).
       create_game_events_and_log_entries # *1
 
-      byebug
+      # byebug
       if events_boolean
         @units_includes_events = CreateUnitsAndInstances.
         create_records_from_shifts(@team, roster, game, @units_includes_events)
 
         ProcessSpecialEvents.
-        process_special_events(@team, roster, game)
+        process_special_events(@team, roster, game, @units_includes_events)
       end
     end #create_game_records
 
@@ -115,6 +117,7 @@ include NHLTeamAPI
       map do |unit|
         tally = unit.build_tally
         tally.tally_unit
+        byebug if $interrupt
         Hash[
           unit_id: unit.id,
           assists: tally.assists,
@@ -122,8 +125,7 @@ include NHLTeamAPI
           goals: tally.goals,
           points: tally.points,
           created_at: Time.now,
-          updated_at: Time.now
-        ]
+          updated_at: Time.now ]
       end
 
       SQLOperations.sql_insert_all("tallies", prepared_tallies)

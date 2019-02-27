@@ -64,24 +64,58 @@ describe 'CreateUnitsAndInstances' do
 
   # insts = instances.map do |e| [e[:start_time], e[:end_time], e[:events].map do |ev| [e[:events].size, ev.start_time, ev.end_time, Player.find_by_player_id_num(ev.player_id_num).last_name] end ] end; pp insts
   describe '#form_instances_by_events' do
-    let(:forwards) {
+    let(:all_player_types) {
       @roster.players.
       select do |plyr|
+        position =
         plyr.player_profiles.first.
-        position_type == "Forward" end.
+        position_type
+        (position == "Defenseman" || position == "Forward" || position == "Goalie")
+      end.
       map(&:player_id_num) }
     let(:period_hash) {
       Hash[
         1 => Event.where(event_type: 'shift', period: 1 ).
-        where(player_id_num: forwards).order(start_time: :asc).to_a.
+        where(player_id_num: all_player_types).order(start_time: :asc).to_a.
         sort_by! do |shft|
           [shft.start_time, shft.end_time] end
         # 2 => Event.where(event_type: 'shift' ).first(12)
       ] }
 
-    it 'forms array of arrays of events', :overlaps do
+    it 'forms 6-man instances', :overlaps do
       expect(
-        CreateUnitsAndInstances.form_instances_by_events(period_hash, UNIT_HASH.keys.first)
+        CreateUnitsAndInstances.form_instances_by_events(period_hash)
+      ).
+      to a_collection_including(
+        hash_including(
+          :events => a_collection_including(a_kind_of(Event))
+        ),
+        an_object_satisfying { |event|
+          event[:start_time] == "00:37" }
+      )
+    end
+
+    let(:fwds_and_d) {
+      @roster.players.
+      select do |plyr|
+        position =
+        plyr.player_profiles.first.
+        position_type
+        (position == "Defenseman" || position == "Forward")
+      end.
+      map(&:player_id_num) }
+    let(:period_hash) {
+      Hash[
+        1 => Event.where(event_type: 'shift', period: 1 ).
+        where(player_id_num: fwds_and_d).order(start_time: :asc).to_a.
+        sort_by! do |shft|
+          [shft.start_time, shft.end_time] end
+        # 2 => Event.where(event_type: 'shift' ).first(12)
+      ] }
+
+    it 'forms 5-man instances', :overlaps do
+      expect(
+        CreateUnitsAndInstances.form_instances_by_events(period_hash)
       ).
       to a_collection_including(
         hash_including(
@@ -92,28 +126,6 @@ describe 'CreateUnitsAndInstances' do
       )
     end
   end
-
-  # describe '#mutual_overlap' do
-  #   let(:shifts_overlap) {
-  #     events_with_db_keys(sample_shifts_overlap).map do |shift|
-  #       Event.new(shift) end
-  #     }
-  #     it "returns true, testing full array elements' overlap" do
-  #       expect(
-  #         CreateUnitsAndInstances.mutual_overlap(shifts_overlap)
-  #       ).to eq( true )
-  #     end
-  #
-  #     let(:shifts_disparate) {
-  #       events_with_db_keys(sample_shifts_disparate).map do |shift|
-  #         Event.new(shift) end
-  #       }
-  #       it "returns false, testing such overlap" do
-  #         expect(
-  #           CreateUnitsAndInstances.mutual_overlap(shifts_disparate)
-  #         ).to eq( false )
-  #       end
-  # end
 
   let(:units_groups_hash) {
     abc_events = Event.all.sample(3)
@@ -174,7 +186,6 @@ describe 'CreateUnitsAndInstances' do
     it '#inserts and retrieves instances' do
       expect(
         CreateUnitsAndInstances.create_instances(units.reverse, units_groups_hash.values)
-
       ).
       to include(
         a_kind_of(Instance),

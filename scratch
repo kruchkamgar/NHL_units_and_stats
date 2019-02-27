@@ -24,3 +24,12 @@ end
 ** return / call proc? (if # on-ice players matches unit_sizes)
   - index(n+1) - index(initial) // # on-ice players
   - instance bounds: [basis start time, comparison start time]
+
+// EXPLICIT-LOGIC STRUCTURING?
+def overlap_test
+  if ...
+
+  elsif equal()
+  elsif frame_or_subframe()
+
+end

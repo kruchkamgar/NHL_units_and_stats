@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema.define(version: 2018_11_19_010249) do
+ActiveRecord::Schema.define(version: 2019_02_25_173045) do
 
   create_table "circumstances", force: :cascade do |t|
     t.integer "unit_id"
@@ -134,10 +134,10 @@ ActiveRecord::Schema.define(version: 2018_11_19_010249) do
 
   create_table "tallies", force: :cascade do |t|
     t.integer "unit_id"
-    t.integer "assists"
+    t.integer "assists", default: 0
     t.integer "plus_minus"
-    t.integer "goals"
-    t.integer "points"
+    t.integer "goals", default: 0
+    t.integer "points", default: 0
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
     t.index ["unit_id"], name: "index_tallies_on_unit_id"
