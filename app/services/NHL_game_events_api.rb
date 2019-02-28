@@ -85,9 +85,9 @@ module NHLGameEventsAPI
         records_hash = get_profile_by ({
           player_id_num: event.player_id_num
         })
-        byebug if records_hash[:profile] == nil
+        next if records_hash == nil
         [event, records_hash]
-      end
+      end.compact #if an event does not have a log_entry, then API error
 
       new_log_entries_array =
       new_log_entries_data.
@@ -243,14 +243,16 @@ module NHLGameEventsAPI
           search_hash[key] == plyr.send(key)
         end.all?
       end
-      byebug unless player
-      player_profile =
-      @game.player_profiles.
-      find do |profile|
+      if player
+        player_profile =
+        @game.player_profiles.
+        find do |profile|
           profile.player_id == player.id end
 
-      byebug unless player_profile
-      Hash[ profile: player_profile ]
+        byebug unless player_profile
+        Hash[ profile: player_profile ]
+      else byebug end
+
     end
     # http://www.nhl.com/stats/rest/shiftcharts?cayenneExp=gameId=2018020008
     def get_shifts_url

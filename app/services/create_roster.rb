@@ -91,16 +91,14 @@ module CreateRoster
         map do |id, player_hash|
           person = player_hash["person"]
 
+          # SQL escape for apostrophes
           fN = person["firstName"]; lN = person["lastName"];
-
           if fN.include?("'")
             fN.insert(fN.index("'"), "'")
             interrupt = true end
           if lN.include?("'")
             lN.insert(lN.index("'"), "'")
             interrupt = true end
-
-          byebug if interrupt
 
           Hash[
             first_name: fN,

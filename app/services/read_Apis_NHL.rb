@@ -14,7 +14,6 @@ include NHLTeamAPI
     if teams.empty?
       create_teams_for_season() end
 
-
     teams.
     each do |team|
       @team_season =
