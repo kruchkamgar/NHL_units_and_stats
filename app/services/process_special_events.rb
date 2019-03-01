@@ -34,6 +34,10 @@ module ProcessSpecialEvents
 
   def get_special_events_data
     # "universal quantification" –(not not, in place of ALL--absent from sqlite3)
+
+    # should use joins, to load only the matching instances
+    #https://guides.rubyonrails.org/active_record_querying.html#specifying-conditions-on-eager-loaded-associations
+      # look into preloading or eagerloading with joins
     @game_instances =
     Instance.includes(:events).
     where.not(

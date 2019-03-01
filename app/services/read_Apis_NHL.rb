@@ -20,6 +20,7 @@ include NHLTeamAPI
       TeamSeason.new(season: 20182018, team: team)
       @team_season.create_records_from_APIs
       @team_season.create_tallies
+      byebug
     end
   end
 
@@ -39,7 +40,7 @@ include NHLTeamAPI
       schedule_hash = team_adapter.fetch_data
       get_schedule_dates(schedule_hash).
       each do |date_hash|
-        create_game_records(date_hash); break; end
+        create_game_records(date_hash) end
     end
 
     def get_schedule_dates(schedule_hash)
@@ -50,36 +51,39 @@ include NHLTeamAPI
         slice(5) == "1" end
     end
 
+  include CreateUnitsAndInstances
     def create_game_records(date_hash)
     # create a game for each schedule date
       game_id =
       date_hash["games"].first["gamePk"]
       unless game_id then byebug end
 
-      game, teams_hash =
+      @game, teams_hash =
       NHLGameAPI::Adapter.
       new(game_id: game_id).
       create_game
       # game API may deliver two teams' players
 
-      rosters = create_rosters(game, teams_hash)
-      roster =
+      rosters = create_rosters(@game, teams_hash)
+      @roster =
       rosters.find do |roster|
         roster.team.eql?(@team) end
 
       events_boolean =
       NHLGameEventsAPI::Adapter.
       new(team:
-        @team, game: game, roster: roster).
+        @team, game: @game, roster: @roster).
       create_game_events_and_log_entries # *1
 
-      # byebug
+      byebug
+      # @units_includes_events.each do |u| u.instances.each do |inst| inst.events.load end end
+      create_records_from_shifts()
       if events_boolean
-        @units_includes_events = CreateUnitsAndInstances.
-        create_records_from_shifts(@team, roster, game, @units_includes_events)
+        # @units_includes_events = CreateUnitsAndInstances.
+        # create_records_from_shifts(@team, roster, game, @units_includes_events)
 
         ProcessSpecialEvents.
-        process_special_events(@team, roster, game, @units_includes_events)
+        process_special_events(@team, @roster, @game, @units_includes_events)
       end
     end #create_game_records
 
