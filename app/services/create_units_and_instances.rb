@@ -26,8 +26,8 @@ module CreateUnitsAndInstances
   def create_records_from_shifts #(team, roster, game, units)
     # @team, @units_includes_events = team, units
     @game = Game.where(id: @game).includes(events: [:player_profiles])[0]
-    byebug
     @roster = Roster.where(id: @roster).includes(:players)[0]
+
     # iterate through units: 6-man, 5-man, 3-man
     UNIT_HASH.each do |unit_size, unit_type|
       roster_sample = get_roster_sample (unit_type)
@@ -44,7 +44,6 @@ module CreateUnitsAndInstances
       create_units_and_instances (units_groups_hash)
     end
 
-    @units_includes_events
   end #create_records_from_shifts
 
   def create_units_and_instances (units_groups_hash)
@@ -64,13 +63,11 @@ module CreateUnitsAndInstances
         inst_hash[:events] end
       end.flatten(1) )
 
-    @inserted_units =
-    @inserted_units.includes(:rosters, instances: [ :events ]).
+    @inserted_units = @inserted_units.includes(:rosters, instances: [ :events ]).
     where(instances: {events: {event_type: "shift"}}).load
-    # byebug
+
     associate_roster_to_units(queued_units)
 
-    puts "\n\n @units_includes_events \n\n"
 
     # byebug
     # @units_includes_events +=
@@ -79,13 +76,9 @@ module CreateUnitsAndInstances
     # reject do |unit|
     #   @units_includes_events.include? unit end ) if @inserted_units.any?
 
-    @units_includes_events +=
-    ( @inserted_units.includes( instances: [ :events ]).
-    where(instances: {events: {event_type: "shift"}}).
-    reject do |unit|
-      @units_includes_events.include? unit end ) if @inserted_units.any?
+    puts "\n\n @units_includes_events \n\n"
+    @units_includes_events.or(@inserted_units)
 
-    @units_includes_events
   end
 
   def find_or_create_units (formed_units)
@@ -102,15 +95,17 @@ module CreateUnitsAndInstances
     new_formed_units = formed_units.clone
     # nils act as placeholders for queued new units. swaps pre-existing units with their records from db.
     puts "\n\n get_preexisting_units \n\n"
-
     units_records_queue =
     formed_units.
     map do |unit|
       unit_record =
       @units_includes_events.
       find do |record|
-        if record.instances.first.events.
-           map(&:player_id_num).sort == unit.sort
+        comparison = []
+        record.instances.first.events.
+           each do |event|
+             comparison.push(event.player_id_num) end
+        if comparison.sort == unit.sort
           new_formed_units.delete_at(new_formed_units.index(unit))
           true
         end

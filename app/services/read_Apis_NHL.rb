@@ -28,7 +28,7 @@ include NHLTeamAPI
 
     def initialize (season:, team:)
       @season, @team_id = season, team.team_id
-      @units_includes_events = []
+      @units_includes_events = ActiveRecord::Relation.new(Unit).none
     end
 
   include ReadApisNHL
@@ -75,15 +75,15 @@ include NHLTeamAPI
         @team, game: @game, roster: @roster).
       create_game_events_and_log_entries # *1
 
-      byebug
+      # byebug
       # @units_includes_events.each do |u| u.instances.each do |inst| inst.events.load end end
       create_records_from_shifts()
       if events_boolean
         # @units_includes_events = CreateUnitsAndInstances.
         # create_records_from_shifts(@team, roster, game, @units_includes_events)
 
-        ProcessSpecialEvents.
-        process_special_events(@team, @roster, @game, @units_includes_events)
+        # ProcessSpecialEvents.
+        # process_special_events(@team, @roster, @game, @units_includes_events)
       end
     end #create_game_records
 

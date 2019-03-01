@@ -39,7 +39,8 @@ module ProcessSpecialEvents
     #https://guides.rubyonrails.org/active_record_querying.html#specifying-conditions-on-eager-loaded-associations
       # look into preloading or eagerloading with joins
     @game_instances =
-    Instance.includes(:events).
+    Instance.
+    joins(:events).
     where.not(
       events_instances:
         { event_id: Event.
@@ -47,13 +48,15 @@ module ProcessSpecialEvents
               player_id_num: @roster.players.map(&:player_id_num) ) } ).
     where(
       events:
-        { game_id: @game.id, event_type: "shift" } )
+        { game_id: @game.id, event_type: "shift" } ).
+    eager_load(:events)
 
     @special_events = #*2
-    Event.includes(:log_entries).
+    Event.
     where( events: { game_id: @game.id } ).
     where.not(
-      "events.event_type = ? OR events.event_type = ?", 'Shootout', 'shift' )
+      "events.event_type = ? OR events.event_type = ?", 'Shootout', 'shift' ).
+    eager_load(:log_entries)
 
     @opposing_events =
     @special_events.
