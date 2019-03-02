@@ -38,7 +38,10 @@ include NHLTeamAPI
       @team, team_adapter = NHLTeamAPI::Adapter.new(team_id: @team_id).create_team
 
       schedule_hash = team_adapter.fetch_data
-      get_schedule_dates(schedule_hash).
+      @schedule_dates =
+      get_schedule_dates(schedule_hash)
+
+      @schedule_dates[54..60].
       each do |date_hash|
         create_game_records(date_hash) end
     end
@@ -58,6 +61,10 @@ include NHLTeamAPI
       date_hash["games"].first["gamePk"]
       unless game_id then byebug end
 
+      $counter ||= 0; $counter += 1
+      if @schedule_dates.index(date_hash) == 58
+        @interrupt = true end
+
       @game, teams_hash =
       NHLGameAPI::Adapter.
       new(game_id: game_id).
@@ -70,20 +77,17 @@ include NHLTeamAPI
         roster.team.eql?(@team) end
 
       events_boolean =
-      NHLGameEventsAPI::Adapter.
-      new(team:
-        @team, game: @game, roster: @roster).
-      create_game_events_and_log_entries # *1
+      NHLGameEventsAPI::Adapter
+      .new(team:
+        @team, game: @game, roster: @roster)
+      .create_game_events_and_log_entries # *1
 
       # byebug
-      # @units_includes_events.each do |u| u.instances.each do |inst| inst.events.load end end
-      create_records_from_shifts()
       if events_boolean
-        # @units_includes_events = CreateUnitsAndInstances.
-        # create_records_from_shifts(@team, roster, game, @units_includes_events)
+        create_records_from_shifts()
 
-        # ProcessSpecialEvents.
-        # process_special_events(@team, @roster, @game, @units_includes_events)
+        ProcessSpecialEvents.
+        process_special_events(@team, @roster, @game, @units_includes_events)
       end
     end #create_game_records
 
@@ -120,7 +124,6 @@ include NHLTeamAPI
       map do |unit|
         tally = unit.build_tally
         tally.tally_unit
-        byebug if $interrupt
         Hash[
           unit_id: unit.id,
           assists: tally.assists,

@@ -64,21 +64,28 @@ module CreateUnitsAndInstances
       end.flatten(1) )
 
     @inserted_units = @inserted_units.includes(:rosters, instances: [ :events ]).
-    where(instances: {events: {event_type: "shift"}}).load
+    where(instances: {events: {event_type: "shift"}})
+
+    unit_ids =
+    @inserted_units.clone
+    .map do |u|
+      u.id end
+    byebug
 
     associate_roster_to_units(queued_units)
 
-
-    # byebug
-    # @units_includes_events +=
-    # ( @inserted_units.includes( instances: [ :events ]).
-    # where(instances: {events: {event_type: "shift"}}).
-    # reject do |unit|
-    #   @units_includes_events.include? unit end ) if @inserted_units.any?
-
     puts "\n\n @units_includes_events \n\n"
-    @units_includes_events.or(@inserted_units)
+    @units_includes_events =
+    @units_includes_events
+    .or(
+       Unit.where(
+         Unit.arel_table[:id].in(
+           @inserted_units.arel_table.project(:id)) )
+       .includes(:rosters, instances: [ :events ])
+       .where(instances: { events: {event_type: "shift"} })
+    )
 
+    byebug
   end
 
   def find_or_create_units (formed_units)
@@ -248,13 +255,13 @@ module CreateUnitsAndInstances
   end #shifts_into_periods
 
   def form_instances_by_events (p_chron) # *4
-
     p_chron.
     map do |period, events|
       time_mark = "00:00"; queue_head = 0;
       instances = []
       while queue_head && events[queue_head]
         load_next_overlaps(queue_head, events, time_mark)
+        byebug if @interrupt
         instances_proc =
         Proc.new do |inst|
           (instances.push inst if inst) || instances end
@@ -284,14 +291,14 @@ module CreateUnitsAndInstances
   end
 
   def load_next_overlaps(queue_head, events, time_mark)
-    # byebug if @interrupt
+    byebug if @interrupt
     @overlap_set = []
     for comparison in events[queue_head..-1]
       if events[queue_head].end_time > comparison.start_time
         if time_mark < comparison.end_time
           @overlap_set.push comparison end
       else break end
-      # byebug if @interrupt
+      byebug if @interrupt
     end # for
   end
 
@@ -309,6 +316,7 @@ module CreateUnitsAndInstances
   end
 
   def overlap_test( basis, comparison, instances: )
+    byebug if basis == nil
     n = @overlap_set.index(basis[:event])
     min_by_et = Proc.new do
       @overlap_set.min_by(&:end_time) end
