@@ -63,17 +63,6 @@ module CreateUnitsAndInstances
         inst_hash[:events] end
       end.flatten(1) )
 
-    @inserted_units = @inserted_units.includes(:rosters, instances: [ :events ]).
-    where(instances: {events: {event_type: "shift"}})
-
-    unit_ids =
-    @inserted_units.clone
-    .map do |u|
-      u.id end
-    byebug
-
-    associate_roster_to_units(queued_units)
-
     puts "\n\n @units_includes_events \n\n"
     @units_includes_events =
     @units_includes_events
@@ -83,9 +72,10 @@ module CreateUnitsAndInstances
            @inserted_units.arel_table.project(:id)) )
        .includes(:rosters, instances: [ :events ])
        .where(instances: { events: {event_type: "shift"} })
-    )
+    ).load
 
-    byebug
+
+    associate_roster_to_units(queued_units)
   end
 
   def find_or_create_units (formed_units)
@@ -244,24 +234,23 @@ module CreateUnitsAndInstances
 
   def shifts_into_periods (shift_events)
     period_chron =
-    shift_events.
-    group_by do |event|
-      event.period end.
-    each do |period, events|
-      events.
-      sort_by! do |shft|
+    shift_events
+    .group_by do |event|
+      event.period end
+      .each do |period, events|
+      events
+      .sort_by! do |shft|
         [shft.start_time, shft.end_time] end
     end
   end #shifts_into_periods
 
   def form_instances_by_events (p_chron) # *4
-    p_chron.
-    map do |period, events|
+    p_chron
+    .map do |period, events|
       time_mark = "00:00"; queue_head = 0;
       instances = []
       while queue_head && events[queue_head]
         load_next_overlaps(queue_head, events, time_mark)
-        byebug if @interrupt
         instances_proc =
         Proc.new do |inst|
           (instances.push inst if inst) || instances end
@@ -293,12 +282,15 @@ module CreateUnitsAndInstances
   def load_next_overlaps(queue_head, events, time_mark)
     byebug if @interrupt
     @overlap_set = []
+    # accomodates no-length shift errors in API data
+    while events[queue_head].start_time == events[queue_head].end_time
+      queue_head += 1 end
     for comparison in events[queue_head..-1]
       if events[queue_head].end_time > comparison.start_time
         if time_mark < comparison.end_time
           @overlap_set.push comparison end
-      else break end
-      byebug if @interrupt
+      else
+         break end
     end # for
   end
 
