@@ -91,7 +91,7 @@ module CreateUnitsAndInstances
   def get_preexisting_units (formed_units)
     new_formed_units = formed_units.clone
     # nils act as placeholders for queued new units. swaps pre-existing units with their records from db.
-    puts "\n\n get_preexisting_units \n\n"
+    puts "\n\n #get_preexisting_units #{formed_units.first.size} \n\n"
     units_records_queue =
     formed_units.
     map do |unit|

@@ -55,6 +55,7 @@ include NHLTeamAPI
     end
 
   include CreateUnitsAndInstances
+  include ProcessSpecialEvents
     def create_game_records(date_hash)
     # create a game for each schedule date
       game_id =
@@ -85,9 +86,7 @@ include NHLTeamAPI
       # byebug
       if events_boolean
         create_records_from_shifts()
-
-        ProcessSpecialEvents.
-        process_special_events(@team, @roster, @game, @units_includes_events)
+        process_special_events()
       end
     end #create_game_records
 

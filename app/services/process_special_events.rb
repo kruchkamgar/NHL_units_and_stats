@@ -3,11 +3,9 @@
 module ProcessSpecialEvents
   include Utilities
 
-  def process_special_events (team, roster, game, units_includes_events)
-    @team, @roster, @game = team, roster, game
-    @units_includes_events = units_includes_events
+  def process_special_events
 
-    get_special_events_data
+    get_special_events_data()
     # @special_events.reject do |event|
     #   event.event_type == "Shootout" end
     @team_events =
@@ -20,9 +18,9 @@ module ProcessSpecialEvents
       event.event_type == "PPG" end
 
 # only working for 3-man unit
-    opposing_data = associate_events_to_instances(opposing_sans_ppg)
+    opposing_data = assoc_special_events_to_instances(opposing_sans_ppg)
     team_data =
-    associate_events_to_instances(team_sans_shg)
+    assoc_special_events_to_instances(team_sans_shg)
 
     opposing_data.
     each do |data|
@@ -68,7 +66,7 @@ module ProcessSpecialEvents
   end #get_special_events_data
 
   # should skip SHGs for; PPGs against, until 2/4-man
-  def associate_events_to_instances (events)
+  def assoc_special_events_to_instances (events)
 # only working for 3-man unit
     events.
     map do |event|
@@ -86,7 +84,7 @@ module ProcessSpecialEvents
       Hash[instance: cspg_instance, event: event]
     end
 
-  end #associate_events_to_instances
+  end #assoc_special_events_to_instances
 
   def tally_special_events (data, team_event=false)
     event = data[:event]; instance = data[:instance];
@@ -111,17 +109,14 @@ module ProcessSpecialEvents
     end
     instance.save
 
-    byebug unless @units_includes_events.
-    find do |unit|
-      unit == instance.unit end
-
-    @units_includes_events.
-    find do |unit|
-      unit == instance.unit end.reload
+    this = @units_includes_events
+    .find_by(id: instance.unit.id)
+    .reload
+    byebug if this.blank?
   end #(method)
 
   module_function :get_special_events_data,
-  :associate_events_to_instances, :tally_special_events, :process_special_events
+  :assoc_special_events_to_instances, :tally_special_events, :process_special_events
 end
 
 
