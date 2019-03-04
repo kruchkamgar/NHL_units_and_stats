@@ -74,7 +74,6 @@ module CreateUnitsAndInstances
        .where(instances: { events: {event_type: "shift"} })
     ).load
 
-
     associate_roster_to_units(queued_units)
   end
 
@@ -92,27 +91,66 @@ module CreateUnitsAndInstances
     new_formed_units = formed_units.clone
     # nils act as placeholders for queued new units. swaps pre-existing units with their records from db.
     puts "\n\n #get_preexisting_units #{formed_units.first.size} \n\n"
+
     units_records_queue =
     formed_units.
     map do |unit|
-      unit_record =
-      @units_includes_events.
-      find do |record|
-        comparison = []
-        record.instances.first.events.
-           each do |event|
-             comparison.push(event.player_id_num) end
-        if comparison.sort == unit.sort
+      # @units_includes_events
+      # .find do |record|
+      bind_targets = []
+      binds =
+      unit.map.with_index do |value, index|
+        bind_targets.push(":#{index + 1}")
+        assemble_binds("player_id_num", value) end
+
+        retrieve_unit_sql = "
+        SELECT *
+        FROM units
+        JOIN
+        	(SELECT unit_id
+        	FROM instances
+        	JOIN events_instances
+        	ON instance_id = instances.id
+          JOIN events
+          ON events.id = event_id
+        	WHERE instances.id IN
+        		(SELECT instances.id
+        		FROM instances
+        		JOIN
+        			(SELECT instance_id
+        			FROM events_instances
+        			WHERE event_id IN
+        				(SELECT id
+        				FROM events
+        				WHERE player_id_num IN (#{bind_targets.join(', ')})
+                  AND events.event_type = 'shift' )
+        			GROUP BY instance_id
+        			HAVING COUNT(*) >= #{bind_targets.size} )
+        		ON instance_id = instances.id )
+          AND events.event_type = 'shift'
+        	GROUP BY unit_id, instance_id
+        	HAVING COUNT(instance_id) = #{bind_targets.size} )
+        ON id = unit_id
+        GROUP BY id"
+
+        unit_record = ApplicationRecord.connection.exec_query(retrieve_unit_sql, "SQL", binds).rows.first
+
+        if (unit_record)
+          # byebug
           new_formed_units.delete_at(new_formed_units.index(unit))
-          true
-        end
-      end
-      unit_record unless unit_record == nil
+          true end
+      # end #find
+
+      Unit.find_by(id: unit_record.first) unless unit_record == nil
     end
 
     puts "\n\n get_preexisting_units done \n\n"
 
     [new_formed_units, units_records_queue]
+  end
+
+  def assemble_binds(field, value)
+    ActiveRecord::Relation::QueryAttribute.new(field, value, ActiveRecord::Type::Integer.new)
   end
 
   def insert_units(formed_units, records_queue)
@@ -131,6 +169,7 @@ module CreateUnitsAndInstances
       Unit.order(id: :desc).limit(units_changes)
     end
 
+    # add inserted_units to @units_includes_events, ahead of assoc to roster?
     @inserted_units.reverse.
     each do |record|
       nil_i = records_queue.index(nil)
@@ -424,24 +463,6 @@ module CreateUnitsAndInstances
         event.player_id_num end.sort
     end
   end #group_by_players
-
-  module_function :create_records_from_shifts,
-   :get_roster_sample,
-   :get_shifts,
-   :form_instances_by_events,
-   :make_event_hash,
-   :load_next_overlaps,
-   :reset_queue_head,
-   :call_overlap_test,
-   :overlap_test,
-   :shifts_into_periods,
-   :group_by_players,
-   :get_preexisting_units,
-   :insert_units,
-   :create_instances,
-   :find_or_create_units,
-   :create_units_and_instances, :associate_events_to_instances,
-   :associate_roster_to_units
 
 end
 #

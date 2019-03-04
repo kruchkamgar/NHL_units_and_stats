@@ -33,9 +33,7 @@ module ProcessSpecialEvents
   def get_special_events_data
     # "universal quantification" –(not not, in place of ALL--absent from sqlite3)
 
-    # should use joins, to load only the matching instances
-    #https://guides.rubyonrails.org/active_record_querying.html#specifying-conditions-on-eager-loaded-associations
-      # look into preloading or eagerloading with joins
+
     @game_instances =
     Instance.
     joins(:events).
@@ -55,6 +53,8 @@ module ProcessSpecialEvents
     where.not(
       "events.event_type = ? OR events.event_type = ?", 'Shootout', 'shift' ).
     eager_load(:log_entries)
+
+    # Player.arel_table.join(Roster.arel_table).on(Player.arel_table[:id]
 
     @opposing_events =
     @special_events.
@@ -109,14 +109,8 @@ module ProcessSpecialEvents
     end
     instance.save
 
-    this = @units_includes_events
-    .find_by(id: instance.unit.id)
-    .reload
-    byebug if this.blank?
   end #(method)
 
-  module_function :get_special_events_data,
-  :assoc_special_events_to_instances, :tally_special_events, :process_special_events
 end
 
 

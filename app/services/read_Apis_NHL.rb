@@ -41,7 +41,7 @@ include NHLTeamAPI
       @schedule_dates =
       get_schedule_dates(schedule_hash)
 
-      @schedule_dates[54..60].
+      @schedule_dates.
       each do |date_hash|
         create_game_records(date_hash) end
     end
@@ -61,10 +61,6 @@ include NHLTeamAPI
       game_id =
       date_hash["games"].first["gamePk"]
       unless game_id then byebug end
-
-      $counter ||= 0; $counter += 1
-      if @schedule_dates.index(date_hash) == 58
-        @interrupt = true end
 
       @game, teams_hash =
       NHLGameAPI::Adapter.
