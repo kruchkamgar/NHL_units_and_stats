@@ -13,14 +13,14 @@ module NHLTeamAPI
 
   def create_all_teams_by_season
     # get_season
-    make_teams_data
+    create_teams
   end
 
-  def make_teams_data
+  def create_teams
     teams_data =
     JSON.parse(RestClient.get(TEAM_URL))
 
-    made_teams_array =
+    prepared_teams =
     teams_data["teams"].
     map do |info_hash|
       Hash[
@@ -30,7 +30,7 @@ module NHLTeamAPI
         created_at: Time.now, updated_at: Time.now ]
     end
     teams_changes =
-    SQLOperations.sql_insert_all("teams", made_teams_array )
+    SQLOperations.sql_insert_all("teams", prepared_teams )
     # grab teams
     if teams_changes > 0
       inserted_teams = Team.order(id: :desc).limit(teams_changes)
@@ -45,7 +45,7 @@ module NHLTeamAPI
       get_season unless @season # string
     end
 
-    def create_team
+    def find_or_create_team
       team =
       Team.find_or_create_by(
         team_id: @team_id,
@@ -100,4 +100,5 @@ module NHLTeamAPI
       @season = "#{year-1}#{year}"
     end
   end
+
 end

@@ -30,16 +30,21 @@ module CreateRoster
   end
 
   def self.query_for_matching_roster
+    team_name = @team_hash["team"]["name"]
+    team = (
+      if @team.name == team_name
+        @team
+      else Team.find_by_name(team_name) end )
     player_id_nums =
     @team_hash["players"].keys.
     map do |key|
       key.match(/\d+/)[0].to_i end
 
     roster_records =
-    Roster.
-    includes(players: [:player_profiles]).
-    where(players: { player_id_num: player_id_nums }).
-    references(:players)
+    Roster
+    .includes(players: [:player_profiles])
+    .where(players: { player_id_num: player_id_nums })
+    .where(team_id: team)
     #*1
     # collect potential new players, if roster exists
     if roster_records.any?

@@ -28,14 +28,13 @@ include NHLTeamAPI
 
     def initialize (season:, team:)
       @season, @team_id = season, team.team_id
-      @units_includes_events = ActiveRecord::Relation.new(Unit).none
     end
 
   include ReadApisNHL
     def create_records_from_APIs
       # create_teams_for_season()
       # create team and get its schedule
-      @team, team_adapter = NHLTeamAPI::Adapter.new(team_id: @team_id).create_team
+      @team, team_adapter = NHLTeamAPI::Adapter.new(team_id: @team_id).find_or_create_team
 
       schedule_hash = team_adapter.fetch_data
       schedule_dates =
@@ -48,29 +47,22 @@ include NHLTeamAPI
         create_game_records(date_hash) end
     end
 
-    def get_schedule_dates(schedule_hash)
-      schedule_hash["dates"].
-      reject do |date|
-        # "1" means preseason
-        date["games"].first["gamePk"].to_s.
-        slice(5) == "1" end
-    end
-
   include CreateUnitsAndInstances
   include ProcessSpecialEvents
     def create_game_records(date_hash)
     # create a game for each schedule date
       game_id =
       date_hash["games"].first["gamePk"]
-      unless game_id then byebug end
+      games = @team.games.where.load
+      if games.find do |game|
+        game.game_id == game_id end
+      then return end
 
       @game, teams_hash =
       NHLGameAPI::Adapter.
       new(game_id: game_id).
       create_game
       # game API may deliver two teams' players
-
-      byebug if @game == nil
 
       rosters = create_rosters(@game, teams_hash)
       @roster =
@@ -80,7 +72,7 @@ include NHLTeamAPI
       events_boolean =
       NHLGameEventsAPI::Adapter
       .new(team:
-        @team, game: @game, roster: @roster)
+        @team, game: @game )
       .create_game_events_and_log_entries # *1
 
       # byebug
@@ -135,13 +127,22 @@ include NHLTeamAPI
           created_at: Time.now,
           updated_at: Time.now ]
       end
-
+      byebug if prepared_tallies.blank?
       SQLOperations.sql_insert_all("tallies", prepared_tallies)
     end #create_tallies
   end #TeamSeason
 
 
   # ////////////// helpers /////////////// #
+  private
+
+  def get_schedule_dates(schedule_hash)
+    schedule_hash["dates"].
+    reject do |date|
+      # "1" means preseason
+      date["games"].first["gamePk"].to_s.
+      slice(5) == "1" end
+  end
 
   # def select_team_hash (teams_hash, team_id = nil)
   #   team_id ||= @team.team_id

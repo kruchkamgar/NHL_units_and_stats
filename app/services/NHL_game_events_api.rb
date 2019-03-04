@@ -10,10 +10,10 @@ module NHLGameEventsAPI
 
     SHIFT_CHARTS_URL = 'http://www.nhl.com/stats/rest/shiftcharts'
 
-    def initialize (team:, game:, roster:)
+    def initialize (team:, game:)
       @team = team
       @game = Game.where(id: game).includes(:player_profiles)[0]
-      @roster = Roster.where(id: roster).includes(:players)[0]
+      # @roster = Roster.where(id: roster).includes(:players)[0]
     end
 
     def create_game_events_and_log_entries
