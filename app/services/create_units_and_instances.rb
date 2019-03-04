@@ -64,15 +64,15 @@ module CreateUnitsAndInstances
       end.flatten(1) )
 
     puts "\n\n @units_includes_events \n\n"
-    @units_includes_events =
-    @units_includes_events
-    .or(
-       Unit.where(
-         Unit.arel_table[:id].in(
-           @inserted_units.arel_table.project(:id)) )
-       .includes(:rosters, instances: [ :events ])
-       .where(instances: { events: {event_type: "shift"} })
-    ).load
+    # @units_includes_events =
+    # @units_includes_events
+    # .or(
+    #    Unit.where(
+    #      Unit.arel_table[:id].in(
+    #        @inserted_units.arel_table.project(:id)) )
+    #    .includes(:rosters, instances: [ :events ])
+    #    .where(instances: { events: {event_type: "shift"} })
+    # ).load
 
     associate_roster_to_units(queued_units)
   end
@@ -95,46 +95,17 @@ module CreateUnitsAndInstances
     units_records_queue =
     formed_units.
     map do |unit|
-      # @units_includes_events
-      # .find do |record|
       bind_targets = []
       binds =
       unit.map.with_index do |value, index|
         bind_targets.push(":#{index + 1}")
         assemble_binds("player_id_num", value) end
 
-        retrieve_unit_sql = "
-        SELECT *
-        FROM units
-        JOIN
-        	(SELECT unit_id
-        	FROM instances
-        	JOIN events_instances
-        	ON instance_id = instances.id
-          JOIN events
-          ON events.id = event_id
-        	WHERE instances.id IN
-        		(SELECT instances.id
-        		FROM instances
-        		JOIN
-        			(SELECT instance_id
-        			FROM events_instances
-        			WHERE event_id IN
-        				(SELECT id
-        				FROM events
-        				WHERE player_id_num IN (#{bind_targets.join(', ')})
-                  AND events.event_type = 'shift' )
-        			GROUP BY instance_id
-        			HAVING COUNT(*) >= #{bind_targets.size} )
-        		ON instance_id = instances.id )
-          AND events.event_type = 'shift'
-        	GROUP BY unit_id, instance_id
-        	HAVING COUNT(instance_id) = #{bind_targets.size} )
-        ON id = unit_id
-        GROUP BY id"
-
-        unit_record = ApplicationRecord.connection.exec_query(retrieve_unit_sql, "SQL", binds).rows.first
-
+        unit_record =
+        ApplicationRecord.connection.exec_query(
+          retrieve_unit_sql(bind_targets),
+          "SQL",
+          binds ).rows.first
         if (unit_record)
           # byebug
           new_formed_units.delete_at(new_formed_units.index(unit))
@@ -147,6 +118,39 @@ module CreateUnitsAndInstances
     puts "\n\n get_preexisting_units done \n\n"
 
     [new_formed_units, units_records_queue]
+  end
+
+  def retrieve_unit_sql (bind_targets)
+    <<~SQL
+      SELECT *
+      FROM units
+      JOIN
+        (SELECT unit_id
+        FROM instances
+        JOIN events_instances
+        ON instance_id = instances.id
+        JOIN events
+        ON events.id = event_id
+        WHERE instances.id IN
+          (SELECT instances.id
+          FROM instances
+          JOIN
+            (SELECT instance_id
+            FROM events_instances
+            WHERE event_id IN
+              (SELECT id
+              FROM events
+              WHERE player_id_num IN (#{bind_targets.join(', ')})
+                AND events.event_type = 'shift' )
+            GROUP BY instance_id
+            HAVING COUNT(*) >= #{bind_targets.size} )
+          ON instance_id = instances.id )
+        AND events.event_type = 'shift'
+        GROUP BY unit_id, instance_id
+        HAVING COUNT(instance_id) = #{bind_targets.size} )
+      ON id = unit_id
+      GROUP BY id
+    SQL
   end
 
   def assemble_binds(field, value)
@@ -221,6 +225,8 @@ module CreateUnitsAndInstances
 
   def associate_roster_to_units(queued_units)
     puts "\n\n associate_roster_to_units \n\n"
+
+# performance: single query for units' rosters matching @roster instead?
     queued_units_new_roster =
     queued_units.
     reject do |unit|

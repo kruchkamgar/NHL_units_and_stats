@@ -38,11 +38,13 @@ include NHLTeamAPI
       @team, team_adapter = NHLTeamAPI::Adapter.new(team_id: @team_id).create_team
 
       schedule_hash = team_adapter.fetch_data
-      @schedule_dates =
+      schedule_dates =
       get_schedule_dates(schedule_hash)
+      .select do |date|
+        date["date"] < Time.now end
 
-      @schedule_dates.
-      each do |date_hash|
+      schedule_dates
+      .each do |date_hash|
         create_game_records(date_hash) end
     end
 
@@ -67,6 +69,8 @@ include NHLTeamAPI
       new(game_id: game_id).
       create_game
       # game API may deliver two teams' players
+
+      byebug if @game == nil
 
       rosters = create_rosters(@game, teams_hash)
       @roster =
@@ -114,9 +118,12 @@ include NHLTeamAPI
     end
 
     def create_tallies
+
       prepared_tallies =
-      @units_includes_events.
-      map do |unit|
+      @team.rosters
+      .map do |rstr|
+        rstr.units end[0]
+      .map do |unit|
         tally = unit.build_tally
         tally.tally_unit
         Hash[
@@ -130,7 +137,7 @@ include NHLTeamAPI
       end
 
       SQLOperations.sql_insert_all("tallies", prepared_tallies)
-    end
+    end #create_tallies
   end #TeamSeason
 
 
