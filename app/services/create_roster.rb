@@ -48,7 +48,7 @@ module CreateRoster
     .joins(:players)
     .where(id:
       Roster
-      .joins(players: [:player_profiles])
+      .joins(:players)
       .where(players: { player_id_num: @player_id_nums })
       .where(team_id: team)
       .select(:id).distinct
@@ -94,7 +94,6 @@ module CreateRoster
       @roster.games << @game
       @roster.save
     else
-      byebug
       @roster = @roster_record[0]
       @roster.games << @game unless @roster.games.include?(@game)
     end # if ...
@@ -215,7 +214,6 @@ module CreateRoster
       find do |profile|
         profile.position == api_hash["position"]["name"] end
     end
-byebug if @game.id ==3
     @game.player_profiles +=
     (
       game_profiles +

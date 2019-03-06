@@ -46,7 +46,7 @@ include NHLTeamAPI
 
       schedule_hash = team_adapter.fetch_data
       schedule_dates =
-      get_schedule_dates(schedule_hash)[8..10]
+      get_schedule_dates(schedule_hash)
       .select do |date|
         date["date"] < Time.now end
 
