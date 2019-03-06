@@ -18,11 +18,10 @@ module CreateRoster
   def self.create_game_roster (team_hash, team, game)
     @team_hash, @team, @game = team_hash, team, game
 
-    roster_record_data =
     query_for_matching_roster()
-    roster_and_players_creation_logic(roster_record_data)
+    roster_and_players_creation_logic()
     map_player_records_to_api()
-    # new profiles may manifest, for matched rosters too, in @game
+    # new profiles may manifest - even for matched rosters too - in this new @game
     inserted_profiles =
     create_new_profiles()
     add_profiles_to_game(inserted_profiles)
@@ -35,115 +34,129 @@ module CreateRoster
       if @team.name == team_name
         @team
       else Team.find_by_name(team_name) end )
-    player_id_nums =
-    @team_hash["players"].keys.
-    map do |key|
+    @player_id_nums =
+    @team_hash["players"].keys
+    .map do |key|
       key.match(/\d+/)[0].to_i end
-    # roster_records =
     # Roster
     # .includes(players: [:player_profiles])
     # .where(players: { player_id_num: player_id_nums })
     # .where(team_id: team)
 
-    Roster.find_by_id(
+    @roster_record =
+    Roster
+    .joins(:players)
+    .where(id:
       Roster
       .joins(players: [:player_profiles])
-      .where(players: { player_id_num: player_id_nums })
+      .where(players: { player_id_num: @player_id_nums })
       .where(team_id: team)
-      .group("rosters.id").select(:id).distinct
-    )
+      .select(:id).distinct
+      .group(:id)
+      .having("COUNT(rosters.id) = ?", @player_id_nums.size) )
+    .group("rosters.id")
+    .having("COUNT(rosters.id) = ?", @player_id_nums.size ) || nil
+
     #*1
     # collect potential new players, if roster exists
-    if roster_records.any?
-      # find best match from matching-roster array
-      roster_record =
-      roster_records.
-      max_by do |record|
-        ( record.players.map(&:player_id_num) &
-        player_id_nums ).size end
+    # if roster_record
 
-      new_player_id_nums =
-      player_id_nums.
-      reject do |id_num|
-        roster_record.players.
-        map(&:player_id_num).include? id_num end
-    else new_player_id_nums = player_id_nums end
-    Hash[
-      roster_record: roster_record,
-      n_p_ids: new_player_id_nums,
-      p_ids: player_id_nums ]
+      # find best match from matching-roster array
+      # roster_record =
+      # roster_records.
+      # max_by do |record|
+      #   ( record.players.map(&:player_id_num) &
+      #   player_id_nums ).size end
+
+    #   new_player_id_nums =
+    #   player_id_nums.
+    #   reject do |id_num|
+    #     roster_record.players.
+    #     map(&:player_id_num).include? id_num end
+    # else new_player_id_nums = player_id_nums end
+
   end
 
   # if new players exist (and no matching roster found, therefore) @game brings a NEW roster
-  def self.roster_and_players_creation_logic (data)
-    roster_record = data[:roster_record]; new_player_id_nums = data[:n_p_ids];
-    byebug if new_player_id_nums.include? 8476234
+  def self.roster_and_players_creation_logic
 
-    if new_player_id_nums.any? &&
-      !( roster_record.games.include?(@game) if roster_record )# blocks api game roster update contingency, which could bring new players
+    unless @roster_record.any?
+    # if new_player_id_nums.any? &&
+     # blocks api game roster update contingency, which could bring new players
       byebug if @interrupt
       @roster = @team.rosters.build
 # >>? check first if player exists, as opposed to letting database handle uniqueness for player_id_nums
 # - team_hash players.any? { |player| Player.all.include? player }
-      player_records =
-      Player.where(player_id_num: data[:p_ids])
-      new_players_api_data =
-      @team_hash["players"].
-      select do |id, player_hash|
-        new_player_id_nums.include? player_hash["person"]["id"] end
-      # new minus existing players
-
-      new_players =
-      new_players_api_data.
-      reject do |id, player_hash|
-        player_records.
-        map(&:player_id_num).include? player_hash["person"]["id"] end
-
-      if new_players.any?
-        prepared_players =
-        new_players.
-        map do |id, player_hash|
-          person = player_hash["person"]
-
-          # SQL escape for apostrophes
-          fN = person["firstName"]; lN = person["lastName"];
-          if fN.include?("'")
-            fN.insert(fN.index("'"), "'")
-            interrupt = true end
-          if lN.include?("'")
-            lN.insert(lN.index("'"), "'")
-            interrupt = true end
-
-          Hash[
-            first_name: fN,
-            last_name: lN,
-            player_id_num: person["id"],
-            created_at: Time.now,
-            updated_at: Time.now ]
-        end
-        players_changes = SQLOperations.sql_insert_all("players", prepared_players )
-        roster_players =
-        Player.order(id: :desc).limit(players_changes) + player_records
-      else roster_players = player_records end
+      players_data = get_new_api_data_and_records()
+      roster_players = create_new_players(*players_data)
 
       @roster.players << roster_players
       @roster.games << @game
       @roster.save
     else
-      byebug if @interrupt
-      @roster = roster_record
+      byebug
+      @roster = @roster_record[0]
       @roster.games << @game unless @roster.games.include?(@game)
     end # if ...
   end #roster_and_players_creation_logic
 
+  def self.get_new_api_data_and_records
+    player_records =
+    Player.where(player_id_num: @player_id_nums)
+    new_players_api_data =
+    @team_hash["players"]
+    .select do |id, player_hash|
+      @player_id_nums
+      .include? player_hash["person"]["id"] end
+
+    # new minus existing players
+    new_players =
+    new_players_api_data
+    .reject do |id, player_hash|
+      player_records
+      .map(&:player_id_num)
+      .include? player_hash["person"]["id"] end
+
+    [new_players, player_records]
+  end
+
+  def self.create_new_players(new_players, player_records)
+    if new_players.any?
+      prepared_players =
+      new_players
+      .map do |id, player_hash|
+        person = player_hash["person"]
+
+        # SQL escape for apostrophes
+        fN = person["firstName"]; lN = person["lastName"];
+        if fN.include?("'")
+          fN.insert(fN.index("'"), "'")
+          interrupt = true end
+        if lN.include?("'")
+          lN.insert(lN.index("'"), "'")
+          interrupt = true end
+
+        Hash[
+          first_name: fN,
+          last_name: lN,
+          player_id_num: person["id"],
+          created_at: Time.now,
+          updated_at: Time.now ]
+      end
+      players_changes = SQLOperations.sql_insert_all("players", prepared_players )
+      roster_players =
+      Player.order(id: :desc).limit(players_changes) + player_records
+    else roster_players = player_records end
+  end
+
   def self.map_player_records_to_api
     @player_records_to_api =
-    @roster.players.
-    map do |player|
+    @roster.players
+    .map do |player|
       api_player_hash =
-      @team_hash["players"].
-      find do |id, plyr_hash|
-        player.player_id_num == plyr_hash["person"]["id"] end[1]
+      (@team_hash["players"]
+      .find do |id, plyr_hash|
+        player.player_id_num == plyr_hash["person"]["id"] end || byebug)[1]
       [player, api_player_hash]
     end
   end #map_player_records_to_api
