@@ -1,5 +1,5 @@
 class Instance < ApplicationRecord
-  belongs_to :unit, inverse_of: :instances, optional: true
+  belongs_to :unit, optional: true
   has_and_belongs_to_many :events
 
   # give goals and assists default value of 0

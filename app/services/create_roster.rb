@@ -39,12 +39,19 @@ module CreateRoster
     @team_hash["players"].keys.
     map do |key|
       key.match(/\d+/)[0].to_i end
+    # roster_records =
+    # Roster
+    # .includes(players: [:player_profiles])
+    # .where(players: { player_id_num: player_id_nums })
+    # .where(team_id: team)
 
-    roster_records =
-    Roster
-    .includes(players: [:player_profiles])
-    .where(players: { player_id_num: player_id_nums })
-    .where(team_id: team)
+    Roster.find_by_id(
+      Roster
+      .joins(players: [:player_profiles])
+      .where(players: { player_id_num: player_id_nums })
+      .where(team_id: team)
+      .group("rosters.id").select(:id).distinct
+    )
     #*1
     # collect potential new players, if roster exists
     if roster_records.any?
@@ -52,7 +59,7 @@ module CreateRoster
       roster_record =
       roster_records.
       max_by do |record|
-        ( record.players.map(&:player_id_num) &&
+        ( record.players.map(&:player_id_num) &
         player_id_nums ).size end
 
       new_player_id_nums =
@@ -70,9 +77,11 @@ module CreateRoster
   # if new players exist (and no matching roster found, therefore) @game brings a NEW roster
   def self.roster_and_players_creation_logic (data)
     roster_record = data[:roster_record]; new_player_id_nums = data[:n_p_ids];
+    byebug if new_player_id_nums.include? 8476234
 
     if new_player_id_nums.any? &&
       !( roster_record.games.include?(@game) if roster_record )# blocks api game roster update contingency, which could bring new players
+      byebug if @interrupt
       @roster = @team.rosters.build
 # >>? check first if player exists, as opposed to letting database handle uniqueness for player_id_nums
 # - team_hash players.any? { |player| Player.all.include? player }
@@ -121,6 +130,7 @@ module CreateRoster
       @roster.games << @game
       @roster.save
     else
+      byebug if @interrupt
       @roster = roster_record
       @roster.games << @game unless @roster.games.include?(@game)
     end # if ...
@@ -192,7 +202,7 @@ module CreateRoster
       find do |profile|
         profile.position == api_hash["position"]["name"] end
     end
-
+byebug if @game.id ==3
     @game.player_profiles +=
     (
       game_profiles +

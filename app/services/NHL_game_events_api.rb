@@ -17,6 +17,7 @@ module NHLGameEventsAPI
     end
 
     def create_game_events_and_log_entries
+      #game already created via the opposing team
       game_record = Event.where(game_id: @game).any?
 
         # for 'add new events' functionality: grab events w/ game id, and subtract from API events (for ex: live-updating)

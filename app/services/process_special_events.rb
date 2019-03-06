@@ -33,7 +33,6 @@ module ProcessSpecialEvents
   def get_special_events_data
     # "universal quantification" –(not not, in place of ALL--absent from sqlite3)
 
-
     @game_instances =
     Instance.
     joins(:events).

@@ -39,23 +39,23 @@ module NHLTeamAPI
 
   class Adapter
 
-    def initialize (name: nil, team_id:, season: nil, start_date: nil, end_date: nil)
-      @name, @team_id, @season, @start_date, @end_date = name, team_id, season, start_date, end_date
+    def initialize (name: nil, team:, season: nil, start_date: nil, end_date: nil)
+      @name, @team, @season, @start_date, @end_date = name, team, season, start_date, end_date
 
       get_season unless @season # string
     end
 
     def find_or_create_team
-      team =
-      Team.find_or_create_by(
-        team_id: @team_id,
-        season: @season
-      )
+      # team =
+      # Team.find_or_create_by(
+      #   team_id: @team_id,
+      #   season: @season
+      # )
 
-      team.name = @name ||=
-      (@name = get_team_name["teams"][0]["name"])
-      team.save
-      [team, self]
+      @team.name =
+      (@name = get_team_name["teams"][0]["name"]) unless @team.name
+      @team.save
+      self
     end
 
     def fetch_data
@@ -69,7 +69,7 @@ module NHLTeamAPI
     #   "#{BASE_URL}#{@team_id}/roster"
     # end
     def get_team_name
-      JSON.parse(RestClient.get(TEAM_URL+"#{@team_id}"))
+      JSON.parse(RestClient.get(TEAM_URL+"#{@team.team_id}"))
     end
 
     def get_sched_url
@@ -85,7 +85,7 @@ module NHLTeamAPI
         end_date = "#{@season[4, 4]}-#{@end_date}"
       end
 
-      "#{SCHEDULE_URL}?teamId=#{@team_id}&startDate=#{start_date}&endDate=#{end_date}"
+      "#{SCHEDULE_URL}?teamId=#{@team.team_id}&startDate=#{start_date}&endDate=#{end_date}"
     end
 
 

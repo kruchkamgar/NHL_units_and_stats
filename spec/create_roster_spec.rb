@@ -38,6 +38,8 @@ describe CreateRoster do
     @game = Game.new(id: 2, home_side: "New York Islanders") end
   # seems to destroy it automatically -- after(:context) do @game.destroy end
 
+
+
   describe '#query_for_roster_and_new_plyrs' do
     it 'retrieves matching roster record from db' do
       initializer
@@ -62,7 +64,7 @@ describe CreateRoster do
     before(:example) do
       @data = Hash[roster_record: @roster, pids: []]
     end
-    # CreateRoster.instance_variable_set(:@game, @game)
+
     describe '#roster_and_players_creation_logic' do
       it 'sets @roster and @players' do
         CreateRoster.instance_variable_set(:@game, @game)
@@ -101,16 +103,17 @@ describe CreateRoster do
         expect(subject.instance_variable_get(:@players)).
         to eq(@players_sample)
       end
+
+      it 'doesnt build duplicate rosters' do
+        # rstrs = Team.find_by(team_id: 1).rosters.load; mr = rstrs.map do |r| r.players.map(&:player_id_num).sort end; sel = rstrs.map do |r| mr.count(r.players.map(&:player_id_num).sort) end;
+      end
     end
   end # context 'does not have game'
 
   context '-' do
 
     before(:context) do
-      # CreateRoster.instance_variable_get(:@roster).games.destroy_all
-      # CreateRoster.instance_variable_get(:@game).destroy
-      # CreateRoster.instance_variable_get(:@roster).players.destroy_all
-      # CreateRoster.instance_variable_get(:@players).destroy
+    
       @players_sample = @players.first(5).clone
       @sample_profiles = sample_profiles # NYI
     end

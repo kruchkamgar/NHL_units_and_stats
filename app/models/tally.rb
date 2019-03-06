@@ -21,7 +21,7 @@ class Tally < ApplicationRecord
       self.goals =
       goals_values.reduce(:+) if goals_values.any?
 
-      if self.goals > 0 && self.assists > 0 then $interrupt = true end
+      # if self.goals > 0 && self.assists > 0 then $interrupt = true end
 
       self.points =
       self.goals + self.assists

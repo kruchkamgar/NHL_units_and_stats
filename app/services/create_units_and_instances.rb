@@ -247,15 +247,16 @@ module CreateUnitsAndInstances
 
   # filter to get certain player types (see UNIT_HASH)
   def get_roster_sample (player_types)
+
     roster_sample =
-    @roster.players.
-    select do |player|
-      player_types.
-      include? (
-        @game.player_profiles.
-        find do |profile|
-        profile.player_id == player.id end.
-        position_type )
+    @roster.players
+    .select do |player|
+      player_types
+      .include? (
+        (@game.player_profiles
+        .find do |profile|
+          profile.player_id == player.id end || byebug)
+        .position_type)
     end
   end
 
