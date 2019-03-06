@@ -18,17 +18,22 @@ module NHLGameAPI
       @game_id = game_id #2017020019
     end
 
+    # handle new player profiles? (primary-position change for example)
     def create_game
-      game =
-      Game.find_or_create_by(game_id: @game_id)
-      # handle new player profiles? (primary-position change for example)
+      game = Game.find_by(game_id: @game_id)
       teams_hash =
       fetch_data(get_game_url)["teams"]
-      teams_hash.
-      each do |side, team_hash|
-        if side == "home"
-          game.home_side = team_hash["team"]["name"] end
-        game.save
+      home_side =
+      teams_hash.select do |side, team_hash|
+        side == "home" end
+      home_side_name = home_side["home"]["team"]["name"]
+
+      if game
+          game.home_side = home_side_name
+          game.save
+      else
+        game =
+        Game.create(game_id: @game_id, home_side: home_side_name)
       end
       return [game, teams_hash]
     end

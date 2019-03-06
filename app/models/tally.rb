@@ -2,7 +2,7 @@ class Tally < ApplicationRecord
   belongs_to :unit
 # implement starting value of 0 for assists and goals and points
 
-  def tally_unit
+  def tally_instances
       plus_minus_values =
       self.unit.instances.
       map(&:plus_minus).compact

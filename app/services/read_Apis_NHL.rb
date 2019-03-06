@@ -48,7 +48,7 @@ include NHLTeamAPI
       schedule_dates =
       get_schedule_dates(schedule_hash)
       .select do |date|
-        date["date"] < Time.now end
+        date["date"] < (Time.now - 85000) end
 
       schedule_dates
       .each do |date_hash|
@@ -86,31 +86,24 @@ include NHLTeamAPI
       end
     end #create_game_records
 
-    # create the main roster
-    # NHLRosterAPI::Adapter.new(team.team_id, season: team.season).fetch_roster
+            # option: create the main roster
+            # NHLRosterAPI::Adapter.new(team.team_id, season: team.season).fetch_roster
     def create_rosters(game, teams_hash)
       teams_data =
-      teams_hash.
-      map do |side, side_hash|
+      teams_hash
+      .map do |side, side_hash|
         [ side_hash["team"]["id"],
           side_hash ] end
-      hashed =
-      Hash[
-        ids: teams_data.transpose.first,
-        hash_data: teams_data.transpose.second ]
+      .sort do |a,b|
+        a.first <=> b.first end
 
       team_records =
-      Team.where(team_id: hashed[:ids])
-      hashed[:hash_data].
-      map do |hash|
-        team_record =
-        team_records.
-        find_by(team_id: hash["team"]["id"] )
-        [ team_record, hash ] end.
-      map do |team, hash|
+      Team.where(team_id: teams_data.transpose.first).order(team_id: :ASC)
+
+      teams_data
+      .map.with_index do |array, i|
         CreateRoster::create_game_roster(
-          hash, team, game )
-      end
+          array.second, team_records[i], game ) end
     end
 
     def create_tallies
@@ -120,8 +113,8 @@ include NHLTeamAPI
       .map do |rstr|
         rstr.units end[0]
       .map do |unit|
-        tally = unit.build_tally
-        tally.tally_unit
+        tally = unit.tallies.build
+        tally.tally_instances
         Hash[
           unit_id: unit.id,
           assists: tally.assists,

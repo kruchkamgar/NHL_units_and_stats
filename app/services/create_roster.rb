@@ -29,51 +29,25 @@ module CreateRoster
   end
 
   def self.query_for_matching_roster
-    team_name = @team_hash["team"]["name"]
-    team = (
-      if @team.name == team_name
-        @team
-      else Team.find_by_name(team_name) end )
+
     @player_id_nums =
     @team_hash["players"].keys
     .map do |key|
       key.match(/\d+/)[0].to_i end
-    # Roster
-    # .includes(players: [:player_profiles])
-    # .where(players: { player_id_num: player_id_nums })
-    # .where(team_id: team)
 
     @roster_record =
     Roster
     .joins(:players)
     .where(id:
-      Roster
+      Roster.select(:id).distinct
       .joins(:players)
       .where(players: { player_id_num: @player_id_nums })
-      .where(team_id: team)
-      .select(:id).distinct
+      .where(team_id: @team)
       .group(:id)
       .having("COUNT(rosters.id) = ?", @player_id_nums.size) )
     .group("rosters.id")
-    .having("COUNT(rosters.id) = ?", @player_id_nums.size ) || nil
-
-    #*1
-    # collect potential new players, if roster exists
-    # if roster_record
-
-      # find best match from matching-roster array
-      # roster_record =
-      # roster_records.
-      # max_by do |record|
-      #   ( record.players.map(&:player_id_num) &
-      #   player_id_nums ).size end
-
-    #   new_player_id_nums =
-    #   player_id_nums.
-    #   reject do |id_num|
-    #     roster_record.players.
-    #     map(&:player_id_num).include? id_num end
-    # else new_player_id_nums = player_id_nums end
+    .having("COUNT(rosters.id) = ?", @player_id_nums.size )
+    .preload(players: [:player_profiles]) || nil
 
   end
 
@@ -81,12 +55,9 @@ module CreateRoster
   def self.roster_and_players_creation_logic
 
     unless @roster_record.any?
-    # if new_player_id_nums.any? &&
-     # blocks api game roster update contingency, which could bring new players
-      byebug if @interrupt
+
       @roster = @team.rosters.build
-# >>? check first if player exists, as opposed to letting database handle uniqueness for player_id_nums
-# - team_hash players.any? { |player| Player.all.include? player }
+
       players_data = get_new_api_data_and_records()
       roster_players = create_new_players(*players_data)
 
@@ -95,7 +66,7 @@ module CreateRoster
       @roster.save
     else
       @roster = @roster_record[0]
-      @roster.games << @game unless @roster.games.include?(@game)
+      @roster.games << @game unless @roster.games.pluck(:game_id).include?(@game.game_id)
     end # if ...
   end #roster_and_players_creation_logic
 
@@ -116,6 +87,7 @@ module CreateRoster
       .map(&:player_id_num)
       .include? player_hash["person"]["id"] end
 
+# byebug
     [new_players, player_records]
   end
 
@@ -160,18 +132,20 @@ module CreateRoster
     end
   end #map_player_records_to_api
 
+  # differencce b/n player records and api profiles
   def self.create_new_profiles
     @existing_profiles_data =
-    @player_records_to_api.
-    select do |player, api_player_hash|
+    @player_records_to_api
+    .select do |player, api_player_hash|
       player.player_profiles.map(&:position).include? api_player_hash["position"]["name"]
     end
 
     new_profiles_data = @player_records_to_api - @existing_profiles_data
+# byebug
 
     new_profiles_array =
-    new_profiles_data.
-    map do |player, api_player_hash|
+    new_profiles_data
+    .map do |player, api_player_hash|
       # then create hash if not exists
       Hash[
         position: api_player_hash["position"]["name"],
@@ -192,31 +166,16 @@ module CreateRoster
   # add all the database profiles found in team_hash, to @game
   def self.add_profiles_to_game (inserted_profiles)
 
-    # players_records =
-    # @roster.players.
-    # includes(:player_profiles)
-    # player_profiles =
-    # @team_hash["players"].
-    # map do |id, plyr_hash|
-    #   record =
-    #   players_records.
-    #   find { |record|
-    #     record.player_id_num == plyr_hash["person"]["id"] }
-    #   # return the matching player_profile
-    #   record.player_profiles.
-    #   find { |profile|
-    #     profile.position == plyr_hash["position"]["name"] }
-    # end
     game_profiles =
-    @existing_profiles_data.
-    map do |record, api_hash|
-      record.player_profiles.
-      find do |profile|
+    @existing_profiles_data
+    .map do |record, api_hash|
+      record.player_profiles
+      .find do |profile|
         profile.position == api_hash["position"]["name"] end
     end
+#performance: do a prepare-insert instead perhaps
     @game.player_profiles +=
-    (
-      game_profiles +
+    ( game_profiles +
       (inserted_profiles || []) - @game.player_profiles ) # existing + inserted - pre-existing
   end
 
