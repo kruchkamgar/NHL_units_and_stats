@@ -6,28 +6,26 @@ $season = 20182019
 
 include NHLTeamAPI
   def create_teams_seasons
+    set_season($season)
+
     teams =
     Team.left_outer_joins(rosters: [:units])
-    .where(season: $season)
+    .where(season: @season)
     .group("teams.id").having("COUNT(units.id) = 0")
 
     if teams.empty?
-      create_teams_for_season() end
+      # teams to which to associate opposing team rosters, per game
+      create_all_teams_by_season()
+    end
 
     teams.
     each do |team|
       @team_season =
-      TeamSeason.new(season: $season, team: team)
+      TeamSeason.new(season: @season, team: team)
       @team_season.create_records_from_APIs
       @team_season.create_tallies
       byebug
     end
-  end
-
-  # teams to which to associate opposing team rosters, per game
-  def create_teams_for_season
-    get_season
-    create_all_teams_by_season() unless Team.find_by(season: @season)
   end
 
   class TeamSeason
@@ -107,11 +105,11 @@ include NHLTeamAPI
     end
 
     def create_tallies
-
       prepared_tallies =
-      @team.rosters
-      .map do |rstr|
-        rstr.units end[0]
+      Unit.joins(:rosters)
+      .where(rosters: {team_id: @team.id})
+      .group(:id)
+      .preload(:instances)
       .map do |unit|
         tally = unit.tallies.build
         tally.tally_instances
@@ -155,7 +153,7 @@ include NHLTeamAPI
   #   game.game_id == game_id end
   # then return end
 
-  module_function :create_teams_seasons, :create_teams_for_season
+  module_function :create_teams_seasons
 end
 
 

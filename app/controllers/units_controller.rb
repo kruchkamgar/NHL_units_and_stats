@@ -2,7 +2,7 @@
 class UnitsController < ApplicationController
 
   def index
-    @units = Unit.order(created_at: :desc).limit(3)
+    @units = Unit.order(updated_at: :desc).limit(3)
 
     render json: @units
     # Unit.order(created_at: :desc).limit(3).

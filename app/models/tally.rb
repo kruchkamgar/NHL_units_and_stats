@@ -1,5 +1,6 @@
 class Tally < ApplicationRecord
   belongs_to :unit
+  # belongs_to :team
 # implement starting value of 0 for assists and goals and points
 
   def tally_instances

@@ -12,7 +12,6 @@ module NHLTeamAPI
   SCHEDULE_URL = 'https://statsapi.web.nhl.com/api/v1/schedule'
 
   def create_all_teams_by_season
-    # get_season
     create_teams
   end
 
@@ -39,10 +38,11 @@ module NHLTeamAPI
 
   class Adapter
 
+  include NHLTeamAPI
     def initialize (name: nil, team:, season: nil, start_date: nil, end_date: nil)
       @name, @team, @season, @start_date, @end_date = name, team, season, start_date, end_date
 
-      get_season unless @season # string
+      set_season() unless @season # string
     end
 
     def find_or_create_team
@@ -88,11 +88,12 @@ module NHLTeamAPI
       "#{SCHEDULE_URL}?teamId=#{@team.team_id}&startDate=#{start_date}&endDate=#{end_date}"
     end
 
-
-    # /////////////////////  helpers  ///////////////////// #
   end
+  # /////////////////////  helpers  ///////////////////// #
 
-  def get_season
+  def set_season(season = nil)
+    if season then return (@season = season) end
+
     year = Date.current.year
     if Date.current.month > 9
       @season = "#{year}#{year+1}"
@@ -101,4 +102,4 @@ module NHLTeamAPI
     end
   end
 
-end
+end # module
