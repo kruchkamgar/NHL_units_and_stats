@@ -1,10 +1,16 @@
 require 'create_units_and_instances'
-require_relative './data/create_events_from_hashes'
+require_relative './data/events_flow'
+require_relative './data/instances_flow'
 require_relative './data/players_and_profiles'
 
 describe 'CreateUnitsAndInstances' do
   before(:context) do
-    create_events_sample #larger than sample from seeds
+    CRUI = CreateUnitsAndInstances
+    instances_penalties = units_groups_hash_penalties()
+
+    @events_hashes = events_hashes_penalties
+    create_events_sample() #larger than sample from seeds
+
     @roster = CreateUnitsAndInstances.instance_variable_set(
       :@roster, Roster.where(team_id: 1).first
     )
@@ -22,6 +28,7 @@ describe 'CreateUnitsAndInstances' do
       ) end
 
     @game = CreateUnitsAndInstances.instance_variable_set(:@game, Game.first)
+    byebug
   end
 
   describe '#get_roster_sample' do
@@ -82,18 +89,18 @@ describe 'CreateUnitsAndInstances' do
         # 2 => Event.where(event_type: 'shift' ).first(12)
       ] }
 
-    it 'forms 6-man instances', :overlaps do
-      expect(
-        CreateUnitsAndInstances.form_instances_by_events(period_hash)
-      ).
-      to a_collection_including(
-        hash_including(
-          :events => a_collection_including(a_kind_of(Event))
-        ),
-        an_object_satisfying { |event|
-          event[:start_time] == "00:37" }
-      )
-    end
+    # it 'forms 6-man instances', :overlaps do
+    #   expect(
+    #     CreateUnitsAndInstances.form_instances_by_events(period_hash)
+    #   ).
+    #   to a_collection_including(
+    #     hash_including(
+    #       :events => a_collection_including(a_kind_of(Event))
+    #     ),
+    #     an_object_satisfying { |event|
+    #       event[:start_time] == "00:37" }
+    #   )
+    # end
 
     let(:fwds_and_d) {
       @roster.players.
@@ -127,6 +134,33 @@ describe 'CreateUnitsAndInstances' do
     end
   end
 
+  describe 'incorporate instance penalty status', :penalties do
+    it '#get_special_teams_api_data' do
+      byebug #check for @game
+      live_game_api_data = CRUI::get_special_teams_api_data
+
+      expect(live_game_api_data)
+      .to include(a_kind_of(Hash))
+    end
+
+    let(:penalty_data) do
+      CRUI::get_special_teams_api_data end
+    it '#add_penalty_end_times' do
+      penalties =
+      CRUI::add_penalty_end_times(penalty_data)
+      expect(penalties)
+      .to a_kind_of(Array)
+    end
+
+    it '#merge_instances_with_penalties' do
+      made_instances = CRUI::merge_instances_with_penalties(instances_penalties, penalty_data)
+
+      expect(made_instances)
+      .to include(
+        hash_including( penalty: true ) )
+    end
+  end
+
   let(:units_groups_hash) {
     abc_events = Event.all.sample(3)
     abc_player_id_nums =
@@ -142,12 +176,13 @@ describe 'CreateUnitsAndInstances' do
     map.with_index do |unit, i|
       Unit.new(id: i) end }
   let(:existing_units) {
-    instance = Instance.create(id: 100)
-    instance.events << units_groups_hash.
-                       values.last.flatten(1)
+    instance =
+    Instance.create(id: 100)
+    instance.events << units_groups_hash
+      .values.last.flatten(1)
     unit =
-    Unit.new(id:1); unit.instances << instance;
-    unit
+    Unit.new(id:1)
+    unit.instances << instance; unit
   }
   describe '#get_preexisting_units' do
     it 'forms an array sequenced with pre-existing units, and nils for new units' do
@@ -216,8 +251,8 @@ describe 'CreateUnitsAndInstances' do
       inject(0) do |counts, instance|
         counts + instance.size end
 
-      expect(SQLOperations).
-      to receive(:sql_insert_all).with("events_instances",
+      expect(SQLOperations)
+      .to receive(:sql_insert_all).with("events_instances",
         an_object_satisfying do |obj|
           obj[sample_index][:instance_id] == sample_instance.id end
       )
