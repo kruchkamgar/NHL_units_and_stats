@@ -1,9 +1,5 @@
 
 
-# redundant code with seeds.rb? or keep limited seed file to save time
-# ... make into a library module
-
-
 def create_events_sample
   single_team_events =
   @events_hashes

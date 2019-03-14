@@ -1,4 +1,13 @@
+require './app/services/NHL_game_api.rb'
+
 module TestTeamHashes
+
+  include NHLGameAPI #set @game_id
+  def fetch_team_hash
+    box_score_url = get_game_url()
+    fetch_data( box_score_url )
+  end
+
   def team_hash_islanders
     {
         "team" => {

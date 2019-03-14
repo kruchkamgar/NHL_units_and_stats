@@ -8,7 +8,7 @@
 
 require './spec/data/data.rb'
 # require './spec/data/events_flow'
-require './spec/data/test_methods'
+require './spec/data/seed_methods'
 # require './lib/utilities.rb'
 
 include SeedMethods
@@ -49,4 +49,4 @@ def destroy_all_db
 end
 
 
-run_seeds
+# run_seeds

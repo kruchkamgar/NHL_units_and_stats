@@ -10,6 +10,13 @@ include TestTeamHashes
    team_hash_islanders()
  end
 
+ def get_team_hash
+   fetch_team_hash()["teams"]
+   .find do |side|
+     side.second["team"]["name"] == @team.name end
+   .second
+ end
+
 include TestEventsHashes
   def events_hashes
     events_hashes_2017020019()

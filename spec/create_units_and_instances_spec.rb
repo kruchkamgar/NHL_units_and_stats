@@ -6,29 +6,27 @@ require_relative './data/players_and_profiles'
 describe 'CreateUnitsAndInstances' do
   before(:context) do
     CRUI = CreateUnitsAndInstances
-    instances_penalties = units_groups_hash_penalties()
 
-    @events_hashes = events_hashes_penalties
-    create_events_sample() #larger than sample from seeds
+    # create_events_sample() #larger than sample from seeds
 
-    @roster = CreateUnitsAndInstances.instance_variable_set(
-      :@roster, Roster.where(team_id: 1).first
-    )
-    player_id_nums =
-    @roster.players.
-    map(&:player_id_num)
-    #from create_events_sample--
-    Event.where(player_id_num: player_id_nums ).
-    each do |event|
-      LogEntry.create(
-        event_id: event.id,
-        action_type: event.event_type,
-        player_profile_id:
-          Player.find_by(player_id_num: event.player_id_num).player_profiles.first.id
-      ) end
-
-    @game = CreateUnitsAndInstances.instance_variable_set(:@game, Game.first)
-    byebug
+  # runs using [old] seeds---
+    # @roster = CreateUnitsAndInstances.instance_variable_set(
+    #   :@roster, Roster.where(team_id: 1).first
+    # )
+    # player_id_nums =
+    # @roster.players.
+    # map(&:player_id_num)
+    # #from create_events_sample--
+    # Event.where(player_id_num: player_id_nums ).
+    # each do |event|
+    #   LogEntry.create(
+    #     event_id: event.id,
+    #     action_type: event.event_type,
+    #     player_profile_id:
+    #       Player.find_by(player_id_num: event.player_id_num).player_profiles.first.id
+    #   ) end
+    #
+    # @game = CreateUnitsAndInstances.instance_variable_set(:@game, Game.first)
   end
 
   describe '#get_roster_sample' do
@@ -134,9 +132,18 @@ describe 'CreateUnitsAndInstances' do
     end
   end
 
+
+  before(:context) do
+    @team_id = 1; @game_id = 2018021020; #SeedMethods
+    seed_team_and_players(); seed_game();
+    @events_hashes = events_hashes_penalties()
+    seed_events()
+    CRUI.instance_variable_set(:@game, @game)
+  end
+  # hashes via data.rb
+
   describe 'incorporate instance penalty status', :penalties do
     it '#get_special_teams_api_data' do
-      byebug #check for @game
       live_game_api_data = CRUI::get_special_teams_api_data
 
       expect(live_game_api_data)
@@ -151,6 +158,9 @@ describe 'CreateUnitsAndInstances' do
       expect(penalties)
       .to a_kind_of(Array)
     end
+
+    let(:instances_penalties) do
+      units_groups_hash_penalties() end
 
     it '#merge_instances_with_penalties' do
       made_instances = CRUI::merge_instances_with_penalties(instances_penalties, penalty_data)

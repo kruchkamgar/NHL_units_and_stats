@@ -1,4 +1,5 @@
 require_relative './test_team_hashes.rb'
+require_relative './data'
 # issue: odd namespace collisions with ./players_and_profiles.rb
 
 # set—-
@@ -18,12 +19,18 @@ include TestTeamHashes
   # end
 
   def create_team
-    Team.create(name: "New Jersey Devils", team_id: @team_id)
+    @team = Team.create(name: "New Jersey Devils", team_id: @team_id)
   end
 
-  def create_roster
-    roster = Roster.create(team_id: @team_id)
-    roster.players << team_players #find_or_create_by
+  def create_and_associate_profiles_and_players
+    players = team_players
+    profiles = team_player_profiles
+    players
+    .each_with_index do |player, i|
+      player.player_profiles << profiles[i] end
+
+    create_roster(players)
+    [players, profiles]
   end
 
   def team_players
@@ -36,7 +43,7 @@ include TestTeamHashes
         last_name: plyr_hash["lastName"],
         player_id_num: plyr_hash["id"] )
     end
-  end
+  end #team_players
 
   def team_player_profiles
     @team_hash["players"]
@@ -47,25 +54,33 @@ include TestTeamHashes
         id: index,
         position: plyr_hash["position"]["name"],
         position_type: plyr_hash["position"]["type"],
-        player_id: index )
-    end
+        player_id: index ) end
   end
 
-  def create_and_associate_profiles_and_players
-    byebug
-    players = team_players
-    profiles = team_hash_player_profiles
-    players.
-    each_with_index do |player, i|
-      player.player_profiles << profiles[i]
-    end
+  def create_roster(players = nil)
+    @roster = Roster.create(team_id: @team_id)
+    @roster.players << ( players || team_players ) #find_or_create_by
   end
 
-  def create_game
-    game =
-    Game.create(home_side: "New Jersey Devils", game_id: @game_id)
 
-    game.player_profiles << team_hash_player_profiles #find_or_create_by
+  def create_game (player_profiles = nil)
+    @game =
+    Game.find_or_create_by(home_side: "New Jersey Devils", game_id: @game_id)
+
+    @game.player_profiles << player_profiles #find_or_create_by
+  end
+
+  def create_events
+    all_goal_events
+    .each do |event|
+      Event.find_or_create_by(
+        event_type: event["eventDescription"] || "shift", duration: event["duration"],
+        start_time: event["startTime"],
+        end_time: event["endTime"],
+        shift_number: event["shiftNumber"],
+        period: event["period"],
+        player_id_num: event["playerId"],
+        game_id: @game.id ) end
   end
 
   def shift_events_by_team
@@ -93,19 +108,6 @@ include TestTeamHashes
     end
   end
 
-  def create_events
-    all_goal_events
-    .each do |event|
-    Event.find_or_create_by(
-      event_type: event["eventDescription"] || "shift", duration: event["duration"],
-      start_time: event["startTime"],
-      end_time: event["endTime"],
-      shift_number: event["shiftNumber"],
-      period: event["period"],
-      player_id_num: event["playerId"],
-      game_id: @game_id )
-    end
-  end
 
   def create_instances
     all_goal_events
