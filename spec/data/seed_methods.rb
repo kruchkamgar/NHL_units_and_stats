@@ -108,14 +108,14 @@ include TestTeamHashes
     end
   end
 
-
+  # mock instances
   def create_instances
     all_goal_events
     .each do |event|
       instance =
       Instance.find_or_create_by(
         duration: "01:00",
-        start_time: Utilities::TimeOperation.new(:-, "00:30", event["startTime"]).result )
+        start_time: Utilities::TimeOperation.new(:-, event["startTime"], "00:30" ).result )
 
       add_events_to_instance(instance)
     end

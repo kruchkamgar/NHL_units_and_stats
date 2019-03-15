@@ -23,6 +23,5 @@ include SeedMethods
 
 include CreateUnitsAndInstances
   def units_groups_hash_penalties
-    byebug
     create_records_from_shifts()
   end

@@ -144,9 +144,9 @@ describe 'CreateUnitsAndInstances' do
 
   describe 'incorporate instance penalty status', :penalties do
     it '#get_special_teams_api_data' do
-      live_game_api_data = CRUI::get_special_teams_api_data
+      penalty_plays = CRUI::get_special_teams_api_data
 
-      expect(live_game_api_data)
+      expect(penalty_plays)
       .to include(a_kind_of(Hash))
     end
 
@@ -156,14 +156,16 @@ describe 'CreateUnitsAndInstances' do
       penalties =
       CRUI::add_penalty_end_times(penalty_data)
       expect(penalties)
-      .to a_kind_of(Array)
+      .to include( a_hash_including(
+        end_time: a_kind_of(String) ) )
     end
 
-    let(:instances_penalties) do
+    let(:units_groups) do
       units_groups_hash_penalties() end
 
-    it '#merge_instances_with_penalties' do
-      made_instances = CRUI::merge_instances_with_penalties(instances_penalties, penalty_data)
+    it '#add_penalty_data_to_instances' do
+      made_instances = CRUI::add_penalty_data_to_instances(
+        units_groups, penalty_data )
 
       expect(made_instances)
       .to include(
