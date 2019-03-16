@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema.define(version: 2019_02_27_204851) do
+ActiveRecord::Schema.define(version: 2019_03_16_165704) do
 
   create_table "circumstances", force: :cascade do |t|
     t.integer "unit_id"
@@ -78,6 +78,10 @@ ActiveRecord::Schema.define(version: 2019_02_27_204851) do
     t.string "duration"
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.integer "ppga"
+    t.integer "shga"
+    t.integer "ppg"
+    t.integer "shg"
     t.index ["unit_id"], name: "index_instances_on_unit_id"
   end
 

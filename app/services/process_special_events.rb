@@ -10,41 +10,42 @@ module ProcessSpecialEvents
     #   event.event_type == "Shootout" end
     @team_events =
     @special_events - @opposing_events
-    team_sans_shg =
-    @team_events.reject do |event|
-      event.event_type == "SHG" end
+    # team_sans_shg =
+    # @team_events.reject do |event|
+    #   event.event_type == "SHG" end
     opposing_sans_ppg =
     @opposing_events.reject do |event|
-      event.event_type == "PPG" end
+      event.event_type == "PPG" end # opposing PPG have no +/- impact
 
 # only working for 3-man unit
-    opposing_data = assoc_special_events_to_instances(opposing_sans_ppg)
-    team_data =
-    assoc_special_events_to_instances(team_sans_shg)
+    opposing_inst_event_data = assoc_special_events_to_instances(opposing_sans_ppg)
+    team_inst_event_data =
+    assoc_special_events_to_instances(@team_events)
 
-    opposing_data.
-    each do |data|
-      tally_special_events(data) end
-    team_data.
-    each do |data|
-      tally_special_events(data, true) end
+    opposing_inst_event_data
+    .each do |data|
+      special_events_tally_logic(data) end
+    team_inst_event_data
+    .each do |data|
+      special_events_tally_logic(data, true) end
   end
 
   def get_special_events_data
     # "universal quantification" –(not not, in place of ALL--absent from sqlite3)
 
+    # not-not only for has_many relationship -- join table uses 1-to-1
     @game_instances =
-    Instance.
-    joins(:events).
-    where.not(
+    Instance
+    .joins(:events)
+    .where.not(
       events_instances:
         { event_id: Event.
             where.not(
-              player_id_num: @roster.players.map(&:player_id_num) ) } ).
-    where(
+              player_id_num: @roster.players.map(&:player_id_num) ) } )
+    .where(
       events:
-        { game_id: @game.id, event_type: "shift" } ).
-    eager_load(:events)
+        { game_id: @game.id, event_type: "shift" } )
+    .eager_load(:events)
 
     @special_events = #*2
     Event.
@@ -64,15 +65,14 @@ module ProcessSpecialEvents
     end
   end #get_special_events_data
 
-  # should skip SHGs for; PPGs against, until 2/4-man
   def assoc_special_events_to_instances (events)
-# only working for 3-man unit
-    events.
-    map do |event|
+
+    events
+    .map do |event|
       # find the special event's corresponding instance
       cspg_instance =
-      @game_instances.to_a.
-      find do |instance|
+      @game_instances.to_a
+      .find do |instance|
         instance_end_time = TimeOperation.new(:+, instance.start_time, instance.duration).result
 
         event.end_time > instance.start_time && event.end_time <= instance_end_time && instance.events.first.period == event.period
@@ -85,29 +85,47 @@ module ProcessSpecialEvents
 
   end #assoc_special_events_to_instances
 
-  def tally_special_events (data, team_event=false)
+  def special_events_tally_logic (data, team_event=false)
     event = data[:event]; instance = data[:instance];
     delta = -1; # use default values for instances
 
     if team_event
-      event.log_entries.
-      each do |log_entry|
+      # aggregating individuals' points
+      event.log_entries
+      .each do |log_entry|
         case log_entry.action_type
         when "assist", "primary", "secondary"
           instance.assists ||= 0; instance.assists += 1
         when "goal"
           instance.goals ||= 0; instance.goals += 1
           delta = 1
-        end
+        end end #each
+
+      # special teams 'for' stats
+      case event.event_type
+      when "PPG"
+        instance.ppg +=1
+      when "SHG"
+        instance.shg +=1
+      end
+    else
+      # special teams 'against'
+      case
+      when "PPG"
+        instance.ppga +=1
+      when "SHG"
+        instance.shga +=1
       end
     end
+
+    # tally instance's plus_minus (both for and against)
     case event.event_type
     when "EVG", "SHG"
       instance.plus_minus ||= 0
       instance.plus_minus += delta
     end
-    instance.save
 
+    instance.save
   end #(method)
 
 end
