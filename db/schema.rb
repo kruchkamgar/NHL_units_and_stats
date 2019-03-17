@@ -78,10 +78,10 @@ ActiveRecord::Schema.define(version: 2019_03_16_165704) do
     t.string "duration"
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
-    t.integer "ppga"
-    t.integer "shga"
-    t.integer "ppg"
-    t.integer "shg"
+    t.integer "ppga", default: 0
+    t.integer "shga", default: 0
+    t.integer "ppg", default: 0
+    t.integer "shg", default: 0
     t.index ["unit_id"], name: "index_instances_on_unit_id"
   end
 
