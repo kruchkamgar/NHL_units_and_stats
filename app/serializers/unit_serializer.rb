@@ -18,10 +18,10 @@ class UnitSerializer < ActiveModel::Serializer
     ]
   end #instances
 
-  has_many :tallies
+  # has_many :tallies
   def plus_minus
     Hash[
-      plus_minus: self.tallies.first.plus_minus ]
+      plus_minus: self.object.tallies.first.plus_minus ]
   end
 
 end

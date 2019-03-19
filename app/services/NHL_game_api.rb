@@ -2,23 +2,19 @@
 =begin
 fetches the game information:
 - create the game; record 'home-side'
-- needs to find_or_create_by the roster info
-- create the player_profile for this game;
-- and create the roster
---> should perhaps trigger the event information in the NHLeventAPI module
+- fetches the API listing of players for the game rosters, via the 'boxscore'
+
 =end
 
 module NHLGameAPI
 
-  GAME_BASE_URL = 'https://statsapi.web.nhl.com/api/v1/game/'
-
   class Adapter
+  include NHLGameAPI
 
     def initialize (game_id: )
       @game_id = game_id #2017020019
     end
 
-    # handle new player profiles? (primary-position change for example)
     def create_game
       game = Game.find_by(game_id: @game_id)
       teams_hash =
@@ -38,17 +34,18 @@ module NHLGameAPI
       return [game, teams_hash]
     end
 
-  private
+  end #Adapter
 
-    def get_game_url
-      "#{GAME_BASE_URL}#{@game_id}/boxscore"
-    end
+  GAME_BASE_URL = 'https://statsapi.web.nhl.com/api/v1/game/'
 
-    def fetch_data (url = nil)
-      data = JSON.parse(RestClient.get(url))
-    end
-
+  def get_game_url
+    "#{GAME_BASE_URL}#{@game_id}/boxscore"
   end
+
+  def fetch_data (url = nil)
+    data = JSON.parse(RestClient.get(url))
+  end
+
 end
 
 

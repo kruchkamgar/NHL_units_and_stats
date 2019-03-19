@@ -7,8 +7,7 @@ Get the shifts events from API and call SynthesizeUnits functionality
 module NHLGameEventsAPI
 
   class Adapter
-
-    SHIFT_CHARTS_URL = 'http://www.nhl.com/stats/rest/shiftcharts'
+    include NHLGameEventsAPI
 
     def initialize (team:, game:)
       @team = team
@@ -255,16 +254,18 @@ module NHLGameEventsAPI
       else byebug end
 
     end
-    # http://www.nhl.com/stats/rest/shiftcharts?cayenneExp=gameId=2018020008
-    def get_shifts_url
-      "#{SHIFT_CHARTS_URL}?cayenneExp=gameId=#{@game.game_id}"
-    end
-
-    def fetch_data (url = nil)
-      data = JSON.parse(RestClient.get(url))
-    end
 
   end #class Adapter
+
+  SHIFT_CHARTS_URL = 'http://www.nhl.com/stats/rest/shiftcharts'
+  #http://www.nhl.com/stats/rest/shiftcharts?cayenneExp=gameId=2018020008
+  def get_shifts_url
+    "#{SHIFT_CHARTS_URL}?cayenneExp=gameId=#{@game.game_id}"
+  end
+
+  def fetch_data (url = nil)
+    JSON.parse(RestClient.get(url))
+  end
 
 
 end

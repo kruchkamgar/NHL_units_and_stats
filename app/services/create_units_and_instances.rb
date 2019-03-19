@@ -15,11 +15,11 @@
 module CreateUnitsAndInstances
   include Utilities # time calculations
 
+  GAME_DATA_API =
+  "https://statsapi.web.nhl.com/api/v1/game/<game_id>/feed/live/"
+
   UNIT_HASH = {
-    # 2 => ["Defenseman"]
-    # 2 => ["Forward"] #4-on-4 (EVGs), SH
-    3 => ["Forward"],
-    5 => ["Forward", "Defenseman"],
+    5 => ["Forward", "Defenseman"]
     # 6 => ["Forward", "Defenseman", "Goalie"], #6-skater
   }
 
@@ -28,21 +28,17 @@ module CreateUnitsAndInstances
     @game = Game.where(id: @game).includes(events: [:player_profiles])[0]
     @roster = Roster.where(id: @roster).includes(:players)[0]
 
-    # iterate through units: 6-man, 5-man, 3-man
-    UNIT_HASH.each do |unit_size, unit_type|
-      roster_sample = get_roster_sample (unit_type)
+      roster_sample = get_roster_sample (UNIT_HASH[5])
       #find the shifts matching the roster sample
       shifts = get_shifts(roster_sample)
       # sort shifts by start time, for each period
         # {[period1 event1, 2...], [p2 event1, 2, ...] ... }
-      period_chronology = shifts_into_periods (shifts)
+      period_chronology = shifts_into_periods(shifts)
       #find all unit instances by shift events' temporal overlaps
         # (format: array of arrays)
       instances_by_events_arrays = form_instances_by_events(period_chronology)
-      units_groups_hash = group_by_players(instances_by_events_arrays)
 
-      create_units_and_instances (units_groups_hash)
-    end
+      group_by_players(instances_by_events_arrays)
 
   end #create_records_from_shifts
 
@@ -120,42 +116,6 @@ module CreateUnitsAndInstances
     [new_formed_units, units_records_queue]
   end
 
-  def retrieve_unit_sql (bind_targets)
-    <<~SQL
-      SELECT *
-      FROM units
-      JOIN
-        (SELECT unit_id
-        FROM instances
-        JOIN events_instances
-        ON instance_id = instances.id
-        JOIN events
-        ON events.id = event_id
-        WHERE instances.id IN
-          (SELECT instances.id
-          FROM instances
-          JOIN
-            (SELECT instance_id
-            FROM events_instances
-            WHERE event_id IN
-              (SELECT id
-              FROM events
-              WHERE player_id_num IN (#{bind_targets.join(', ')})
-                AND events.event_type = 'shift' )
-            GROUP BY instance_id
-            HAVING COUNT(*) >= #{bind_targets.size} )
-          ON instance_id = instances.id )
-        AND events.event_type = 'shift'
-        GROUP BY unit_id, instance_id
-        HAVING COUNT(instance_id) = #{bind_targets.size} )
-      ON id = unit_id
-      GROUP BY id
-    SQL
-  end
-
-  def assemble_binds(field, value)
-    ActiveRecord::Relation::QueryAttribute.new(field, value, ActiveRecord::Type::Integer.new)
-  end
 
   def insert_units(formed_units, records_queue)
     prepared_units =
@@ -185,27 +145,36 @@ module CreateUnitsAndInstances
   end
 
   def create_instances (queued_units, units_groups)
+    # penalty_data = get_special_teams_api_data()
+    # penalities = add_penalty_end_times(penalty_data)
+    # made_instances = add_penalty_data_to_instances(units_groups, penalties)
 
+    made_instances = units_groups
+    insert_instances(queued_units, made_instances)
+  end
+
+  def insert_instances (queued_units, units_groups)
     prepared_instances =
     queued_units.
     map.with_index do |unit, i|
-    # (create_units already reverses queued_units)
+      # (create_units already reverses queued_units)
       # coincident index from source: units_groups_hash
       units_groups[i].
       map do |inst|
         Hash[
           unit_id: unit.id,
           start_time: inst[:start_time],
-          duration: TimeOperation.new(:-, inst[:start_time], inst[:end_time]).result,
+          duration: TimeOperation.new(:-, inst[:end_time], inst[:start_time]).result,
+          # penalty: ( inst[:penalty] || false ),
           created_at: Time.now,
           updated_at: Time.now ]
-      end # *3
-    end.flatten(1)
+        end # *3
+      end.flatten(1)
 
-    instances_changes = SQLOperations.sql_insert_all("instances", prepared_instances)
+      instances_changes = SQLOperations.sql_insert_all("instances", prepared_instances)
 
-    queued_instances =
-    Instance.order(id: :desc).limit(instances_changes).reverse
+      queued_instances =
+      Instance.order(id: :desc).limit(instances_changes).reverse
   end
 
   def associate_events_to_instances(queued_instances, formed_instances)
@@ -266,8 +235,8 @@ module CreateUnitsAndInstances
   def get_shifts roster_sample
     # select shifts by matching to roster sample's player_profiles
     shifts =
-    @game.events.
-    select do |event|
+    @game.events
+    .select do |event|
       event.event_type == "shift" &&
       roster_sample.
       any? do |player|
@@ -438,38 +407,65 @@ module CreateUnitsAndInstances
   end
 
   def group_by_players(instances_by_events_hashes)
-=begin
-    # for [live-]updating of games? likely not useful
-    if instances_by_events_hashes
-      @existing_game_instances = Instance.includes("events").where( events: { game_id: @game.id })
 
-      # subtract events of existing game instances
-      @formed_instances_by_events = instances_by_events_hashes.
-      reject do |inst_hash|
-        @existing_game_instances.
-        map do |inst|
-          inst.map(&:events).
-          select do |event|
-            event.event_type = "shift" end
-        end.
-        sort_by |e| [e.player_id_num] == inst_hash[:events].
-        sort_by |e| [e.player_id_num]
-      end #reject
-    end # if...
-=end
     # {
       # [instances' player_id_nums] => [
         # { :events => [instance_by_events_1], :start_time => "00:00", :end_time => "00:01" }
         # { :events => [instance_by_events_5], :start_time => "00:20", :end_time => "00:23" }
     # ] }
     units_groups_hash =
-    instances_by_events_hashes.
-    group_by do |inst_hash|
-      inst_hash[:events].
-      map do |event|
+    instances_by_events_hashes
+    .group_by do |inst_hash|
+      inst_hash[:events]
+      .map do |event|
         event.player_id_num end.sort
     end
   end #group_by_players
+
+
+# //////////////////// helpers //////////////////// #
+
+  #select subset of units, by team first? or by presence of all players
+
+#refactor: use module?
+  def retrieve_unit_sql (bind_targets)
+    <<~SQL
+      SELECT *
+      FROM units
+      JOIN
+        (SELECT unit_id
+        FROM instances
+        JOIN events_instances
+        ON instance_id = instances.id
+        JOIN events
+        ON events.id = event_id
+        WHERE instances.id IN
+          (SELECT instances.id
+          FROM instances
+          JOIN
+            (SELECT instance_id
+            FROM events_instances
+            WHERE event_id IN
+              (SELECT id
+              FROM events
+              WHERE player_id_num IN (#{bind_targets.join(', ')})
+                AND events.event_type = 'shift' )
+            GROUP BY instance_id
+            HAVING COUNT(*) >= #{bind_targets.size} )
+          ON instance_id = instances.id )
+        AND events.event_type = 'shift'
+        GROUP BY unit_id, instance_id
+        HAVING COUNT(instance_id) = #{bind_targets.size} )
+      ON id = unit_id
+      GROUP BY id
+    SQL
+  end
+
+  def assemble_binds(field, value)
+    ActiveRecord::Relation::QueryAttribute.new(field, value, ActiveRecord::Type::Integer.new)
+  end
+
+
 
 end
 #

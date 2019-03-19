@@ -132,11 +132,26 @@ include NHLTeamAPI
   private
 
   def get_schedule_dates(schedule_hash)
-    schedule_hash["dates"].
-    reject do |date|
+    schedule_hash["dates"]
+    .reject do |date|
       # "1" means preseason
       date["games"].first["gamePk"].to_s.
       slice(5) == "1" end
+  end
+
+  def get_next_date_index (schedule_dates)
+    max_game_id = Game.maximum(:game_id)
+    last_game =
+    schedule_dates
+    .find do |date|
+      date["games"].first["gamePK"] ==
+      max_game_id end
+
+    if last_game
+      schedule_dates
+      .index(last_game) + 1
+    else
+      0 end
   end
 
   # def select_team_hash (teams_hash, team_id = nil)
