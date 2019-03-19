@@ -1,4 +1,7 @@
+# reload!; include ReadApisNHL; ReadApisNHL.create_teams_seasons
+
 module ReadApisNHL
+
 
   #  create class/ Adapter for each team, to enable processing games only once per team (@processed_games)
     # -- can then replace NHLGameEventsAPI gate
@@ -8,10 +11,10 @@ include NHLTeamAPI
   def create_teams_seasons
     set_season($season)
 
-    teams =
-    Team.left_outer_joins(rosters: [:units])
-    .where(season: @season)
-    .group("teams.id").having("COUNT(units.id) = 0")
+    teams = Team.all
+    # Team.left_outer_joins(rosters: [:units])
+    # .where(season: @season)
+    # .group("teams.id").having("COUNT(units.id) = 0")
 
     if teams.empty?
       # teams to which to associate opposing team rosters, per game
@@ -48,7 +51,7 @@ include NHLTeamAPI
       .select do |date|
         date["date"] < (Time.now - 85000) end
 
-      schedule_dates
+      schedule_dates[ get_next_date_index(schedule_dates)..-1]
       .each do |date_hash|
         create_game_records(date_hash) end
     end
@@ -79,7 +82,9 @@ include NHLTeamAPI
 
       # byebug
       if events_boolean
-        create_records_from_shifts()
+        units_groups_hash = create_records_from_shifts()
+        create_units_and_instances(units_groups_hash)
+
         process_special_events()
       end
     end #create_game_records
@@ -142,6 +147,7 @@ include NHLTeamAPI
   def get_next_date_index (schedule_dates)
     max_game_id = Game.maximum(:game_id)
     last_game =
+
     schedule_dates
     .find do |date|
       date["games"].first["gamePK"] ==

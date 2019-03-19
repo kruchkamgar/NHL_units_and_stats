@@ -1,6 +1,7 @@
 require 'create_roster'
-require_relative './data/team_hash'
+# require_relative './data/team_hash'
 require_relative './data/players_and_profiles'
+require_relative './data/data.rb'
 
 # create game
 # create roster w/ and without the game; (roster could exist without this game)
@@ -113,7 +114,7 @@ describe CreateRoster do
   context '-' do
 
     before(:context) do
-    
+
       @players_sample = @players.first(5).clone
       @sample_profiles = sample_profiles # NYI
     end
