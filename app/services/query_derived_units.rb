@@ -44,7 +44,6 @@ module QueryDerivedUnits
     end #group_by
 
     # produce array of totals hashes, standing for the aggregate units
-    @derived_units =
     units_groups
     .map do |plyrs, units|
       unit_tallies =
