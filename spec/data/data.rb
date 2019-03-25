@@ -1,7 +1,7 @@
-require_relative './test_team_hashes.rb'
-require_relative './test_events_hashes.rb'
+require_relative './seed_team_hashes.rb'
+require_relative './seed_events_hashes.rb'
 
-include TestTeamHashes
+include SeedTeamHashes
  def team_hash
    team_hash_devils()
  end
@@ -17,7 +17,7 @@ include TestTeamHashes
    .second
  end
 
-include TestEventsHashes
+include SeedEventsHashes
   def events_hashes
     events_hashes_2017020019()
   end

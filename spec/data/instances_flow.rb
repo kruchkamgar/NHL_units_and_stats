@@ -1,8 +1,6 @@
 require_relative './seed_methods.rb'
 require_relative './data.rb'
 
-
-
 # class TestSeed
 
 include SeedMethods

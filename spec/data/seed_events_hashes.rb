@@ -1,5 +1,6 @@
 
-module TestEventsHashes
+
+module SeedEventsHashes
 
   # 2018021020 - includes penalties which carry over periods
   include NHLGameEventsAPI

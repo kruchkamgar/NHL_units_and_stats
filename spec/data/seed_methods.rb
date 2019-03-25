@@ -1,4 +1,4 @@
-require_relative './test_team_hashes.rb'
+require_relative './seed_team_hashes.rb'
 require_relative './data'
 # issue: odd namespace collisions with ./players_and_profiles.rb
 
@@ -8,7 +8,7 @@ require_relative './data'
   # @team_hash
 
 module SeedMethods
-include TestTeamHashes
+include SeedTeamHashes
 
 # set without using data.rb
   # def set_team_hash (team: :team_hash_devils)

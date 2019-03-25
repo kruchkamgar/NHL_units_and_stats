@@ -1,9 +1,9 @@
-require 'create_units_and_instances'
+# require 'create_units_and_instances'
 require_relative './data/events_flow'
 require_relative './data/instances_flow'
 require_relative './data/players_and_profiles'
 
-describe 'CreateUnitsAndInstances' do
+describe CreateUnitsAndInstances, :type => :service do
   before(:context) do
     CRUI = CreateUnitsAndInstances
 

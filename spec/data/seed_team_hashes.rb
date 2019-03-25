@@ -1,6 +1,6 @@
 require './app/services/NHL_game_api.rb'
 
-module TestTeamHashes
+module SeedTeamHashes
 
   include NHLGameAPI #set @game_id
   def fetch_team_hash
@@ -2676,4 +2676,4 @@ module TestTeamHashes
     team_hash["home"]
   end
 
-end # TestTeamHashes
+end # SeedTeamHashes
