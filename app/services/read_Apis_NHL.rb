@@ -146,16 +146,15 @@ include NHLTeamAPI
 
   def get_next_date_index (schedule_dates)
     max_game_id = Game.maximum(:game_id)
-    last_game =
-
+    latest_game_record =
     schedule_dates
     .find do |date|
       date["games"].first["gamePK"] ==
       max_game_id end
 
-    if last_game
+    if latest_game_record
       schedule_dates
-      .index(last_game) + 1
+      .index(latest_game_record) + 1
     else
       0 end
   end
