@@ -1,7 +1,7 @@
 # require 'create_units_and_instances'
-require_relative './data/events_flow'
-require_relative './data/instances_flow'
-require_relative './data/players_and_profiles'
+require './spec/data/events_flow'
+require './spec/data/instances_flow'
+require './spec/data/players_and_profiles'
 
 describe CreateUnitsAndInstances, :type => :service do
   before(:context) do
@@ -10,7 +10,7 @@ describe CreateUnitsAndInstances, :type => :service do
     # create_events_sample() #larger than sample from seeds
 
   # runs using [old] seeds---
-    # @roster = CreateUnitsAndInstances.instance_variable_set(
+    # @roster = CRUI.instance_variable_set(
     #   :@roster, Roster.where(team_id: 1).first
     # )
     # player_id_nums =
@@ -26,14 +26,14 @@ describe CreateUnitsAndInstances, :type => :service do
     #       Player.find_by(player_id_num: event.player_id_num).player_profiles.first.id
     #   ) end
     #
-    # @game = CreateUnitsAndInstances.instance_variable_set(:@game, Game.first)
+    # @game = CRUI.instance_variable_set(:@game, Game.first)
   end
 
   describe '#get_roster_sample' do
     let(:player_types) { UNIT_HASH[3] }
     it 'selects forwards from a roster' do
       expect(
-        CreateUnitsAndInstances.get_roster_sample(player_types).map do |plyr|
+        CRUI.get_roster_sample(player_types).map do |plyr|
           plyr.player_profiles.first end
         ).to all(have_attributes(position_type: "Forward"))
     end
@@ -45,7 +45,7 @@ describe CreateUnitsAndInstances, :type => :service do
 
       player_id_nums = roster_sample.map(&:player_id_num)
       expect(
-        CreateUnitsAndInstances.get_shifts(roster_sample).map(&:player_id_num).uniq.sort
+        CRUI.get_shifts(roster_sample).map(&:player_id_num).uniq.sort
       ).to eq(player_id_nums.sort)
     end
   end
@@ -56,7 +56,7 @@ describe CreateUnitsAndInstances, :type => :service do
   describe '#shifts_into_periods' do
     it 'groups shifts into hash of periods' do
       expect(
-        CreateUnitsAndInstances.shifts_into_periods(shift_events)
+        CRUI.shifts_into_periods(shift_events)
       ).
       to include(
         3 => a_collection_including( a_kind_of(Event) ),
@@ -89,7 +89,7 @@ describe CreateUnitsAndInstances, :type => :service do
 
     # it 'forms 6-man instances', :overlaps do
     #   expect(
-    #     CreateUnitsAndInstances.form_instances_by_events(period_hash)
+    #     CRUI.form_instances_by_events(period_hash)
     #   ).
     #   to a_collection_including(
     #     hash_including(
@@ -120,7 +120,7 @@ describe CreateUnitsAndInstances, :type => :service do
 
     it 'forms 5-man instances', :overlaps do
       expect(
-        CreateUnitsAndInstances.form_instances_by_events(period_hash)
+        CRUI.form_instances_by_events(period_hash)
       ).
       to a_collection_including(
         hash_including(
@@ -139,19 +139,21 @@ describe CreateUnitsAndInstances, :type => :service do
     @events_hashes = events_hashes_penalties()
     seed_events()
     CRUI.instance_variable_set(:@game, @game)
-  end
-  # hashes via data.rb
+
+    @units_groups_hash = units_groups_hash_(pre_seed: true)
+  end # hashes via data.rb
+  describe 'creation process—-', :creation do
 
   describe 'incorporate instance penalty status', :penalties do
+    let(:penalty_data) do
+      CRUI::get_special_teams_api_data end
     it '#get_special_teams_api_data' do
       penalty_plays = CRUI::get_special_teams_api_data
 
-      expect(penalty_plays)
+      expect(penalty_data)
       .to include(a_kind_of(Hash))
     end
 
-    let(:penalty_data) do
-      CRUI::get_special_teams_api_data end
     it '#add_penalty_end_times' do
       penalties =
       CRUI::add_penalty_end_times(penalty_data)
@@ -159,9 +161,6 @@ describe CreateUnitsAndInstances, :type => :service do
       .to include( a_hash_including(
         end_time: a_kind_of(String) ) )
     end
-
-    let(:units_groups) do
-      units_groups_hash_penalties() end
 
     it '#add_penalty_data_to_instances' do
       made_instances = CRUI::add_penalty_data_to_instances(
@@ -171,41 +170,19 @@ describe CreateUnitsAndInstances, :type => :service do
       .to include(
         hash_including( penalty: true ) )
     end
-  end
+  end # :penalties
 
-  let(:units_groups_hash) {
-    abc_events = Event.all.sample(3)
-    abc_player_id_nums =
-    abc_events.map(&:player_id_num)
-    Hash[
-      [123, 234, 345] => [ Event.all.sample(3), Event.all.sample(3) ],
-      [543, 432, 321] => [ Event.all.sample(3), Event.all.sample(3) ],
-      abc_player_id_nums => [ abc_events ]
-    ]
-  }
-  let(:units) {
-    units_groups_hash.keys.
-    map.with_index do |unit, i|
-      Unit.new(id: i) end }
-  let(:existing_units) {
-    instance =
-    Instance.create(id: 100)
-    instance.events << units_groups_hash
-      .values.last.flatten(1)
-    unit =
-    Unit.new(id:1)
-    unit.instances << instance; unit
-  }
+  let(:existing_units) do end
+
   describe '#get_preexisting_units' do
     it 'forms an array sequenced with pre-existing units, and nils for new units' do
-      allow(Unit).to receive(:includes).with(instances: [ :events ]) { [existing_units] }
-
-      expect(
-        CreateUnitsAndInstances.get_preexisting_units(units_groups_hash.keys)
-      ).
-      to a_collection_including(
-        include(nil, nil, existing_units)
-      )
+      # allow(Unit).to receive(:includes).with(instances: [ :events ]) { [existing_units] }
+      #
+      # expect(
+      #   CRUI.get_preexisting_units(.keys)
+      # )
+      # .to a_collection_including(
+      #   include(nil, nil, existing_units) )
     end
   end
 
@@ -216,38 +193,54 @@ describe CreateUnitsAndInstances, :type => :service do
   #   puts "formed_units––\n"
   #   byebug end
 
-  describe '#create_units' do
-    it '#inserts and retrieves units' do
-      allow(CreateUnitsAndInstances).to receive(:get_preexisting_units).with(a_kind_of(Array)) { [nil] }
-      expect(
-        CreateUnitsAndInstances.create_units(units_groups_hash.keys)
-      ).
-      to include(
-        a_kind_of(Unit)
-      )
+  let(:insert_units_method) do
+    all_new_queue = Array.new( @units_groups_hash.size, nil )
+
+    CRUI::insert_units(
+      @units_groups_hash.keys,
+      all_new_queue )
+  end
+    # let(:insert_with_existing_units) do
+    # not_all_new_queue
+    # ... end
+
+  describe '#insert_units', :creation do
+    it 'inserts and retrieves units' do
+      expect(insert_units_method)
+      .to include( a_kind_of(Unit) )
     end
   end
 
   # unit_players_names = Unit.all.select do |unit| unit.instances.any? end.map(&:instances).map do |inst| inst.map(&:events).map do |event| event.map do |event| Player.find_by(player_id_num: event.player_id_num).last_name end end end
-  describe '#create_instances' do
-    it '#inserts and retrieves instances' do
-      expect(
-        CreateUnitsAndInstances.create_instances(units.reverse, units_groups_hash.values)
-      ).
-      to include(
-        a_kind_of(Instance),
-        have_attributes(
-          unit_id: 0,
-          start_time: units_groups_hash.values.first.
+  # let(:queued_units) do
+  #   CRUI::find_or_create_units(units_groups_hash.keys) end
 
-          first.max_by(&:start_time).start_time # check for correct unit-instance mapping, to verify order of insertion
-        )
-      )
+  let(:prepped_insts_grps) do
+    prepare_instances(insert_units_method, @units_groups_hash.values) end
+  describe '#prepare_instances', :creation do
+    it 'prepares instances hashes for insert' do
+      expect(prepped_insts_grps)
+      .to include(
+        a_collection_including(
+          hash_including(
+            unit_id: 1,
+            start_time: @units_groups_hash.values.first
+            .last[:start_time] # check for correct unit-instance mapping, to verify order of insertion
+      ))  )
+    end
+  end
+
+  describe '#create_circumstances', :creation do
+    it 'creates circumstances' do
+      create_circumstances = CRUI.create_circumstances(prepped_insts_grps)
+
+      expect(create_circumstances)
+      .to eq(10)
     end
   end
 
   #after .flatten(1): [ [event1, 2, 3], [event1, 2, 3], ... ]
-  let(:new_instances) { units_groups_hash.values.flatten(1) }
+  let(:new_instances) { @units_groups_hash.values.flatten(1) }
   let(:inserted_instances) {
     Array.new(new_instances.size) do |index|
       Instance.new(id: index) end }
@@ -269,12 +262,13 @@ describe CreateUnitsAndInstances, :type => :service do
           obj[sample_index][:instance_id] == sample_instance.id end
       )
 
-      CreateUnitsAndInstances.
+      CRUI.
       associate_events_to_instances(
         inserted_instances,
         new_instances
       )
     end
-  end
+  end # associate_events_to_instances
+end # describe creation process
 
-end # CreateUnitsAndInstances
+end # CRUI

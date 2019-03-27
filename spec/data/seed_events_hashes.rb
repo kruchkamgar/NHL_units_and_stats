@@ -6,7 +6,7 @@ module SeedEventsHashes
   include NHLGameEventsAPI
     def events_hashes_2018021020_penalties
       url = get_shifts_url()
-      fetch_data(url)
+      fetch_data(url)["data"]
     end
   # "http://www.nhl.com/stats/rest/shiftcharts?cayenneExp=gameId=#{@game.game_id}"  game_id: 2017020019
   def events_hashes_2017020019

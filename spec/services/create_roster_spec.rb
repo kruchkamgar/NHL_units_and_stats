@@ -1,7 +1,7 @@
 require 'create_roster'
 # require_relative './data/team_hash'
-require_relative './data/players_and_profiles'
-require_relative './data/data.rb'
+require_relative './spec/data/players_and_profiles'
+require_relative './spec/data/data.rb'
 
 # create game
 # create roster w/ and without the game; (roster could exist without this game)
@@ -15,8 +15,8 @@ describe CreateRoster do
 
     @sample_players = sample_players.map do |player|
       Player.new(player) end
-    @players = @team_hash["players"].
-    map.with_index(0) do |id, index|
+    @players = @team_hash["players"]
+    .map.with_index(0) do |id, index|
         plyr_hash = @team_hash["players"]["#{id[0]}"]
         Player.new(
           id: (index + @init_index),
@@ -176,12 +176,12 @@ describe CreateRoster do
 
         # sample_profiles contains first (3) @player_profiles?
         expect(
-          subject.
-          add_profiles_to_game.first(3).
-          map(&:position) ).
-        to eq(
-          @sample_profiles.
-          map(&:position) )
+          subject
+          .add_profiles_to_game.first(3)
+          .map(&:position) )
+          .to eq(
+          @sample_profiles
+          .map(&:position) )
       end
     end
   end

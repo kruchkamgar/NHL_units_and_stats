@@ -67,11 +67,19 @@ include SeedTeamHashes
     @game =
     Game.find_or_create_by(home_side: "New Jersey Devils", game_id: @game_id)
 
+    @game.rosters << @roster
     @game.player_profiles << player_profiles #find_or_create_by
   end
 
+  def create_game_events_and_log_entries_
+    NHLGameEventsAPI::Adapter
+    .new(team:
+      @team, game: @game )
+    .create_game_events_and_log_entries
+  end
+
   def create_events
-    all_goal_events
+    events_by_team()
     .each do |event|
       Event.find_or_create_by(
         event_type: event["eventDescription"] || "shift", duration: event["duration"],
@@ -88,7 +96,7 @@ include SeedTeamHashes
   end
 
   def goal_events
-    events_by_team
+    events_by_team()
     .select do |event|
       event["typeCode"] == 505
     end

@@ -16,3 +16,28 @@ include SamplesData
   end
 
 end
+
+
+# let(:units_groups_hash) {
+#   abc_events = Event.all.sample(3)
+#   abc_player_id_nums =
+#   abc_events.map(&:player_id_num)
+#   Hash[
+#     [123, 234, 345] => [ Event.all.sample(3), Event.all.sample(3) ],
+#     [543, 432, 321] => [ Event.all.sample(3), Event.all.sample(3) ],
+#     abc_player_id_nums => [ abc_events ]
+#   ]
+# }
+# let(:units) {
+#   units_groups_hash.keys.
+#   map.with_index do |unit, i|
+#     Unit.new(id: i) end }
+# let(:existing_units) {
+#   instance =
+#   Instance.create(id: 100)
+#   instance.events << units_groups_hash
+#     .values.last.flatten(1)
+#   unit =
+#   Unit.new(id:1)
+#   unit.instances << instance; unit
+# }
