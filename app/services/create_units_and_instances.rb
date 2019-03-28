@@ -39,7 +39,6 @@ module CreateUnitsAndInstances
       instances_by_events_arrays = form_instances_by_events(period_chronology)
 
       group_by_players(instances_by_events_arrays)
-
   end #create_records_from_shifts
 
   def create_units_and_instances (units_groups_hash)
@@ -48,27 +47,18 @@ module CreateUnitsAndInstances
     find_or_create_units(units_groups_hash.keys)
 
     queued_instances =
-    create_instances(queued_units, units_groups_hash.values)
+    create_instances_and_circumstances(queued_units, units_groups_hash.values)
 
     associate_events_to_instances(
       queued_instances,
-      units_groups_hash.values.
-      map do |instances|
-        instances.
-        map do |inst_hash|
+      units_groups_hash.values
+      .map do |instances|
+        instances
+        .map do |inst_hash|
         inst_hash[:events] end
       end.flatten(1) )
 
     puts "\n\n @units_includes_events \n\n"
-    # @units_includes_events =
-    # @units_includes_events
-    # .or(
-    #    Unit.where(
-    #      Unit.arel_table[:id].in(
-    #        @inserted_units.arel_table.project(:id)) )
-    #    .includes(:rosters, instances: [ :events ])
-    #    .where(instances: { events: {event_type: "shift"} })
-    # ).load
 
     associate_roster_to_units(queued_units)
   end
@@ -116,7 +106,6 @@ module CreateUnitsAndInstances
     [new_formed_units, units_records_queue]
   end
 
-
   def insert_units(formed_units, records_queue)
     prepared_units =
     formed_units.
@@ -134,8 +123,8 @@ module CreateUnitsAndInstances
     end
 
     # add inserted_units to @units_includes_events, ahead of assoc to roster?
-    @inserted_units.reverse.
-    each do |record|
+    @inserted_units.reverse
+    .each do |record|
       nil_i = records_queue.index(nil)
       if nil_i
         records_queue[nil_i] = record end
@@ -144,37 +133,71 @@ module CreateUnitsAndInstances
     records_queue
   end
 
-  def create_instances (queued_units, units_groups)
+  def create_instances_and_circumstances(queued_units, units_groups_values)
     # penalty_data = get_special_teams_api_data()
     # penalities = add_penalty_end_times(penalty_data)
     # made_instances = add_penalty_data_to_instances(units_groups, penalties)
 
-    made_instances = units_groups
-    insert_instances(queued_units, made_instances)
+    prepped_insts_grps =
+    prepare_instances(queued_units, units_groups)
+    insert_instances(prepped_insts_grps.flatten)
+
+    create_circumstances(queued_units, units_groups_values)
   end
 
-  def insert_instances (queued_units, units_groups)
-    prepared_instances =
-    queued_units.
-    map.with_index do |unit, i|
+  def prepare_instances (queued_units, units_groups)
+    prepared_instances_groups =
+    queued_units
+    .map.with_index do |unit, i|
       # (create_units already reverses queued_units)
       # coincident index from source: units_groups_hash
-      units_groups[i].
-      map do |inst|
+      units_groups[i]
+      .map do |inst|
         Hash[
           unit_id: unit.id,
           start_time: inst[:start_time],
           duration: TimeOperation.new(:-, inst[:end_time], inst[:start_time]).result,
           # penalty: ( inst[:penalty] || false ),
           created_at: Time.now,
-          updated_at: Time.now ]
-        end # *3
-      end.flatten(1)
+          updated_at: Time.now ] # *3
+      end
+    end
+  end #prepare_instances
 
-      instances_changes = SQLOperations.sql_insert_all("instances", prepared_instances)
+  def insert_instances(prepared_instances)
+    instances_changes = SQLOperations.sql_insert_all("instances", prepared_instances)
 
-      queued_instances =
-      Instance.order(id: :desc).limit(instances_changes).reverse
+    queued_instances =
+    Instance.order(id: :desc).limit(instances_changes).reverse
+  end
+
+  def create_circumstances(queued_units, units_groups_values)
+        # if first time unit?
+          # make a hash for circumstance insert
+            # - get player_id_nums from events
+            # - use event.player_id_num to associate player_profile
+          # insert circumstances
+
+  # store the specific profile (includes position), for this unit
+    prepared_circumstances = []
+    units_groups_values
+    .each_with_index do |group, i|
+      group[0][:events]
+      .each do |evnt|
+        # shift events only here
+        prepared_circumstances +=
+        evnt.player_profiles
+        .map do |profile|
+          Hash[
+            unit_id: queued_units[i].id,
+            player_profile_id: profile.id,
+            created_at: Time.now,
+            updated_at: Time.now ]
+        end
+      end #each evnt
+    end #each group
+
+    SQLOperations.sql_insert_all("circumstances", prepared_circumstances)
   end
 
   def associate_events_to_instances(queued_instances, formed_instances)
