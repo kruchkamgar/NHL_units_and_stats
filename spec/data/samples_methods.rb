@@ -3,11 +3,16 @@ require './spec/data/samples_data'
 module SamplesMethods
 include SamplesData
 
-  def units_sample
-    unit = Unit.create
-    instances_sample(unit.id)
+  def units_sample(num)
+    this = Array.new(num, nil)
+    .map do |_| unit_create() end
   end
 
+  def unit_create
+    unit = Unit.create
+    instances_sample(unit.id)
+    unit
+  end
   def instances_sample(unit_id = nil, array_i = -1)
     instances_stats_data()[0..array_i]
     .map do |hash|

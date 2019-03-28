@@ -18,27 +18,30 @@ include SeedTeamHashes
   #   @team_hash = method(team).call
   # end
 
-  def create_team
-    @team = Team.create(name: "New Jersey Devils", team_id: @team_id)
-  end
+  def create_team()
+    @team = Team.create(name: "New Jersey Devils", team_id: @team_id )
 
-  def create_opponent(team)
+    @home_side_name = @team_hash
+    .find do |side|
+      side.first == "home" end
+    .second["team"]["name"]
 
-    @opponent = Team.create(name: team["name"], team_id: team["id"])
+    if @opponent_id
+      opponent_name = @team_hash
+      .find do |side|
+        side.second["team"]["id"] == @opponent_id end
+        .second["team"]["name"]
+        @opponent = Team.create(name: opponent_name, team_id: @opponent_id) end
   end
 
   def create_and_associate_profiles_and_players
     @team_hash
     .map do |side|
       @team_hash_side = side.second
-
-      if @team_hash_side["team"]["id"] != @team.team_id
-        create_opponent(@team_hash_side["team"])
-        team = @opponent
-      else team = @team end
-
-      { team: create_players_and_profiles(team) }
-    end
+      id = @team_hash_side["team"]["id"]
+      team = Team.find_by_team_id(id)
+      { id => create_players_and_profiles(team) } if team
+    end.compact
   end
 
   def create_players_and_profiles(team)
@@ -84,7 +87,7 @@ include SeedTeamHashes
     roster = Roster.where(team_id: [@team.id, @opponent.id]) unless roster
 
     @game =
-    Game.find_or_create_by(home_side: "New Jersey Devils", game_id: @game_id)
+    Game.find_or_create_by(home_side: @home_side_name, game_id: @game_id)
 
     @game.rosters << roster
     @game.player_profiles << player_profiles.flatten #find_or_create_by
@@ -161,6 +164,10 @@ include SeedTeamHashes
     end
 
     instance.events << concurrent_events
+  end
+
+  def create_units()
+    
   end
 
 end # TestMethods
