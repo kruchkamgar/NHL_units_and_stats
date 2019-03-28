@@ -22,23 +22,41 @@ include SeedTeamHashes
     @team = Team.create(name: "New Jersey Devils", team_id: @team_id)
   end
 
+  def create_opponent(team)
+
+    @opponent = Team.create(name: team["name"], team_id: team["id"])
+  end
+
   def create_and_associate_profiles_and_players
+    @team_hash
+    .map do |side|
+      @team_hash_side = side.second
+
+      if @team_hash_side["team"]["id"] != @team.team_id
+        create_opponent(@team_hash_side["team"])
+        team = @opponent
+      else team = @team end
+
+      { team: create_players_and_profiles(team) }
+    end
+  end
+
+  def create_players_and_profiles(team)
     players = team_players
     profiles = team_player_profiles
     players
     .each_with_index do |player, i|
       player.player_profiles << profiles[i] end
 
-    create_roster(players)
+    create_roster(players, team)
     [players, profiles]
   end
 
   def team_players
-    @team_hash["players"]
+    @team_hash_side["players"]
     .map.with_index(1) do |id, index|
-      plyr_hash = @team_hash["players"]["#{id[0]}"]["person"]
+      plyr_hash = @team_hash_side["players"]["#{id[0]}"]["person"]
       Player.find_or_create_by(
-        id: index,
         first_name: plyr_hash["firstName"],
         last_name: plyr_hash["lastName"],
         player_id_num: plyr_hash["id"] )
@@ -46,29 +64,30 @@ include SeedTeamHashes
   end #team_players
 
   def team_player_profiles
-    @team_hash["players"]
+    @team_hash_side["players"]
     .map.with_index(1) do |id, index|
-      plyr_hash = @team_hash["players"]["#{id[0]}"]
+      plyr_hash = @team_hash_side["players"]["#{id[0]}"]
 
       PlayerProfile.find_or_create_by(
-        id: index,
         position: plyr_hash["position"]["name"],
         position_type: plyr_hash["position"]["type"],
         player_id: index ) end
   end
 
-  def create_roster(players = nil)
-    @roster = Roster.create(team_id: @team_id)
+  def create_roster(players = nil, team = @team)
+    @roster = Roster.create(team_id: team.id)
     @roster.players << ( players || team_players ) #find_or_create_by
   end
 
 
-  def create_game (player_profiles = nil)
+  def create_game (player_profiles = nil, roster = nil)
+    roster = Roster.where(team_id: [@team.id, @opponent.id]) unless roster
+
     @game =
     Game.find_or_create_by(home_side: "New Jersey Devils", game_id: @game_id)
 
-    @game.rosters << @roster
-    @game.player_profiles << player_profiles #find_or_create_by
+    @game.rosters << roster
+    @game.player_profiles << player_profiles.flatten #find_or_create_by
   end
 
   def create_game_events_and_log_entries_

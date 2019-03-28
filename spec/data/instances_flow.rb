@@ -7,8 +7,11 @@ include SeedMethods
   def seed_team_and_players
     create_team # creates roster also
     @team_hash = get_team_hash() unless @team_hash # set @team_hash, from data.rb
-    players, @player_profiles =
-    create_and_associate_profiles_and_players() end
+    @player_profiles =
+    create_and_associate_profiles_and_players()
+    .map do |side|
+      side.values[0].second end
+  end
 
   def seed_game
     create_game(@player_profiles) end

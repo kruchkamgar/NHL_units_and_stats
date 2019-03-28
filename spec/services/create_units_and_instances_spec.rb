@@ -2,9 +2,13 @@
 require './spec/data/events_flow'
 require './spec/data/instances_flow'
 require './spec/data/players_and_profiles'
+require './db/destroy_db/destroy_db.rb'
+
 
 describe CreateUnitsAndInstances, :type => :service do
+  include DestroyDb
   before(:context) do
+    destroy_all_db
     CRUI = CreateUnitsAndInstances
 
     # create_events_sample() #larger than sample from seeds
@@ -132,7 +136,6 @@ describe CreateUnitsAndInstances, :type => :service do
     end
   end
 
-
   before(:context) do
     @team_id = 1; @game_id = 2018021020; #SeedMethods
     seed_team_and_players(); seed_game();
@@ -140,7 +143,7 @@ describe CreateUnitsAndInstances, :type => :service do
     seed_events()
     CRUI.instance_variable_set(:@game, @game)
 
-    @units_groups_hash = units_groups_hash_(pre_seed: true)
+    @units_groups_hash = units_groups_hash_()
   end # hashes via data.rb
   describe 'creation process—-', :creation do
 
@@ -195,7 +198,6 @@ describe CreateUnitsAndInstances, :type => :service do
 
   let(:insert_units_method) do
     all_new_queue = Array.new( @units_groups_hash.size, nil )
-
     CRUI::insert_units(
       @units_groups_hash.keys,
       all_new_queue )
@@ -230,10 +232,10 @@ describe CreateUnitsAndInstances, :type => :service do
     end
   end
 
+  let(:create_circumstances) do
+    CRUI.create_circumstances(insert_units_method, @units_groups_hash.values) end
   describe '#create_circumstances', :creation do
     it 'creates circumstances' do
-      create_circumstances = CRUI.create_circumstances(prepped_insts_grps)
-
       expect(create_circumstances)
       .to eq(10)
     end

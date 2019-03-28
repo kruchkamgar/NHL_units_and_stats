@@ -11,10 +11,10 @@ include SeedTeamHashes
  end
 
  def get_team_hash
-   fetch_team_hash()["teams"]
-   .find do |side|
-     side.second["team"]["name"] == @team.name end
-   .second
+   this = fetch_team_hash()["teams"]
+   # .find do |side|
+   #   side.second["team"]["name"] == @team.name end
+   # .second
  end
 
 include SeedEventsHashes
