@@ -69,7 +69,9 @@ module CreateUnitsAndInstances
     # nils stand for new units [absent from records]
     if units_records_queue.any? nil
       units_queue =
-      insert_units(new_formed_units, units_records_queue)
+      insert_units(
+        new_formed_units,
+        @units_records_queue = units_records_queue )
     else units_records_queue end
   end
 
@@ -142,7 +144,7 @@ module CreateUnitsAndInstances
     prepare_instances(queued_units, units_groups)
     insert_instances(prepped_insts_grps.flatten)
 
-    create_circumstances(queued_units, units_groups_values)
+    create_circumstances(queued_units, units_groups_values) if @units_records_queue
   end
 
   def prepare_instances (queued_units, units_groups)
@@ -172,15 +174,21 @@ module CreateUnitsAndInstances
   end
 
   def create_circumstances(queued_units, units_groups_values)
-        # if first time unit?
-          # make a hash for circumstance insert
-            # - get player_id_nums from events
-            # - use event.player_id_num to associate player_profile
-          # insert circumstances
 
-  # store the specific profile (includes position), for this unit
+    # delete unit group, if unit preexisted as retrieved into @units_records_queue;
+    # collect the new unit otherwise.
+    new_units_queue =
+    @units_records_queue
+    .map.with_index do |record, i|
+      if record.class == Unit
+        units_groups_values[i] = nil
+      else
+        queued_units[i] end
+    end.compact
+
+    # store the specific profile (includes position), for this unit
     prepared_circumstances = []
-    units_groups_values
+    units_groups_values.compact
     .each_with_index do |group, i|
       group[0][:events]
       .each do |evnt|
@@ -189,7 +197,7 @@ module CreateUnitsAndInstances
         evnt.player_profiles
         .map do |profile|
           Hash[
-            unit_id: queued_units[i].id,
+            unit_id: new_units_queue[i].id,
             player_profile_id: profile.id,
             created_at: Time.now,
             updated_at: Time.now ]

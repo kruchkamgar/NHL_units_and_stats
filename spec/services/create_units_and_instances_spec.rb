@@ -226,31 +226,35 @@ describe CreateUnitsAndInstances, :type => :service do
   end
 
 include SamplesMethods
-  before do
-    num_retrieved = 3
-    @ugh_size = @units_groups_hash.size
-    num_new = @ugh_size - num_retrieved
-
-    @preexisting_units_q = Array.new(num_new, nil) + units_sample(num_retrieved)
-  end
-  let(:create_circumstances) do
-    CRUI.create_circumstances(insert_units_method, @units_groups_hash.values) end
-
   describe '#create_circumstances', :creation do
-    it 'creates circumstances' do
+    before do
+      @ugh_size = @units_groups_hash.size
+      num_retrieved = rand(0...@ugh_size)
+      num_new = @ugh_size - num_retrieved
+
+      @preexisting_units_q = Array.new(num_new, nil) + units_sample(num_retrieved)
+
+      @create_crmstncs = proc do
+        CRUI.create_circumstances(insert_units_method, @units_groups_hash.values) end
+    end
+
+    let!(:create_for_all_new_units ) do
       CRUI.instance_variable_set(:@units_records_queue,
         Array.new(@ugh_size, nil) )
+      @create_crmstncs.call end
+    let(:create_for_existing_units) do
+      CRUI.instance_variable_set( :@units_records_queue,
+        @preexisting_units_q.shuffle )
+      @create_crmstncs.call end
 
-      expect(create_circumstances)
+    it 'creates circumstances-- all new units in queue' do
+      expect(create_for_all_new_units)
       .to a_kind_of(Integer)
     end
 
-    it 'creates circumstances for only new units' do
-      CRUI.instance_variable_set( :@units_records_queue,
-        @preexisting_units_q.shuffle )
-
-      expect(create_circumstances)
-      .to a_kind_of(Integer)
+    it '...and for ONLY the new units, in mixed queue' do
+      expect(create_for_existing_units)
+      .to (be < create_for_all_new_units).and be > 0
     end
   end
 
