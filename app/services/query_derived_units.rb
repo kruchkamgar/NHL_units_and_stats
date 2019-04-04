@@ -8,8 +8,21 @@ module QueryDerivedUnits
     # include ActiveModel::Serialization
     attr_accessor :players, :tallies
 
+    @@team_players =
+    Player
+    .joins(rosters: [:team])
+    .where(teams: {team_id: 1}).distinct
+    .group_by do |plyr|
+      plyr.player_id_num end
+
     def initialize(players, tallies)
-      @players, @tallies = players, tallies
+      @players, @tallies = player_data(players), tallies
+    end
+
+    def player_data(players)
+      players
+      .map do |plyr_id_num|
+        @@team_players[plyr_id_num].first.last_name end
     end
 
     def attributes
@@ -17,99 +30,58 @@ module QueryDerivedUnits
     end
   end
 
+include ComposedQueries
+  def display_units(position_type, team_id: , position_type_mark: , unit_size_mark: 3)
 
-  def display_units(position_type, team_id: , position_type_mark: )
-    sql = query_units(position_type, team_id, position_type_mark)
+    @team_id, @position_type, @position_type_mark, @unit_size_mark = team_id, position_type, position_type_mark, unit_size_mark
 
-    units = retrieve_units(sql)
-    .eager_load(
-      instances: [events: [player_profiles: [:player] ]] )
+      # units = retrieve_units()
+      # .eager_load(:tallies,
+      #   instances: [events: [player_profiles: [:player] ]] ) # use 'only:' for tallies ?
 
-    units_groups = units
-    .group_by do |unit|
-      unit.instances.first.events
-      .select do |event|
-        event.event_type = "shift" end
-      .select do |event|
-        event
-        .player_profiles.any? do |profile|
-          profile.position_type == "Forward" end
-      end
-      .map do |event|
-        player = event.player_profiles.first.player
-        [player.first_name, player.last_name]
-      end
-      .sort do |a, b|
-        a[1] <=> b[1] end
-    end #group_by
+    # select circumstances / profiles for units
 
-    # produce array of totals hashes, standing for the aggregate units
-    units_groups
+    units_rows = retrieve_units_rows_by_param()
+
+    rows_grouped_by_unit = units_rows
+    .group_by do |unit| unit["id"] end
+
+    units = Unit.where(id: [ rows_grouped_by_unit.keys ]).includes(:stats)
+
+    unit_groups_array = rows_grouped_by_unit.to_a
+
+    units_grouped_by_pids =
+    units
+    .group_by.with_index do |unit, i|
+      unit_groups_array[i].second
+      .map do |hash|
+        hash["player_id_num"]
+      end.sort
+    end
+
+    units_grouped_by_pids
     .map do |plyrs, units|
       unit_tallies =
       units
       .map do |unit|
-        unit.tallies.first.attributes
+        unit.stats.first.attributes
         .reject do |attr|
           attr == "id" ||
-          attr == "unit_id" ||
-          attr == "created_at" ||
-          attr == "updated_at" end
+          attr == "unit_id" end
       end
       .inject do |totals, stat_hash|
-          stat_hash
-          .map do |stat, value|
-            [ stat, value + totals[stat] ] end
-          .to_h
+        stat_hash
+        .map do |stat, value|
+          [ stat, value + totals[stat] ] end
+        .to_h
       end
-      DerivedUnits.new(
-        plyrs, unit_tallies)
-    end #map groups
-  end
+      [plyrs, unit_tallies]
+    end #map units_grouped_by_pids
+    .sort do |a, b|
+      b.second["plus_minus"] <=> a.second["plus_minus"] end
+    .map do |derived_unit|
+      DerivedUnits.new( *derived_unit ) end
 
-  def retrieve_units(sql)
-    # ApplicationRecord.connection.execute(sql)
-    Unit.where("units.id IN " + sql)
-  end
-
-# use BETWEEN intead of dynamic comparison operators?
-  def query_units(position_type, team_id, position_type_mark, count_of_type_relative_to_mark: ">=", unit_size_mark: 3, unit_size_relative_to_mark: ">=" )
-    # at_least_this_many_of_position_type must have number less than than min_unit_size
-    <<~SQL
-        (SELECT unit_id
-        FROM instances
-        JOIN events_instances
-        ON instance_id = instances.id
-        JOIN events
-        ON events.id = event_id
-        WHERE instances.id IN
-          (SELECT instances.id
-          FROM instances
-          JOIN
-            (SELECT instance_id
-            FROM events_instances
-            WHERE event_id IN
-              (SELECT id
-              FROM events
-              WHERE player_id_num IN (
-                SELECT distinct player_id_num
-                FROM players
-                JOIN players_rosters ON players.id = players_rosters.player_id
-                JOIN player_profiles ON players.id = player_profiles.player_id
-                WHERE players_rosters.roster_id IN (
-                  SELECT distinct rosters.id
-                  FROM rosters
-                  JOIN teams ON rosters.team_id = teams.id
-                  WHERE teams.team_id = #{team_id} )
-                  AND position_type = '#{position_type}' )
-            AND events.event_type = 'shift' )
-            GROUP BY instance_id
-            HAVING COUNT(*) #{count_of_type_relative_to_mark} #{position_type_mark} )
-          ON instance_id = instances.id )
-        AND events.event_type = 'shift'
-        GROUP BY unit_id, instance_id
-        HAVING COUNT(instance_id) #{unit_size_relative_to_mark} #{unit_size_mark} )
-    SQL
-  end
+  end #display_units
 
 end #module QueryDerivedUnits

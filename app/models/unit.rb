@@ -7,4 +7,7 @@ class Unit < ApplicationRecord
 
   has_and_belongs_to_many :rosters # Units could conceivably manifest on multiple teams after trades --'reunited'
   has_many :tallies #one per season
+
+  # simply saves on a couple 'reject' conditions
+  has_many :stats, -> { select(:unit_id, :ppg, :ppga, :shg, :shga, :goals, :assists, :points, :plus_minus) }, class_name: "Tally"
 end

@@ -1,6 +1,5 @@
 class Tally < ApplicationRecord
   belongs_to :unit
-  # b
 # implement starting value of 0 for assists and goals and points
 
   #  *1 - conceivably store these in table, with game_ids
@@ -16,7 +15,6 @@ class Tally < ApplicationRecord
       map_reduce_and_total(field.name.to_sym) end
 
     tally_derivatives()
-
   end
 
   def tally_derivatives
