@@ -12,8 +12,6 @@ include QueryDerivedUnits
     display_units("Forward", team_id: 1, position_type_mark: 3)
 
     render json: @derived_units.as_json
-
-
     # Unit.order(created_at: :desc).limit(3).
     # to_json(
     #   include: [instances:

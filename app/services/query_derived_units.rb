@@ -8,12 +8,14 @@ module QueryDerivedUnits
     # include ActiveModel::Serialization
     attr_accessor :players, :tallies
 
-    @@team_players =
-    Player
-    .joins(rosters: [:team])
-    .where(teams: {team_id: 1}).distinct
-    .group_by do |plyr|
-      plyr.player_id_num end
+    def self.team_players(team_id)
+      @@team_players =
+      Player
+      .joins(rosters: [:team])
+      .where(teams: {team_id: team_id}).distinct
+      .group_by do |plyr|
+        plyr.player_id_num end
+    end
 
     def initialize(players, tallies)
       @players, @tallies = player_data(players), tallies
@@ -35,11 +37,8 @@ include ComposedQueries
 
     @team_id, @position_type, @position_type_mark, @unit_size_mark = team_id, position_type, position_type_mark, unit_size_mark
 
-      # units = retrieve_units()
-      # .eager_load(:tallies,
-      #   instances: [events: [player_profiles: [:player] ]] ) # use 'only:' for tallies ?
-
-    # select circumstances / profiles for units
+    # set hash of team's players
+    DerivedUnits.team_players(@team_id)
 
     units_rows = retrieve_units_rows_by_param()
 
