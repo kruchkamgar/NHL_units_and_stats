@@ -21,8 +21,11 @@
 /storage/*
 !/storage/.keep
 
-/node_modules
 /yarn-error.log
+
+# Ignore loose and development library files
+/node_modules
+/db/hockey_api\342
 
 /public/assets
 .byebug_history
