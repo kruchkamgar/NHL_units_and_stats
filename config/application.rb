@@ -1,6 +1,5 @@
 require_relative 'boot'
 require 'rack'
-require 'rack/cors'
 require 'rails/all'
 
 # Require the gems listed in Gemfile, including any gems
@@ -19,13 +18,8 @@ module HockeyApi
     # -- all .rb files in that directory are automatically loaded after loading
     # the framework and any gems in your application.
 
-    # CORS
-    config.middleware.insert_before 0, Rack::Cors do
-      allow do
-        origins /\Ahttp:\/\/localhost:\d+\z/
-        resource '*', headers: :any, methods: :any
-      end
-    end
+    # CORS was here, moved to config.ru
+
 
   end
 end
