@@ -51,9 +51,6 @@ module ComposedQueries
     .group( unit_t[:id], player_t[:player_id_num] )
   end
 
-  def alias_(table, name)
-    Arel::Nodes::As.new( table, Arel::Table.new(name) ) end
-
     # .on(instance_t[:unit_id].eq(unit_t[:id]) )
   def unit_ids_filter
     instance_t
@@ -119,6 +116,9 @@ module ComposedQueries
   def player_t; Player.arel_table end
   def roster_t; Roster.arel_table end
   def player_profiles_t; PlayerProfile.arel_table end
+
+  def alias_(table, name)
+    Arel::Nodes::As.new( table, Arel::Table.new(name) ) end
 
 end
 
