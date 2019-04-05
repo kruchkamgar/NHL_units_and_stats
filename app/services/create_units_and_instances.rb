@@ -42,7 +42,6 @@ module CreateUnitsAndInstances
   end #create_records_from_shifts
 
   def create_units_and_instances (units_groups_hash)
-    @inserted_units = []
     queued_units =
     find_or_create_units(units_groups_hash.keys)
 
@@ -71,7 +70,8 @@ module CreateUnitsAndInstances
       units_queue =
       insert_units(
         new_formed_units,
-        @units_records_queue = units_records_queue )
+        (@units_records_queue = units_records_queue).clone )
+      units_queue
     else units_records_queue end
   end
 
@@ -109,6 +109,7 @@ module CreateUnitsAndInstances
   end
 
   def insert_units(formed_units, records_queue)
+    @inserted_units = []
     prepared_units =
     formed_units.
     map do |unit|
@@ -124,7 +125,7 @@ module CreateUnitsAndInstances
       Unit.order(id: :desc).limit(units_changes)
     end
 
-    # add inserted_units to @units_includes_events, ahead of assoc to roster?
+    # replaces queue nils with the freshly inserted units
     @inserted_units.reverse
     .each do |record|
       nil_i = records_queue.index(nil)
@@ -139,12 +140,12 @@ module CreateUnitsAndInstances
     # penalty_data = get_special_teams_api_data()
     # penalities = add_penalty_end_times(penalty_data)
     # made_instances = add_penalty_data_to_instances(units_groups, penalties)
+    create_circumstances(queued_units, units_groups_values) if @units_records_queue
 
     prepped_insts_grps =
-    prepare_instances(queued_units, units_groups)
+    prepare_instances(queued_units, units_groups_values)
+    queued_instances =
     insert_instances(prepped_insts_grps.flatten)
-
-    create_circumstances(queued_units, units_groups_values) if @units_records_queue
   end
 
   def prepare_instances (queued_units, units_groups)
@@ -174,6 +175,7 @@ module CreateUnitsAndInstances
   end
 
   def create_circumstances(queued_units, units_groups_values)
+    new_units_groups = units_groups_values.clone
 
     # delete unit group, if unit preexisted as retrieved into @units_records_queue;
     # collect the new unit otherwise.
@@ -181,14 +183,15 @@ module CreateUnitsAndInstances
     @units_records_queue
     .map.with_index do |record, i|
       if record.class == Unit
-        units_groups_values[i] = nil
+        new_units_groups[i] = nil
       else
         queued_units[i] end
     end.compact
+    @units_records_queue = nil
 
     # store the specific profile (includes position), for this unit
     prepared_circumstances = []
-    units_groups_values.compact
+    new_units_groups.compact
     .each_with_index do |group, i|
       group[0][:events]
       .each do |evnt|
@@ -204,6 +207,7 @@ module CreateUnitsAndInstances
         end
       end #each evnt
     end #each group
+
 
     SQLOperations.sql_insert_all("circumstances", prepared_circumstances)
   end
