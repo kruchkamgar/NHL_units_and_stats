@@ -36,11 +36,14 @@ gem 'jbuilder', '~> 2.5'
 # Reduces boot times through caching; required in config/boot.rb
 # gem 'bootsnap', '>= 1.1.0', require: false
 
+# secret keys safe?
+gem 'dotenv-rails'
 gem 'rest-client'
 gem 'active_model_serializers'
 
-group :product do
-  gem 'pg'
+gem 'pg', '~> 0.21'
+
+group :production do
   gem 'rails_12factor'
 end
 
@@ -48,7 +51,6 @@ group :development, :test do
   # Call 'byebug' anywhere in the code to stop execution and get a debugger console
   gem 'byebug', platforms: [:mri, :mingw, :x64_mingw]
   gem 'rspec-rails', '~> 3.8'
-  gem 'sqlite3'
 end
 
 group :development do

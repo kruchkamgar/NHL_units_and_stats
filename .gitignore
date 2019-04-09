@@ -25,7 +25,7 @@
 
 # Ignore loose and development library files
 /node_modules
-/db/*.sql
+/db/sql_extras
 
 /public/assets
 .byebug_history

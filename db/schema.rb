@@ -10,7 +10,10 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema.define(version: 2019_03_24_015602) do
+ActiveRecord::Schema.define(version: 2019_04_09_214530) do
+
+  # These are extensions that must be enabled in order to support this database
+  enable_extension "plpgsql"
 
   create_table "circumstances", force: :cascade do |t|
     t.integer "unit_id"

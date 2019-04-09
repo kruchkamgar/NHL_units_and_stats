@@ -78,30 +78,28 @@ module CreateUnitsAndInstances
   def get_preexisting_units (formed_units)
     new_formed_units = formed_units.clone
     # nils act as placeholders for queued new units. swaps pre-existing units with their records from db.
-    puts "\n\n #get_preexisting_units #{formed_units.first.size} \n\n"
+    puts "\n\n #get_preexisting_units #{formed_units.map(&:size)} \n\n"
 
     units_records_queue =
-    formed_units.
-    map do |unit|
+    formed_units
+    .map do |unit|
       bind_targets = []
       binds =
       unit.map.with_index do |value, index|
-        bind_targets.push(":#{index + 1}")
+        bind_targets.push("$#{index + 1}")
         assemble_binds("player_id_num", value) end
 
-        unit_record =
-        ApplicationRecord.connection.exec_query(
-          retrieve_unit_sql(bind_targets),
-          "SQL",
-          binds ).rows.first
-        if (unit_record)
-          # byebug
-          new_formed_units.delete_at(new_formed_units.index(unit))
-          true end
-      # end #find
+      unit_record =
+      ApplicationRecord.connection.exec_query(
+        retrieve_unit_sql(bind_targets),
+        "SQL",
+        binds ).rows.first
+      if (unit_record)
+        new_formed_units.delete_at(new_formed_units.index(unit))
+        true end
 
       Unit.find_by(id: unit_record.first) unless unit_record == nil
-    end
+    end #map
 
     puts "\n\n get_preexisting_units done \n\n"
 
@@ -465,7 +463,7 @@ module CreateUnitsAndInstances
 #refactor: use module?
   def retrieve_unit_sql (bind_targets)
     <<~SQL
-      SELECT *
+      SELECT units.id
       FROM units
       JOIN
         (SELECT unit_id
@@ -474,25 +472,21 @@ module CreateUnitsAndInstances
         ON instance_id = instances.id
         JOIN events
         ON events.id = event_id
-        WHERE instances.id IN
-          (SELECT instances.id
-          FROM instances
-          JOIN
-            (SELECT instance_id
-            FROM events_instances
-            WHERE event_id IN
-              (SELECT id
-              FROM events
-              WHERE player_id_num IN (#{bind_targets.join(', ')})
-                AND events.event_type = 'shift' )
-            GROUP BY instance_id
-            HAVING COUNT(*) >= #{bind_targets.size} )
-          ON instance_id = instances.id )
+        WHERE events_instances.instance_id IN
+          (SELECT instance_id
+          FROM events_instances
+          WHERE event_id IN
+            (SELECT id
+            FROM events
+            WHERE player_id_num IN (#{bind_targets.join(', ')})
+              AND events.event_type = 'shift' )
+          GROUP BY instance_id
+          HAVING COUNT(*) >= #{bind_targets.size} )
         AND events.event_type = 'shift'
         GROUP BY unit_id, instance_id
-        HAVING COUNT(instance_id) = #{bind_targets.size} )
-      ON id = unit_id
-      GROUP BY id
+        HAVING COUNT(instance_id) = #{bind_targets.size} ) AS u_ids
+      ON units.id = u_ids.unit_id
+      GROUP BY units.id
     SQL
   end
 

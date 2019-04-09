@@ -15,6 +15,7 @@ include NHLTeamAPI
     # Team.left_outer_joins(rosters: [:units])
     # .where(season: @season)
     # .group("teams.id").having("COUNT(units.id) = 0")
+        # ?-- having COUNT(games) < (number of games to date)
 
     if teams.empty?
       # teams to which to associate opposing team rosters, per game
@@ -64,8 +65,8 @@ include NHLTeamAPI
       date_hash["games"].first["gamePk"]
 
       @game, teams_hash =
-      NHLGameAPI::Adapter.
-      new(game_id: game_id)
+      NHLGameAPI::Adapter
+      .new(game_id: game_id)
       .create_game
       # game API may deliver two teams' players
 
