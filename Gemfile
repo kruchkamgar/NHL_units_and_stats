@@ -40,6 +40,7 @@ gem 'jbuilder', '~> 2.5'
 
 # secret keys safe?
 gem 'dotenv-rails'
+
 gem 'rest-client'
 gem 'active_model_serializers'
 

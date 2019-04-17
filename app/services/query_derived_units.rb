@@ -71,13 +71,13 @@ include ComposedQueries
       .inject do |totals, stat_hash|
         stat_hash
         .map do |stat, value|
-          [ stat, value + totals[stat] ] end
+          [ stat, (value || 0) + (totals[stat] || 0) ] end
         .to_h
       end
       [plyrs, unit_tallies]
     end #map units_grouped_by_pids
     .sort do |a, b|
-      b.second["plus_minus"] <=> a.second["plus_minus"] end
+      (b.second["plus_minus"] || 0) <=> (a.second["plus_minus"] || 0 ) end
     .map do |derived_unit|
       DerivedUnits.new( *derived_unit ) end
 

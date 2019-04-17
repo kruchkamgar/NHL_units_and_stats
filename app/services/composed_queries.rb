@@ -49,6 +49,8 @@ module ComposedQueries
     .where( event_type_eq
       .and(position_type_eq) )
     .group( unit_t[:id], player_t[:player_id_num] )
+
+    # .where event in [x games] -- temporal data
   end
 
     # .on(instance_t[:unit_id].eq(unit_t[:id]) )
