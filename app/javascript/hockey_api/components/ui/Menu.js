@@ -13,7 +13,7 @@ const Menu = () =>
         // <NavLink to="/add-day" activeClassName="selected">
         //     <FaCalendarPlusO />
         // </NavLink> */}
-        <NavLink to="/list-days" activeClassName="selected">
+        <NavLink to="/latest" activeClassName="selected">
             <FaCalendar />
         </NavLink>
         <NavLink to="/units" activeClassName="selected">

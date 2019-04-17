@@ -7,10 +7,10 @@ import '../stylesheets/index.scss'
 //first [UI/visible] action of app-- load this App from routes.js' '/' path
 export const App = () =>
   <div>
-    <HomePage/>
+    <FirstLevel/>
   </div>
 
-const HomePage = () => (
+const FirstLevel = () => (
   <div className="app">
     <div className="wrapper">
       { /*<ShowErrors /> */ }
