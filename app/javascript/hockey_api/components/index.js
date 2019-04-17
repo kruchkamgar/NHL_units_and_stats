@@ -1,6 +1,5 @@
 import Menu from './ui/Menu'
 import ShowErrors from './containers/ShowErrors'
-import GoalProgress from './containers/GoalProgress'
 import { BrowserRouter, Route, Link} from 'react-router-dom'
 import UnitsDisplay from './containers/UnitsDisplay'
 import '../stylesheets/index.scss'

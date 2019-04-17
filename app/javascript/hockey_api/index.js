@@ -6,7 +6,6 @@ import storeFactory from './store'
 import { Provider } from 'react-redux'
 import { BrowserRouter, Switch, Route, Link } from 'react-router-dom'
 import { App, Whoops404 } from './components/index'
-import SkiDayCount from './components/containers/SkiDayCount'
 import { addError } from './actions'
 
 // local storage
@@ -36,7 +35,6 @@ render(
     <BrowserRouter>
       <Switch>
         <Route path='/' component={App}/>
-        <Route path='/' component={SkiDayCount}/>
         <Route path="*" component={Whoops404}/>
       </Switch>
     </BrowserRouter>
