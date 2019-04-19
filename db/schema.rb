@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema.define(version: 2019_04_09_214530) do
+ActiveRecord::Schema.define(version: 2019_04_17_233642) do
 
   # These are extensions that must be enabled in order to support this database
   enable_extension "plpgsql"
@@ -151,6 +151,7 @@ ActiveRecord::Schema.define(version: 2019_04_09_214530) do
     t.integer "ppg", default: 0
     t.integer "shg", default: 0
     t.integer "shga", default: 0
+    t.string "TOI", default: "0"
     t.index ["unit_id"], name: "index_tallies_on_unit_id"
   end
 

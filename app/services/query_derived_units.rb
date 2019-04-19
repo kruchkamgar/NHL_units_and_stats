@@ -1,3 +1,4 @@
+
 module QueryDerivedUnits
   # fwd units come in 2 (OT), 3-man units
   # use controller to display fwd units or d
@@ -33,6 +34,7 @@ module QueryDerivedUnits
   end
 
 include ComposedQueries
+include Utilities
   def display_units(position_type, team_id: , position_type_mark: , unit_size_mark: 3)
 
     @team_id, @position_type, @position_type_mark, @unit_size_mark = team_id, position_type, position_type_mark, unit_size_mark
@@ -69,11 +71,20 @@ include ComposedQueries
           attr == "unit_id" end
       end
       .inject do |totals, stat_hash|
+        # map over stat_hash for each unit, return new hash to act as new 'totals'
         stat_hash
         .map do |stat, value|
-          [ stat, (value || 0) + (totals[stat] || 0) ] end
-        .to_h
-      end
+          if value.class == String
+            Array.[](
+              stat, TimeOperation.new(:+, totals[stat], value).result )
+          else
+            Array.[](
+              stat, (value || 0) + (totals[stat] || 0) ) end
+        end
+        .to_h #.map
+      end #.inject
+
+      unit_tallies["TOI"] = TimeOperation.new(:+, "00:00", unit_tallies["TOI"]).seconds
       [plyrs, unit_tallies]
     end #map units_grouped_by_pids
     .sort do |a, b|

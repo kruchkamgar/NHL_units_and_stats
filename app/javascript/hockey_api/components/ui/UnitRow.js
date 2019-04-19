@@ -1,7 +1,7 @@
 import PropTypes from 'prop-types';
 
-const UnitRow = ({ html_id, players, tallies/*, id, created_at, instances, plus_minus*/ }) =>
-    <tr id = {html_id}>
+const UnitRow = ({html_id, players, tallies/*, id, created_at, instances, plus_minus*/ }) =>
+    <tr id = {html_id} >
         <td>
             { players
               .map(name =>
@@ -14,7 +14,13 @@ const UnitRow = ({ html_id, players, tallies/*, id, created_at, instances, plus_
             { tallies["plus_minus"] }
         </td>
         <td>
-
+            { function() {
+              var per60 = tallies["plus_minus"]/(tallies["TOI"]/3600)
+              return per60.toFixed(1) }()
+            }
+        </td>
+        <td>
+          { (tallies["TOI"]/3600).toFixed(2) }
         </td>
     </tr>
 

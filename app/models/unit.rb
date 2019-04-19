@@ -9,5 +9,5 @@ class Unit < ApplicationRecord
   has_many :tallies #one per season
 
   # simply saves on a couple 'reject' conditions
-  has_many :stats, -> { select(:unit_id, :ppg, :ppga, :shg, :shga, :goals, :assists, :points, :plus_minus) }, class_name: "Tally"
+  has_many :stats, -> { select(:unit_id, :ppg, :ppga, :shg, :shga, :goals, :assists, :points, :plus_minus, :TOI) }, class_name: "Tally"
 end

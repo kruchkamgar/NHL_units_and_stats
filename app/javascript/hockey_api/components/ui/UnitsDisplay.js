@@ -5,7 +5,7 @@ import UnitRow from './UnitRow'
 // import SnowFlake from 'react-icons/ti'
 import '../../stylesheets/UnitsDisplay.scss'
 
-const UnitsDisplay = ({ units=[], loadUnits=f=>f, clearUnits=f=>f, loadTeamUnits=f=>f, fetching=false }) => {
+const UnitsDisplay = ({ units=[], clearUnits=f=>f, loadTeamUnits=f=>f, fetching=false }) => {
 
     const activeFilterStyle = {
         textDecoration: 'none',
@@ -20,10 +20,7 @@ const UnitsDisplay = ({ units=[], loadUnits=f=>f, clearUnits=f=>f, loadTeamUnits
     }
 
     return (
-        <div className="units_wrapper">
-              <div className="load">
-                <button type="button" onClick={() => loadUnits()}>Load Units</button>
-              </div>
+        <div className="units-wrapper">
               <div className="unload">
                 <button type="button" onClick={() => clearUnits()}>Clear Units</button>
               </div>
@@ -39,9 +36,9 @@ const UnitsDisplay = ({ units=[], loadUnits=f=>f, clearUnits=f=>f, loadTeamUnits
                 <thead>
                 <tr>
                     <th>units</th>
-                    <th>plus-minus</th>
-                    <th>{/* */}</th>
-                    <th></th>
+                    <th>+/-</th>
+                    <th>+/- per 60</th>
+                    <th>TOI (hrs)</th>
                 </tr>
                 <tr>
                     {/* <td colSpan={4}>

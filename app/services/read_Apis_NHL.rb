@@ -11,10 +11,10 @@ include NHLTeamAPI
   def create_teams_seasons
     set_season($season)
 
-    teams = Team.all
-    # Team.left_outer_joins(rosters: [:units])
-    # .where(season: @season)
-    # .group("teams.id").having("COUNT(units.id) = 0")
+    teams =
+    Team.left_outer_joins(rosters: [:units])
+    .where(season: @season)
+    .group("teams.id").having("COUNT(units.id) = 0")
         # ?-- having COUNT(games) < (number of games to date)
 
     if teams.empty?
@@ -125,6 +125,7 @@ include NHLTeamAPI
           plus_minus: tally.plus_minus,
           goals: tally.goals,
           points: tally.points,
+          TOI: tally.TOI,
           created_at: Time.now,
           updated_at: Time.now ]
       end
@@ -146,7 +147,8 @@ include NHLTeamAPI
   end
 
   def get_next_date_index (schedule_dates)
-    max_game_id = Game.maximum(:game_id)
+    # game where team = team and has shift events for that team's roster's players
+    max_game_id = false # Game.maximum(:game_id)
     latest_game_record =
     schedule_dates
     .find do |date|
@@ -158,6 +160,7 @@ include NHLTeamAPI
       .index(latest_game_record) + 1
     else
       0 end
+
   end
 
   # def select_team_hash (teams_hash, team_id = nil)

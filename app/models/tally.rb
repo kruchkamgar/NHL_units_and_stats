@@ -6,6 +6,7 @@ class Tally < ApplicationRecord
 
   def tally_instances
     plus_minus_values()
+    toi_values()
 
     Instance.columns
     .select do |col|
@@ -29,6 +30,17 @@ class Tally < ApplicationRecord
     .reduce(operation)
 
     self.write_attribute(attribute, total)
+  end
+
+include Utilities
+  def toi_values
+    total =
+    self.unit.instances
+    .map(&:duration)
+    .inject do |toi, inst_duration|
+      TimeOperation.new(:+, toi, inst_duration).result end
+
+    self.write_attribute(:TOI, total)
   end
 
   def plus_minus_values

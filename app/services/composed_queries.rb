@@ -52,6 +52,9 @@ module ComposedQueries
 
     # .where event in [x games] -- temporal data
   end
+    # where calculation: TOI > 1:00 OR
+    # total goals while on ice > 0 --goals + abs(plus-minus - goals
+    # goals per TOI calc-- 0.001 < ( goals + abs(plus-minus - goals) )/TOI
 
     # .on(instance_t[:unit_id].eq(unit_t[:id]) )
   def unit_ids_filter

@@ -16,13 +16,11 @@ module SQLOperations
     fields = data_hash.first.keys.map(&:to_s)
     # "VALUES (CSV string1),(string2),(string3)...
 
-    byebug
     sql_events = <<~SQL
       INSERT INTO #{table} (#{fields.join(',')} )
       VALUES ( #{insert_values.join('),(')} )
       RETURNING *
     SQL
-    byebug
     begin
       returning = ApplicationRecord.connection.execute(sql_events)
     rescue StandardError => e

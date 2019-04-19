@@ -1,5 +1,17 @@
 @import "globals.scss";
 
+div.units-wrapper {
+
+  form {
+    padding: 1em 0;
+
+    label {
+      font-size: 1.5em;
+      padding: 1em;
+    }
+  }
+}
+
 div.units-list {
 
   height: calc(100% - 13em);
@@ -7,7 +19,7 @@ div.units-list {
 
   table {
     tbody {
-      tr:first-of-type { background-color: red};
+      // tr:first-of-type { background-color: red};
       caption {
         background-color: white;
         background-color: rgba(255,255,255, .9);
@@ -15,7 +27,7 @@ div.units-list {
       }
     }
     width: 100%;
-    border-collapse: collapse;  
+    border-collapse: collapse;
     background-color: rgba(255,255,255, .9);
     font-family: verdana, sans-serif;
     font-size: 1.5em;
