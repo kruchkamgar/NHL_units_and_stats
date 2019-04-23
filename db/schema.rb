@@ -16,10 +16,10 @@ ActiveRecord::Schema.define(version: 2019_04_17_233642) do
   enable_extension "plpgsql"
 
   create_table "circumstances", force: :cascade do |t|
-    t.integer "unit_id"
+    t.bigint "unit_id"
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
-    t.integer "player_profile_id"
+    t.bigint "player_profile_id"
     t.index ["player_profile_id"], name: "index_circumstances_on_player_profile_id"
     t.index ["unit_id"], name: "index_circumstances_on_unit_id"
   end
@@ -33,14 +33,14 @@ ActiveRecord::Schema.define(version: 2019_04_17_233642) do
     t.string "end_time"
     t.integer "shift_number"
     t.integer "period"
-    t.integer "game_id"
+    t.bigint "game_id"
     t.integer "player_id_num"
     t.index ["game_id"], name: "index_events_on_game_id"
   end
 
   create_table "events_instances", id: false, force: :cascade do |t|
-    t.integer "instance_id", null: false
-    t.integer "event_id", null: false
+    t.bigint "instance_id", null: false
+    t.bigint "event_id", null: false
     t.index ["event_id", "instance_id"], name: "index_events_instances_on_event_id_and_instance_id"
     t.index ["instance_id", "event_id"], name: "index_events_instances_on_instance_id_and_event_id"
   end
@@ -53,26 +53,26 @@ ActiveRecord::Schema.define(version: 2019_04_17_233642) do
   end
 
   create_table "games_player_profiles", id: false, force: :cascade do |t|
-    t.integer "game_id", null: false
-    t.integer "player_profile_id", null: false
+    t.bigint "game_id", null: false
+    t.bigint "player_profile_id", null: false
   end
 
   create_table "games_rosters", id: false, force: :cascade do |t|
-    t.integer "game_id", null: false
-    t.integer "roster_id", null: false
+    t.bigint "game_id", null: false
+    t.bigint "roster_id", null: false
     t.index ["game_id", "roster_id"], name: "index_games_rosters_on_game_id_and_roster_id"
     t.index ["roster_id", "game_id"], name: "index_games_rosters_on_roster_id_and_game_id"
   end
 
   create_table "games_units", id: false, force: :cascade do |t|
-    t.integer "game_id", null: false
-    t.integer "unit_id", null: false
+    t.bigint "game_id", null: false
+    t.bigint "unit_id", null: false
     t.index ["game_id", "unit_id"], name: "index_games_units_on_game_id_and_unit_id"
     t.index ["unit_id", "game_id"], name: "index_games_units_on_unit_id_and_game_id"
   end
 
   create_table "instances", force: :cascade do |t|
-    t.integer "unit_id"
+    t.bigint "unit_id"
     t.integer "assists", default: 0
     t.integer "plus_minus"
     t.integer "goals", default: 0
@@ -89,17 +89,17 @@ ActiveRecord::Schema.define(version: 2019_04_17_233642) do
   end
 
   create_table "log_entries", force: :cascade do |t|
-    t.integer "event_id"
+    t.bigint "event_id"
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
     t.string "action_type"
-    t.integer "player_profile_id"
+    t.bigint "player_profile_id"
     t.index ["event_id"], name: "index_log_entries_on_event_id"
     t.index ["player_profile_id"], name: "index_log_entries_on_player_profile_id"
   end
 
   create_table "player_profiles", force: :cascade do |t|
-    t.integer "player_id"
+    t.bigint "player_id"
     t.string "position"
     t.string "position_type"
     t.datetime "created_at", null: false
@@ -117,8 +117,8 @@ ActiveRecord::Schema.define(version: 2019_04_17_233642) do
   end
 
   create_table "players_rosters", id: false, force: :cascade do |t|
-    t.integer "player_id", null: false
-    t.integer "roster_id", null: false
+    t.bigint "player_id", null: false
+    t.bigint "roster_id", null: false
     t.index ["player_id", "roster_id"], name: "index_players_rosters_on_player_id_and_roster_id"
     t.index ["roster_id", "player_id"], name: "index_players_rosters_on_roster_id_and_player_id"
   end
@@ -126,21 +126,21 @@ ActiveRecord::Schema.define(version: 2019_04_17_233642) do
   create_table "rosters", force: :cascade do |t|
     t.boolean "baseline"
     t.string "type"
-    t.integer "team_id"
+    t.bigint "team_id"
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
     t.index ["team_id"], name: "index_rosters_on_team_id"
   end
 
   create_table "rosters_units", id: false, force: :cascade do |t|
-    t.integer "roster_id", null: false
-    t.integer "unit_id", null: false
+    t.bigint "roster_id", null: false
+    t.bigint "unit_id", null: false
     t.index ["roster_id", "unit_id"], name: "index_rosters_units_on_roster_id_and_unit_id"
     t.index ["unit_id", "roster_id"], name: "index_rosters_units_on_unit_id_and_roster_id"
   end
 
   create_table "tallies", force: :cascade do |t|
-    t.integer "unit_id"
+    t.bigint "unit_id"
     t.integer "assists", default: 0
     t.integer "plus_minus"
     t.integer "goals", default: 0
@@ -168,4 +168,10 @@ ActiveRecord::Schema.define(version: 2019_04_17_233642) do
     t.datetime "updated_at", null: false
   end
 
+  add_foreign_key "circumstances", "units"
+  add_foreign_key "instances", "units"
+  add_foreign_key "log_entries", "events"
+  add_foreign_key "player_profiles", "players"
+  add_foreign_key "rosters", "teams"
+  add_foreign_key "tallies", "units"
 end

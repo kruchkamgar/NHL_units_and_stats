@@ -1,5 +1,4 @@
 class ChangePlayerId < ActiveRecord::Migration[5.2]
-  def change
 
     # reversible do |dir|
     #     dir.up do
@@ -17,6 +16,7 @@ class ChangePlayerId < ActiveRecord::Migration[5.2]
     #     end
     #   end
 
+  def up
     drop_table :player_profiles
     rename_column :players, :player_id, :player_id_num
 
@@ -28,4 +28,17 @@ class ChangePlayerId < ActiveRecord::Migration[5.2]
     end
 
   end
+
+  def down
+    drop_table :player_profiles
+    rename_column :players, :player_id_num, :player_id
+
+    create_table :player_profiles do |t|
+      t.references :player, foreign_key: true
+      t.string :position
+      t.string :position_type
+      t.timestamps
+    end
+  end
+
 end
