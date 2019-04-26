@@ -8,7 +8,7 @@ set :repo_url, "git@github.com:kruchkamgar/NHL_units_and_stats.git"
 # ask :branch, `git rev-parse --abbrev-ref HEAD`.chomp
 
 # Default deploy_to directory is /var/www/my_app_name
-set :deploy_to, "/var/www/hockey_api"
+set :deploy_to, "/home/rails/hockey_api"
 
 # Default value for :format is :airbrussh.
 # set :format, :airbrussh
@@ -22,7 +22,8 @@ set :deploy_to, "/var/www/hockey_api"
 
 # Default value for :linked_files is []
 # append :linked_files, "config/database.yml"
-append :linked_files, "config/database.yml", "config/secrets.yml"
+append :linked_files, ".env"
+# append :linked_files, "config/database.yml", "config/secrets.yml"
 
 # Default value for linked_dirs is []
 # append :linked_dirs, "log", "tmp/pids", "tmp/cache", "tmp/sockets", "public/system"
