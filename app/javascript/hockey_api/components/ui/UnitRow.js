@@ -20,7 +20,7 @@ const UnitRow = ({html_id, players, tallies/*, id, created_at, instances, plus_m
             }
         </td>
         <td>
-          { (tallies["TOI"]/3600).toFixed(2) }
+            { (tallies["TOI"]/3600).toFixed(2) }
         </td>
     </tr>
 
