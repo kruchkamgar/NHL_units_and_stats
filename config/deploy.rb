@@ -7,7 +7,7 @@ set :rvm_type, :user
 set :rvm_ruby_version, '2.5.1'
 
 set :nvm_type, :user # or :system, depends on your nvm setup
-set :nvm_node, 'v8.9.0'
+set :nvm_node, 'v8.16.0'
 set :nvm_map_bins, %w{node npm yarn}
 
 # Default branch is :master
