@@ -55,6 +55,7 @@ gem 'capistrano', '~> 3.7', '>= 3.7.1'
 
     # Add this if you're using rvm
     gem 'capistrano-rvm'
+    gem 'capistrano-nvm'
 
 group :production do
   gem 'rails_12factor'
