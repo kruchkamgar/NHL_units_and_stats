@@ -18,8 +18,9 @@
     "typescript": "^3.4.3",
     "webpack": "^4.30.0"
   },
-  "engines" :
-    { "node" : "=0.8" },
+  "engines": {
+    "node": "8.0.0"
+  },
   "devDependencies": {
     "webpack-cli": "^3.3.0",
     "webpack-dev-server": "^3.3.1"
