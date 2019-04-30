@@ -1,4 +1,5 @@
 # reload!; include ReadApisNHL; ReadApisNHL.create_teams_seasons
+# ts = TeamSeason.new(season: 20182019, team: Team.first)
 
 module ReadApisNHL
 
@@ -125,7 +126,7 @@ include NHLTeamAPI
           plus_minus: tally.plus_minus,
           goals: tally.goals,
           points: tally.points,
-          TOI: tally.TOI,
+          '"TOI"': tally.TOI,
           created_at: Time.now,
           updated_at: Time.now ]
       end
@@ -147,7 +148,14 @@ include NHLTeamAPI
   end
 
   def get_next_date_index (schedule_dates)
-    # game where team = team and has shift events for that team's roster's players
+    # games = game where
+    # team = team and
+    # has shift events for that team's roster's players
+    # Game
+    # .joins(:teams)
+    # .where(teams: {team_id: @team.id})
+    # .joins(:events)
+    # .where()
     max_game_id = false # Game.maximum(:game_id)
     latest_game_record =
     schedule_dates
