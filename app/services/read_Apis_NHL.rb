@@ -1,5 +1,5 @@
 # reload!; include ReadApisNHL; ReadApisNHL.create_teams_seasons
-# ts = TeamSeason.new(season: 20182019, team: Team.first)
+# ts = TeamSeason.new(season: 20182019, team: Team.first); ts.create_tallies;
 
 module ReadApisNHL
 
@@ -12,10 +12,11 @@ include NHLTeamAPI
   def create_teams_seasons
     set_season($season)
 
-    teams =
-    Team.left_outer_joins(rosters: [:units])
-    .where(season: @season)
-    .group("teams.id").having("COUNT(units.id) = 0")
+    teams = Team.all
+    # Team.left_outer_joins(rosters: [:units])
+    # .where(season: @season)
+    # .group("teams.id").having("COUNT(units.id) = 0")
+    # .order(team_id: :asc)
         # ?-- having COUNT(games) < (number of games to date)
 
     if teams.empty?
@@ -28,7 +29,8 @@ include NHLTeamAPI
       @team_season =
       TeamSeason.new(season: @season, team: team)
       @team_season.create_records_from_APIs
-      @team_season.create_tallies
+      @team_season.create_tallies # if updates, update tallies
+      # updates: new games; or events, in case of live updating
       byebug
     end
   end
@@ -38,6 +40,7 @@ include NHLTeamAPI
     def initialize (season:, team:)
       @season, @team = season, team
     end
+
 
   include ReadApisNHL
     def create_records_from_APIs
@@ -52,6 +55,9 @@ include NHLTeamAPI
       get_schedule_dates(schedule_hash)
       .select do |date|
         date["date"] < (Time.now - 85000) end
+# zulu time = 4 hrs ahead of EST
+# (same lvl as "date")--
+# "games" : [{ "gameDate" : "2019-04-24T23:30:00Z",
 
       schedule_dates[ get_next_date_index(schedule_dates)..-1]
       .each do |date_hash|
@@ -117,21 +123,26 @@ include NHLTeamAPI
       .where(rosters: {team_id: @team.id})
       .group(:id)
       .preload(:instances)
+      .preload(:tallies)
       .map do |unit|
-        tally = unit.tallies.build
-        tally.tally_instances
-        Hash[
-          unit_id: unit.id,
-          assists: tally.assists,
-          plus_minus: tally.plus_minus,
-          goals: tally.goals,
-          points: tally.points,
-          '"TOI"': tally.TOI,
-          created_at: Time.now,
-          updated_at: Time.now ]
+        if unit.tallies.empty?
+          tally = unit.tallies.build
+          tally.tally_instances
+          Hash[
+            unit_id: unit.id,
+            assists: tally.assists,
+            plus_minus: tally.plus_minus,
+            goals: tally.goals,
+            points: tally.points,
+            '"TOI"': tally.TOI,
+            created_at: Time.now,
+            updated_at: Time.now
+            # season: @teamseason.season
+          ] end # if
+      end.compact #map
+      unless prepared_tallies.empty?
+        SQLOperations.sql_insert_all("tallies", prepared_tallies)
       end
-      byebug if prepared_tallies.blank?
-      SQLOperations.sql_insert_all("tallies", prepared_tallies)
     end #create_tallies
   end #TeamSeason
 
@@ -147,20 +158,27 @@ include NHLTeamAPI
       slice(5) == "1" end
   end
 
+include ComposedQueries
   def get_next_date_index (schedule_dates)
-    # games = game where
-    # team = team and
-    # has shift events for that team's roster's players
-    # Game
-    # .joins(:teams)
-    # .where(teams: {team_id: @team.id})
-    # .joins(:events)
-    # .where()
-    max_game_id = false # Game.maximum(:game_id)
+        # find a game date which matches latest game record possible (order by game_id?)
+
+# game processing LOGIC
+    # find the last complete game [for season], if any
+    # - find one with shift events
+      # - unless this game represents the last game record, use the subsequent game as starting index
+      # - else, run live-game check for shift-completion
+
+    query = games_by_team_shifts(:game_id, @team.id)
+    games = ApplicationRecord.connection.execute(query.to_sql)
+    max_game_id_hash =
+    games.max_by do |game| game["game_id"] end
+    max_game_id =
+    max_game_id_hash["game_id"] if max_game_id_hash
+
     latest_game_record =
     schedule_dates
     .find do |date|
-      date["games"].first["gamePK"] ==
+      date["games"].first["gamePk"] ==
       max_game_id end
 
     if latest_game_record
@@ -171,6 +189,15 @@ include NHLTeamAPI
 
   end
 
+  def live_game_data_url (start_time, end_time)
+    url = 'https://statsapi.web.nhl.com/api/v1/game/ID/feed/live/diffPatch?startTimecode=yyyymmdd_hhmmss'
+
+    data = fetch(url)
+  end
+
+  def get_game_data
+    JSON.parse(RestClient.get(TEAM_URL+"#{@team.team_id}"))
+  end
   # def select_team_hash (teams_hash, team_id = nil)
   #   team_id ||= @team.team_id
   #

@@ -21,7 +21,7 @@ module SQLOperations
       VALUES ( #{insert_values.join('),(')} )
       RETURNING *
     SQL
-    byebug
+
     begin
       returning = ApplicationRecord.connection.execute(sql_events)
     rescue StandardError => e

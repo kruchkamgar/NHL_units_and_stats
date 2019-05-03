@@ -58,6 +58,8 @@ gem 'capistrano', '~> 3.7', '>= 3.7.1'
     # gem 'capistrano', '~> 3.1'
     gem 'capistrano-nvm', require: false
 
+gem 'rack-cors', require: 'rack/cors'
+
 group :production do
   gem 'rails_12factor'
 end
@@ -76,7 +78,6 @@ group :development do
   gem 'spring'
   gem 'spring-watcher-listen', '~> 2.0.0'
   gem 'spring-commands-rspec'
-  gem 'rack-cors', require: 'rack/cors'
 
 end
 

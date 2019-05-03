@@ -7,6 +7,41 @@ module ComposedQueries
   #   @unit_size_mark = 5
   # end
 
+  def games_by_team_shifts(*columns, team_id)
+    query =
+    games_w_rtrs(*columns).distinct
+    .join(players_rosters_t).on(
+      players_rosters_t[:roster_id].eq(roster_t[:id])  )
+    .join(player_t).on(
+      player_t[:id].eq(players_rosters_t[:player_id]) )
+    .join(player_profile_t).on(
+      player_profile_t[:player_id].eq(player_t[:id]) )
+    .join(log_entry_t).on(
+      log_entry_t[:player_profile_id].eq(player_profile_t[:id]) )
+    .join(event_t).on(
+      event_t[:id].eq(log_entry_t[:event_id]) )
+    .where( roster_t[:team_id].eq(team_id)
+      .and( event_type_eq ) )
+    .order( game_t[:game_id].desc )
+  end
+
+  def evts_evt_typ_eq
+    event_t
+    .project( event_t[:event_type] )
+    .where( event_type_eq )
+  end
+
+  def games_w_rtrs(*columns)
+    game_t
+    .project( *columns.map do |col| game_t[col] end )
+    .join(games_rosters_t).on(
+      games_rosters_t[:game_id].eq(game_t[:id]) )
+    .join(roster_t).on(
+      roster_t[:id].eq(games_rosters_t[:roster_id]) )
+  end
+
+  # /////////////       ////////////// #
+
   def retrieve_units_rows_by_param()
     # Unit.where( unit_t[:id].in(derived_units_sql).to_sql )
     ApplicationRecord.connection.execute(
@@ -44,8 +79,8 @@ module ComposedQueries
       .on( event_t[:id].eq(events_instances_t[:event_id]) )
     .join( player_t )
       .on( player_t[:player_id_num].eq(event_t[:player_id_num]) )
-    .join( player_profiles_t)
-      .on( player_profiles_t[:player_id].eq(player_t[:id]) )
+    .join( player_profile_t)
+      .on( player_profile_t[:player_id].eq(player_t[:id]) )
     .where( event_type_eq
       .and(position_type_eq) )
     .group( unit_t[:id], player_t[:player_id_num] )
@@ -83,23 +118,23 @@ module ComposedQueries
       .in(event_t
           .project( event_t[:id] )
           .where( event_t[:player_id_num]
-            .in(select_distinct_player_id_num()
-                .where(rosters_ids_for_team()
+            .in(pid_w_plrs_rtrs_w_plr_prfls()
+                .where(plr_rtrs_rtr_ids_for_team()
                        .and(position_type_eq) ))
             .and(event_type_eq) )))
     .group( events_instances_t[:instance_id] )
     .having( Arel.star.count.send(*_rel_to_pos_type_mark) )
   end
 
-  def select_distinct_player_id_num
+  def pid_w_plrs_rtrs_w_plr_prfls
     player_t
     .project( player_t[:player_id_num] ).distinct
     .join(players_rosters_t).on(
       players_rosters_t[:player_id].eq(player_t[:id]) )
-    .join(player_profiles_t).on(
-      player_profiles_t[:player_id].eq(player_t[:id]) ) end
+    .join(player_profile_t).on(
+      player_profile_t[:player_id].eq(player_t[:id]) ) end
 
-  def rosters_ids_for_team
+  def plr_rtrs_rtr_ids_for_team
     players_rosters_t[:roster_id]
       .in( rosters_join_team()
         .where( team_id_eq )) end
@@ -110,17 +145,21 @@ module ComposedQueries
     .join(team_t).on(
       roster_t[:team_id].eq(team_t[:id]) ) end
 
+
   def team_t; Team.arel_table end
   def roster_t; Roster.arel_table end
+  def game_t; Game.arel_table end
   def unit_t; Unit.arel_table end
   def profile_t; PlayerProfile.arel_table end
   def players_rosters_t; Arel::Table.new(:players_rosters) end
+  def log_entry_t; LogEntry.arel_table end
   def events_instances_t; Arel::Table.new(:events_instances) end
   def event_t; Event.arel_table end
   def instance_t; Instance.arel_table end
   def player_t; Player.arel_table end
   def roster_t; Roster.arel_table end
-  def player_profiles_t; PlayerProfile.arel_table end
+  def player_profile_t; PlayerProfile.arel_table end
+  def games_rosters_t; Arel::Table.new(:games_rosters) end
 
   def alias_(table, name)
     Arel::Nodes::As.new( table, Arel::Table.new(name) ) end
