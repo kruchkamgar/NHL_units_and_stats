@@ -31,7 +31,6 @@ include NHLTeamAPI
       @team_season.create_records_from_APIs
       @team_season.create_tallies # if updates, update tallies
       # updates: new games; or events, in case of live updating
-      byebug
     end
   end
 
@@ -170,8 +169,8 @@ include ComposedQueries
 
     query = games_by_team_shifts(:game_id, @team.id)
     games = ApplicationRecord.connection.execute(query.to_sql)
-    max_game_id_hash =
-    games.max_by do |game| game["game_id"] end
+    max_game_id_hash = games
+    .max_by do |game| game["game_id"] end
     max_game_id =
     max_game_id_hash["game_id"] if max_game_id_hash
 
@@ -186,7 +185,6 @@ include ComposedQueries
       .index(latest_game_record) + 1
     else
       0 end
-
   end
 
   def live_game_data_url (start_time, end_time)
