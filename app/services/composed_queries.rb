@@ -7,6 +7,26 @@ module ComposedQueries
   #   @unit_size_mark = 5
   # end
 
+  def instances_by_roster_and_game(game_record_id, players_ids)
+    # instance_t.project(instance_t[Arel.star]).distinct
+    Instance.joins(
+      instance_t.join(events_instances_t).on( events_instances_t[:instance_id].eq(instance_t[:id]) ).join_sources,
+      events_instances_t.join(event_t).on(
+        event_t[:id].eq(events_instances_t[:event_id]) ).join_sources )
+    .where(
+      event_t[:player_id_num].in(players_ids)
+      .and(event_type_eq)
+      .and( event_t[:game_id].eq(game_record_id) ))
+    .distinct
+  end
+
+#   SELECT DISTINCT instances.id
+# FROM instances
+# JOIN events_instances ON events_instances.instance_id = instances.id
+# JOIN events ON events.id = events_instances.event_id
+# WHERE events.player_id_num IN (8480002, 8475151, 8475791)
+# AND events.game_id = 4 AND events.event_type = 'shift'
+
   def games_by_team_shifts(*columns, team_id)
     query =
     games_w_rtrs(*columns).distinct

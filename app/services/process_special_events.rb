@@ -2,6 +2,7 @@
 
 module ProcessSpecialEvents
   include Utilities
+  include ComposedQueries
 
   def process_special_events
 
@@ -31,26 +32,15 @@ module ProcessSpecialEvents
   end
 
   def get_special_events_data
-    # "universal quantification" –(not not, in place of ALL--absent from sqlite3)
 
-    # not-not only for has_many relationship -- join table uses 1-to-1
     @game_instances =
-    Instance
-    .joins(:events)
-    .where.not(
-      events_instances:
-        { event_id: Event.
-            where.not(
-              player_id_num: @roster.players.map(&:player_id_num) ) } )
-    .where(
-      events:
-        { game_id: @game.id, event_type: "shift" } )
+    instances_by_roster_and_game(@game.id, @roster.players.map(&:player_id_num))
     .eager_load(:events)
 
     @special_events = #*2
     Event.
-    where( events: { game_id: @game.id } ).
-    where.not(
+    where( events: { game_id: @game.id } )
+    .where.not(
       "events.event_type = ? OR events.event_type = ?", 'Shootout', 'shift' ).
     eager_load(:log_entries)
 
