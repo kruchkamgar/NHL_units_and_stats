@@ -1,4 +1,4 @@
-# require 'create_units_and_instances'
+require 'create_units_and_instances'
 require './spec/data/samples_methods'
 require './spec/data/events_flow'
 require './spec/data/instances_flow'
@@ -7,9 +7,10 @@ require './db/destroy_db/destroy_db.rb'
 
 
 describe CreateUnitsAndInstances, :type => :service do
-  include DestroyDb
+  # include DestroyDb
   before(:context) do
-    destroy_all_db
+    # byebug
+    # destroy_all_db
     CRUI = CreateUnitsAndInstances
 
     # create_events_sample() #larger than sample from seeds
@@ -73,24 +74,26 @@ describe CreateUnitsAndInstances, :type => :service do
   # insts = instances.call.map do |e| [e[:start_time], e[:end_time], e[:events].map do |ev| [ev.start_time, ev.end_time, Player.find_by_player_id_num(ev.player_id_num).last_name] end] end; pp insts
 
   # insts = instances.map do |e| [e[:start_time], e[:end_time], e[:events].map do |ev| [e[:events].size, ev.start_time, ev.end_time, Player.find_by_player_id_num(ev.player_id_num).last_name] end ] end; pp insts
-  describe '#form_instances_by_events' do
-    let(:all_player_types) {
-      @roster.players.
-      select do |plyr|
-        position =
-        plyr.player_profiles.first.
-        position_type
-        (position == "Defenseman" || position == "Forward" || position == "Goalie")
-      end.
-      map(&:player_id_num) }
-    let(:period_hash) {
-      Hash[
-        1 => Event.where(event_type: 'shift', period: 1 ).
-        where(player_id_num: all_player_types).order(start_time: :asc).to_a.
-        sort_by! do |shft|
-          [shft.start_time, shft.end_time] end
-        # 2 => Event.where(event_type: 'shift' ).first(12)
-      ] }
+
+  describe '#form_instances_by_events' do # overlaps
+     # hashes via data.rb
+    # let(:all_player_types) {
+    #   @roster.players.
+    #   select do |plyr|
+    #     position =
+    #     plyr.player_profiles.first.
+    #     position_type
+    #     (position == "Defenseman" || position == "Forward" || position == "Goalie")
+    #   end.
+    #   map(&:player_id_num) }
+    # let(:period_hash) {
+    #   Hash[
+    #     1 => Event.where(event_type: 'shift', period: 1 ).
+    #     where(player_id_num: all_player_types).order(start_time: :asc).to_a.
+    #     sort_by! do |shft|
+    #       [shft.start_time, shft.end_time] end
+    #     # 2 => Event.where(event_type: 'shift' ).first(12)
+    #   ] }
 
     # it 'forms 6-man instances', :overlaps do
     #   expect(
@@ -104,49 +107,55 @@ describe CreateUnitsAndInstances, :type => :service do
     #       event[:start_time] == "00:37" }
     #   )
     # end
+    before(:context) do
+      @team_id = 10; @opponent_id = 8; @game_id = 2018020846; #SeedMethods
+      seed_all();
+      CRUI.instance_variable_set(:@game, @game)
+      @units_groups_hash = units_groups_hash_()
+    end
 
-    let(:fwds_and_d) {
-      @roster.players.
-      select do |plyr|
+    let(:select_fwds_and_d) {
+      @roster.players
+      .select do |plyr|
         position =
-        plyr.player_profiles.first.
-        position_type
-        (position == "Defenseman" || position == "Forward")
-      end.
-      map(&:player_id_num) }
+        plyr.player_profiles.first
+        .position_type
+        (position == "Defenseman" || position == "Forward") end
+      .map(&:player_id_num) }
     let(:period_hash) {
-      Hash[
-        1 => Event.where(event_type: 'shift', period: 1 ).
-        where(player_id_num: fwds_and_d).order(start_time: :asc).to_a.
-        sort_by! do |shft|
+      hash = Hash[
+        1 =>
+        Event
+        .where(event_type: 'shift', period: 1 )
+        .where(player_id_num: select_fwds_and_d).order(start_time: :asc).to_a
+        .sort_by! do |shft|
           [shft.start_time, shft.end_time] end
         # 2 => Event.where(event_type: 'shift' ).first(12)
       ] }
 
     it 'forms 5-man instances', :overlaps do
       expect(
-        CRUI.form_instances_by_events(period_hash)
-      ).
-      to a_collection_including(
+        CRUI.form_instances_by_events(period_hash) )
+      .to a_collection_including(
         hash_including(
           :events => a_collection_including(a_kind_of(Event))
         ),
         an_object_satisfying { |event|
-          event[:start_time] == "00:37" }
+          event[:start_time] == "00:52" }
       )
     end
   end
 
-  before(:context) do
-    @team_id = 1; @opponent_id = 29; @game_id = 2018021020; #SeedMethods
-    seed_team_and_players(); seed_game();
-    @events_hashes = events_hashes_penalties()
-    seed_events()
-    CRUI.instance_variable_set(:@game, @game)
-
-    @units_groups_hash = units_groups_hash_()
-  end # hashes via data.rb
   describe 'creation process—-', :creation do
+    before(:context) do
+      @team_id = 1; @opponent_id = 29; @game_id = 2018021020; #SeedMethods
+      seed_team_and_players(); seed_game();
+      @events_hashes = events_hashes_penalties()
+      seed_events()
+      CRUI.instance_variable_set(:@game, @game)
+
+      @units_groups_hash = units_groups_hash_()
+    end # hashes via data.rb
 
   describe 'incorporate instance penalty status', :penalties do
     let(:penalty_data) do

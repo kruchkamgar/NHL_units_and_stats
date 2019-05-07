@@ -5,12 +5,15 @@ require_relative './data.rb'
 
 include SeedMethods
   def seed_team_and_players
-    @team_hash = get_team_hash() unless @team_hash # set @team_hash, from data.rb
+    # get data via data.rb
+    @team_hash = get_team_hash() unless @team_hash
+
     create_team() # creates roster also
     @player_profiles =
     create_and_associate_profiles_and_players()
     .map do |side|
       side.values[0].second end
+    @roster = Roster.find_by_team_id(@team)
   end
 
   def seed_game

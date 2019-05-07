@@ -19,19 +19,35 @@ include SeedTeamHashes
   # end
 
   def create_team()
-    @team = Team.create(name: "New Jersey Devils", team_id: @team_id )
+
+    # team_init_data = Array.[](
+    #   Hash[ var: @team, id: @team_id ],
+    #   Hash[ var: @opponent, id: @opponent_id ] )
+
+    [@team_id, @opponent_id]
+    .each do |id|
+      if id
+        name = @team_hash
+        .find do |side|
+          side.second["team"]["id"] == id end
+          .second["team"]["name"]
+        Team.create( name: name, team_id: id ) end
+    end
+
+    @team = Team.find_by_team_id(@team_id)
+    @opponent = Team.find_by_team_id(@opponent_id) if @opponent_id
 
     @home_side_name = @team_hash
     .find do |side|
       side.first == "home" end
     .second["team"]["name"]
 
-    if @opponent_id
-      opponent_name = @team_hash
-      .find do |side|
-        side.second["team"]["id"] == @opponent_id end
-        .second["team"]["name"]
-        @opponent = Team.create(name: opponent_name, team_id: @opponent_id) end
+    # if @opponent_id
+    #   opponent_name = @team_hash
+    #   .find do |side|
+    #     side.second["team"]["id"] == @opponent_id end
+    #     .second["team"]["name"]
+    #   @opponent = Team.create(name: opponent_name, team_id: @opponent_id) end
   end
 
   def create_and_associate_profiles_and_players
@@ -52,6 +68,7 @@ include SeedTeamHashes
       player.player_profiles << profiles[i] end
 
     create_roster(players, team)
+
     [players, profiles]
   end
 
@@ -78,8 +95,8 @@ include SeedTeamHashes
   end
 
   def create_roster(players = nil, team = @team)
-    @roster = Roster.create(team_id: team.id)
-    @roster.players << ( players || team_players ) #find_or_create_by
+    roster = Roster.create(team_id: team.id)
+    roster.players << ( players || team_players ) #find_or_create_by
   end
 
 
@@ -167,7 +184,7 @@ include SeedTeamHashes
   end
 
   def create_units()
-    
+
   end
 
 end # TestMethods
