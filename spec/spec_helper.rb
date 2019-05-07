@@ -13,10 +13,14 @@
 # it.
 #
 # See http://rubydoc.info/gems/rspec-core/RSpec/Core/Configuration
+
+require './db/destroy_db/destroy_db.rb'
+
 RSpec.configure do |config|
 
+include DestroyDb
   config.before(:suite) do
-    Rails.application.load_seed
+    destroy_all_db
     API = Event::API
     UNIT_HASH = CreateUnitsAndInstances::UNIT_HASH
   end

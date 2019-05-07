@@ -18,7 +18,12 @@ include SeedTeamHashes
  end
 
 include SeedEventsHashes
+
   def events_hashes
+    events_hashes_instance_data()
+  end
+
+  def events_hashes_legacy
     events_hashes_2017020019()
   end
 
