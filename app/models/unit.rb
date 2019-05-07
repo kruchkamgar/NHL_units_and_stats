@@ -1,4 +1,5 @@
 class Unit < ApplicationRecord
+  has_many :circumstances
   has_many :player_profiles, through: :circumstances # injury? 1st, 2nd, 3rd shift of the night?
   has_many :instances
   # has_many :events, through: :instances

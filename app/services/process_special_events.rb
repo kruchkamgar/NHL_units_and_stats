@@ -34,12 +34,14 @@ module ProcessSpecialEvents
   def get_special_events_data
 
     @game_instances =
-    instances_by_roster_and_game(@game.id, @roster.players.map(&:player_id_num))
+    instances_by_roster_and_game(
+      @game.id,
+      @roster.players.map(&:player_id_num) )
     .eager_load(:events)
 
     @special_events = #*2
-    Event.
-    where( events: { game_id: @game.id } )
+    Event
+    .where( events: { game_id: @game.id } )
     .where.not(
       "events.event_type = ? OR events.event_type = ?", 'Shootout', 'shift' ).
     eager_load(:log_entries)

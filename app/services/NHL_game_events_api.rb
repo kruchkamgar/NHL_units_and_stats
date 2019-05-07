@@ -80,8 +80,8 @@ module NHLGameEventsAPI
     # (these players and profiles should already exist by now)
     def create_log_entries (inserted_events)
       new_log_entries_data =
-      inserted_events.
-      map do |event|
+      inserted_events
+      .map do |event|
         records_hash = get_profile_by ({
           player_id_num: event.player_id_num
         })
@@ -251,7 +251,7 @@ module NHLGameEventsAPI
 
         byebug unless player_profile
         Hash[ profile: player_profile ]
-      else byebug end
+      else Hash[ profile: nil ] end
 
     end
 

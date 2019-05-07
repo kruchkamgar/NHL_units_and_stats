@@ -83,17 +83,24 @@ module CreateUnitsAndInstances
     units_records_queue =
     formed_units
     .map do |unit|
-      bind_targets = []
-      binds =
-      unit.map.with_index do |value, index|
-        bind_targets.push("$#{index + 1}")
-        assemble_binds("player_id_num", value) end
+      # bind_targets = []
+      # binds =
+      # unit.map.with_index do |value, index|
+      #   bind_targets.push("$#{index + 1}")
+      #   assemble_binds("player_id_num", value) end
 
       unit_record =
-      ApplicationRecord.connection.exec_query(
-        retrieve_unit_sql(bind_targets),
-        "SQL",
-        binds ).rows.first
+      Unit
+      .joins(circumstances: [player_profile: [:player]])
+      .where(players: {player_id_num: unit })
+      .group(:id)
+      .having('COUNT(players.player_id_num) = ?', unit.size)
+
+      # ApplicationRecord.connection.exec_query(
+      #   retrieve_unit_sql(bind_targets),
+      #   "SQL",
+      #   binds ).rows.first
+
       if (unit_record)
         new_formed_units.delete_at(new_formed_units.index(unit))
         true end
@@ -295,6 +302,7 @@ module CreateUnitsAndInstances
   def form_instances_by_events (p_chron) # *4
     p_chron
     .map do |period, events|
+
       time_mark = "00:00"; queue_head = 0;
       instances = []
       while queue_head && events[queue_head]
@@ -302,6 +310,7 @@ module CreateUnitsAndInstances
         instances_proc =
         Proc.new do |inst|
           (instances.push inst if inst) || instances end
+        # byebug if period == 4
         time_mark =
         call_overlap_test(
           [ @overlap_set.first, start_time: time_mark ],
@@ -310,6 +319,7 @@ module CreateUnitsAndInstances
         queue_head =
         reset_queue_head(queue_head, events, time_mark)
       end
+      byebug if period == 4
       instances
     end.flatten(1)
   end #form_instances_by_events
@@ -379,8 +389,8 @@ module CreateUnitsAndInstances
             events: @overlap_set.clone,
             start_time: basis[:start_time],
             end_time: min_by_et.call.end_time ] )
-        @overlap_set.
-        delete_if do |event|
+        @overlap_set
+        .delete_if do |event|
           event.end_time == end_time end
         return end_time
       # next instance--
