@@ -25,6 +25,8 @@ module CreateUnitsAndInstances
 
   def create_records_from_shifts #(team, roster, game, units)
     # @team, @units_includes_events = team, units
+    puts "\n\n#create_records_from_shifts\n\n"
+
     @game = Game.where(id: @game).includes(events: [:player_profiles])[0]
     @roster = Roster.where(id: @roster).includes(:players)[0]
 
@@ -91,22 +93,20 @@ module CreateUnitsAndInstances
 
       unit_record =
       Unit
+      .select(:id)
       .joins(circumstances: [player_profile: [:player]])
       .where(players: {player_id_num: unit })
       .group(:id)
       .having('COUNT(players.player_id_num) = ?', unit.size)[0]
 
-      byebug
       # ApplicationRecord.connection.exec_query(
       #   retrieve_unit_sql(bind_targets),
       #   "SQL",
       #   binds ).rows.first
-
       if (unit_record)
-        new_formed_units.delete_at(new_formed_units.index(unit))
-        true end
-
-      Unit.find_by(id: unit_record.first) unless unit_record == nil
+        new_formed_units
+        .delete_at(new_formed_units.index(unit)) end
+      unit_record
     end #map
 
     puts "\n\n get_preexisting_units done \n\n"
@@ -301,22 +301,23 @@ module CreateUnitsAndInstances
   end #shifts_into_periods
 
   def form_instances_by_events (p_chron) # *4
+  puts "\n\n#form_instances_by_events\n\n"
   # abstract--
   # 1. use a QUEUE_HEAD to track progress;
   # 2. through iterations-(@OVERLAP_SET) of groups of events; each event of a group overlaps its "basis" (aka first) event
-  # 3. create INSTANCES by calling a proc, whenever temporal conditions meet the criteria [recursively called on the set]
-  # 4. return the END TIME of the last created instance (TIME_MARK)
-  # 0. repeat process
+  # 3. create INSTANCES via proc, whenever conditions meet the criteria [recursively called on the iterations]
+  # 4. return the END TIME of the last created instance (TIME_MARK), for continuity b/n iterations
     p_chron
     .map do |period, events|
       time_mark = "00:00"; queue_head = 0;
       instances = []
       while queue_head && events[queue_head]
+        # puts "\nload next overlaps\n"
         load_next_overlaps(queue_head, events, time_mark)
         instances_proc =
         Proc.new do |inst|
           (instances.push inst if inst) || instances end
-byebug if @interrupt
+# byebug if @interrupt # view instances before next calls
         time_mark =
         call_overlap_test(
           [ @overlap_set.first, start_time: time_mark ],
@@ -324,7 +325,7 @@ byebug if @interrupt
           instances: instances_proc )
         queue_head =
         reset_queue_head(queue_head, events, time_mark)
-byebug if period == 4
+# byebug if period == 4
       end
 
       instances
@@ -333,21 +334,25 @@ byebug if period == 4
   end #form_instances_by_events
 
   def load_next_overlaps(queue_head, events, time_mark)
-    byebug if @interrupt
+    # byebug if @interrupt
+    queue_tail =
+    events.index(@overlap_set.last) if @overlap_set
     @overlap_set = []
     # while accommodates no-duration shift errors in API data
     while events[queue_head].start_time == events[queue_head].end_time
       queue_head += 1 end
 
-    for comparison in events[queue_head..-1]
-      byebug if comparison.start_time == "02:00"
+    events[queue_head..-1]
+    .each_with_index do |comparison, i|
       if events[queue_head].end_time > comparison.start_time &&
       # time_mark used as 'end time of last instance', to exclude already-processed, sequentially prior events
       time_mark < comparison.end_time
         @overlap_set.push comparison
       else
-        break end
-      byebug if @interrupt
+        unless queue_tail &&
+          (queue_head+i) < queue_tail then break end
+      end
+      # byebug if @interrupt # populating @overlap_set
     end # for
   end
 
@@ -365,7 +370,7 @@ byebug if period == 4
   end
 
   def reset_queue_head(queue_head, events, time_mark)
-    byebug
+    # byebug if @interrupt
     if @overlap_set.any?
       queue_head =
       events.index(@overlap_set.first)
@@ -381,7 +386,7 @@ byebug if period == 4
   end
 
   def overlap_test( basis, comparison, instances: )
-    byebug if basis == nil
+    # byebug if basis == nil
     n = @overlap_set.index(basis[:event])
     min_by_et = Proc.new do
       @overlap_set.min_by(&:end_time) end
@@ -410,7 +415,7 @@ byebug if period == 4
         .delete_if do |event|
           event.end_time == end_time end
         return end_time
-      # next instance-- (3/3)
+      # next instance (commonly for intervening instances)-- (3/3)
         # collect, delete, call
       else
         instances.call(
@@ -422,7 +427,7 @@ byebug if period == 4
         .delete_if do |event|
           event.end_time == end_time end
         call_overlap_test(
-          [ @overlap_set.first, start_time: min_by_et.call.end_time ],
+          [ @overlap_set.first, start_time: end_time ],
           @overlap_set.second,
           instances: instances )
       end

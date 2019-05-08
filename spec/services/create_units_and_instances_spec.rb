@@ -141,7 +141,7 @@ describe CreateUnitsAndInstances, :type => :service do
           :events => a_collection_including(a_kind_of(Event))
         ),
         an_object_satisfying { |event|
-          event[:start_time] == "00:52" }
+          event[:start_time] == Event.where(period: 1).all.sample[:start_time] }
       )
     end
   end
