@@ -238,8 +238,9 @@ module CreateUnitsAndInstances
 
 # performance: single query for units' rosters matching @roster instead?
     queued_units_new_roster =
-    queued_units.
-    reject do |unit|
+    Unit.where(id: queued_units)
+    .preload(:rosters)
+    .reject do |unit|
       unit.rosters.include? @roster end
 
     prepared_rosters_units =

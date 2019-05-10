@@ -46,8 +46,6 @@ module ProcessSpecialEvents
       "events.event_type = ? OR events.event_type = ?", 'Shootout', 'shift' ).
     eager_load(:log_entries)
 
-    # Player.arel_table.join(Roster.arel_table).on(Player.arel_table[:id]
-
     @opposing_events =
     @special_events.
     reject do |event|
@@ -70,10 +68,16 @@ module ProcessSpecialEvents
         event.end_time > instance.start_time && event.end_time <= instance_end_time && instance.events.first.period == event.period
       end
       byebug unless cspg_instance
-      cspg_instance.events << event if (cspg_instance.events & [event]).empty? # adds even events by the OPPOSING team
+      # insts = @game_instances.to_a.map do |inst| [inst.events.first.period, inst.start_time, TimeOperation.new(:+, inst.start_time, inst.duration).result] end.sort; pp insts
 
-      Hash[instance: cspg_instance, event: event]
-    end
+      if cspg_instance
+        cspg_instance.events << event if (cspg_instance.events & [event]).empty? # adds even events by the OPPOSING team
+        Hash[instance: cspg_instance, event: event]
+      else
+        # log entry signals problem
+        event.log_entries.build(action_type: "instance missing")
+        nil end
+    end # map
 
   end #assoc_special_events_to_instances
 
@@ -116,6 +120,15 @@ module ProcessSpecialEvents
       instance.plus_minus ||= 0
       instance.plus_minus += delta
     end
+# send to update method:
+    # Hash[
+    #   ppga: instance.ppga,
+    #   shga: instance.shga,
+    #   ppg: instance.ppg,
+    #   shg: instance.shg,
+    #   goals: instance.goals,
+    #   assists: instance.assists,
+    #   plus_minus: instance.plus_minus ]
 
     instance.save
   end #(method)

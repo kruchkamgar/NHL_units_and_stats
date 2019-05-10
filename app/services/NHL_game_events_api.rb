@@ -94,7 +94,8 @@ module NHLGameEventsAPI
       map do |event, records_hash|
         Hash[
           event_id: event.id,
-          player_profile_id: records_hash[:profile].id,
+          player_profile_id:
+          (records_hash[:profile].id if records_hash || nil),
           action_type: "shift",
           created_at: Time.now,
           updated_at: Time.now
@@ -176,12 +177,12 @@ module NHLGameEventsAPI
       end
 
       made_assisters_data =
-      coupled_have_assisters.
-      map do |api_event, created_evt|
+      coupled_have_assisters
+      .map do |api_event, created_evt|
         assisters = []
         # get UP TO two full names, separated by comma and space
-        api_event["eventDetails"].
-        gsub(/(?<player_name>(?<first_name>[^,\s]+)\s(?<last_name>[^,]+))/) do |z|
+        api_event["eventDetails"]
+        .gsub(/(?<player_name>(?<first_name>[^,\s]+)\s(?<last_name>[^,]+))/) do |z|
           assisters << $~
         end # could use %w, per assister
         # retrieve player profile records
@@ -202,17 +203,16 @@ module NHLGameEventsAPI
       end
 
       made_assisters_log_entries =
-      made_assisters_data.
-      map do |assisters_data, created_evt|
-        assisters_data.
-        map do |assister|
+      made_assisters_data
+      .map do |assisters_data, created_evt|
+        assisters_data
+        .map do |assister|
           Hash[
             event_id: created_evt.id,
-            player_profile_id: assister[:records][:profile].id,
+            player_profile_id: (if assister[:records] then assister[:records][:profile].id else nil end),
             action_type: assister[:action_type],
             created_at: Time.now,
-            updated_at: Time.now
-          ]
+            updated_at: Time.now ]
         end
       end.flatten
 
@@ -220,11 +220,11 @@ module NHLGameEventsAPI
 
     def couple_api_and_created_events(api_events, inserted_events)
       @api_and_created_events_coupled =
-      api_events.
-      map do |evnt|
+      api_events
+      .map do |evnt|
         created_event =
-        inserted_events.
-        find do |ins_evnt|
+        inserted_events
+        .find do |ins_evnt|
           ins_evnt.end_time == evnt["endTime"] end
         [evnt, created_event]
       end
@@ -235,23 +235,23 @@ module NHLGameEventsAPI
     def get_profile_by (**search_hash)
       #cross-reference passed attributes (search_hash keys) with roster players
       player =
-      @game.rosters.
-      map(&:players).flatten(1).
-      find do |plyr|
-        search_hash.keys.
-        map do |key|
+      @game.rosters
+      .map(&:players).flatten(1)
+      .find do |plyr|
+        search_hash.keys
+        .map do |key|
           search_hash[key] == plyr.send(key)
         end.all?
       end
       if player
         player_profile =
-        @game.player_profiles.
-        find do |profile|
+        @game.player_profiles
+        .find do |profile|
           profile.player_id == player.id end
 
         byebug unless player_profile
         Hash[ profile: player_profile ]
-      else Hash[ profile: nil ] end
+      else byebug; nil end
 
     end
 

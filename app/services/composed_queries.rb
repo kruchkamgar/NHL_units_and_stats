@@ -38,8 +38,9 @@ module ComposedQueries
       player_profile_t[:player_id].eq(player_t[:id]) )
     .join(log_entry_t).on(
       log_entry_t[:player_profile_id].eq(player_profile_t[:id]) )
-    .join(event_t).on(
-      event_t[:id].eq(log_entry_t[:event_id]) )
+    .join(event_t)
+      .on( event_t[:id].eq(log_entry_t[:event_id])
+      .and( event_t[:game_id].eq(game_t[:id]) ))
     .where( roster_t[:team_id].eq(team_id)
       .and( event_type_eq ) )
     .order( game_t[:game_id].desc )

@@ -9,7 +9,7 @@ module ReadApisNHL
 $season = 20182019
 
 include NHLTeamAPI
-  def create_teams_seasons
+  def create_teams_seasons(n = 0)
     set_season($season)
 
     teams = Team.all
@@ -24,7 +24,7 @@ include NHLTeamAPI
       create_all_teams_by_season()
     end
 
-    teams.
+    teams[n..-1].
     each do |team|
       @team_season =
       TeamSeason.new(season: @season, team: team)
@@ -53,7 +53,7 @@ include NHLTeamAPI
       schedule_dates =
       get_schedule_dates(schedule_hash)
       .select do |date|
-        date["date"] < (Time.now - 85000) end
+        date["date"] < (Time.now - 100000) end
 # zulu time = 4 hrs ahead of EST
 # (same lvl as "date")--
 # "games" : [{ "gameDate" : "2019-04-24T23:30:00Z",

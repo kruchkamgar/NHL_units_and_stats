@@ -31,6 +31,8 @@
 >>>>>>> Stashed changes
 /db/sql_extras
 
+app/services/penalties_data.rb
+
 /public/assets
 .byebug_history
 

@@ -60,7 +60,7 @@ module CreateRoster
 
       players_data = get_new_api_data_and_records()
       roster_players = create_new_players(*players_data)
-
+# performance: bulk insert where '<<'
       @roster.players << roster_players
       @roster.games << @game
       @roster.save
@@ -101,11 +101,9 @@ module CreateRoster
         # SQL escape for apostrophes
         fN = person["firstName"]; lN = person["lastName"];
         if fN.include?("'")
-          fN.insert(fN.index("'"), "'")
-          interrupt = true end
+          fN.insert(fN.index("'"), "'") end
         if lN.include?("'")
-          lN.insert(lN.index("'"), "'")
-          interrupt = true end
+          lN.insert(lN.index("'"), "'") end
 
         Hash[
           first_name: fN,
@@ -121,8 +119,9 @@ module CreateRoster
   end
 
   def self.map_player_records_to_api
-    @player_records_to_api =
+    @player_records_with_api_data =
     @roster.players
+    .preload(:player_profiles)
     .map do |player|
       api_player_hash =
       (@team_hash["players"]
@@ -132,16 +131,15 @@ module CreateRoster
     end
   end #map_player_records_to_api
 
-  # differencce b/n player records and api profiles
+  # difference b/n player records and api profiles
   def self.create_new_profiles
-    @existing_profiles_data =
-    @player_records_to_api
-    .select do |player, api_player_hash|
+    new_profiles_data =
+    @player_records_with_api_data
+    .reject do |player, api_player_hash|
       player.player_profiles.map(&:position).include? api_player_hash["position"]["name"]
     end
 
-    new_profiles_data = @player_records_to_api - @existing_profiles_data
-# byebug
+    @existing_profiles_data = @player_records_with_api_data - new_profiles_data
 
     new_profiles_array =
     new_profiles_data
