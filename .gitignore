@@ -25,10 +25,9 @@
 
 # Ignore loose and development library files
 /node_modules
-<<<<<<< Updated upstream
-=======
+
 /db/*.sql
->>>>>>> Stashed changes
+/db/*.tar
 /db/sql_extras
 
 app/services/penalties_data.rb

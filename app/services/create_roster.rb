@@ -137,6 +137,7 @@ module CreateRoster
     @player_records_with_api_data
     .reject do |player, api_player_hash|
       player.player_profiles.map(&:position).include? api_player_hash["position"]["name"]
+# use primary position to avoid "Unknown"
     end
 
     @existing_profiles_data = @player_records_with_api_data - new_profiles_data

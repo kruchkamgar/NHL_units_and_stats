@@ -24,8 +24,8 @@ module NHLGameEventsAPI
       events = fetch_data(get_shifts_url)["data"]
       byebug unless events.any?
       events_by_team =
-      events.
-      select do |event|
+      events
+      .select do |event|
         event["teamId"] == @team.team_id end
 
       shift_events_by_team =
@@ -39,8 +39,8 @@ module NHLGameEventsAPI
 
       unless game_record
         goal_events =
-        events.
-        select do |event|
+        events
+        .select do |event|
           event["typeCode"] == 505 end
         inserted_goal_events =
         create_goal_events goal_events
@@ -53,8 +53,8 @@ module NHLGameEventsAPI
 
     def create_events (shift_events_by_team)
       made_events_array =
-      shift_events_by_team.
-      map do |event|
+      shift_events_by_team
+      .map do |event|
         Hash[
           event_type: event["eventDescription"] || "shift", #API lists null, except for goals
           duration: event["duration"],

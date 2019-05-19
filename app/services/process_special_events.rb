@@ -1,4 +1,5 @@
-# process special events per game, for one side
+# process special events per game, for one side (@team)
+  # model implication: a special event should belong to two parent instances, after here processing game special events for each team that played in the game.
 
 module ProcessSpecialEvents
   include Utilities
@@ -18,7 +19,7 @@ module ProcessSpecialEvents
     @opposing_events.reject do |event|
       event.event_type == "PPG" end # opposing PPG have no +/- impact
 
-# only working for 3-man unit
+    # logic: because ppg do not count toward plus_minus
     opposing_inst_event_data = assoc_special_events_to_instances(opposing_sans_ppg)
     team_inst_event_data =
     assoc_special_events_to_instances(@team_events)
@@ -43,14 +44,14 @@ module ProcessSpecialEvents
     Event
     .where( events: { game_id: @game.id } )
     .where.not(
-      "events.event_type = ? OR events.event_type = ?", 'Shootout', 'shift' ).
-    eager_load(:log_entries)
+      "events.event_type = ? OR events.event_type = ?", 'Shootout', 'shift' )
+    .eager_load(:log_entries)
 
     @opposing_events =
     @special_events.
     reject do |event|
-      @roster.players.
-      any? do |player|
+      @roster.players
+      .any? do |player|
         player.player_id_num == event.player_id_num end
     end
   end #get_special_events_data
@@ -67,7 +68,7 @@ module ProcessSpecialEvents
 
         event.end_time > instance.start_time && event.end_time <= instance_end_time && instance.events.first.period == event.period
       end
-      byebug unless cspg_instance
+      # byebug unless cspg_instance
       # insts = @game_instances.to_a.map do |inst| [inst.events.first.period, inst.start_time, TimeOperation.new(:+, inst.start_time, inst.duration).result] end.sort; pp insts
 
       if cspg_instance
@@ -75,7 +76,8 @@ module ProcessSpecialEvents
         Hash[instance: cspg_instance, event: event]
       else
         # log entry signals problem
-        event.log_entries.build(action_type: "instance missing")
+        event.log_entries.create(action_type: "instance missing")
+          # migrate null: true, for log_entries' player_profile_id?
         nil end
     end # map
 
