@@ -51,6 +51,7 @@ include Utilities
 
     unit_groups_array = rows_grouped_by_unit.to_a
 
+    # unite records with db row data
     units_grouped_by_pids =
     units
     .group_by.with_index do |unit, i|

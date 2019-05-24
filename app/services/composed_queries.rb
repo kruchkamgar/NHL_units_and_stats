@@ -112,7 +112,6 @@ module ComposedQueries
     # total goals while on ice > 0 --goals + abs(plus-minus - goals
     # goals per TOI calc-- 0.001 < ( goals + abs(plus-minus - goals) )/TOI
 
-    # .on(instance_t[:unit_id].eq(unit_t[:id]) )
   def unit_ids_filter
     instance_t
     .project( instance_t[:unit_id] )
@@ -132,6 +131,7 @@ module ComposedQueries
     instance_t
     .project( instance_t[:id] ) end
 
+  # instances of players from a team roster, with player count of a position-type matching given number.
   def instance_id_via_count_of_position_type
     events_instances_t
     .project( events_instances_t[:instance_id] )

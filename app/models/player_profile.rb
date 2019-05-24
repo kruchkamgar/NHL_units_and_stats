@@ -1,5 +1,5 @@
 class PlayerProfile < ApplicationRecord
-  belongs_to :player
+  belongs_to :player # player_profiles hold relevant data; make this has_one
   has_many :log_entries
   has_many :events, through: :log_entries
   has_many :circumstances

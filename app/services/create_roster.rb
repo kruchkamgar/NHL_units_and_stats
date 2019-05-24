@@ -175,7 +175,7 @@ module CreateRoster
 #performance: do a prepare-insert instead perhaps
     @game.player_profiles +=
     ( game_profiles +
-      (inserted_profiles || []) - @game.player_profiles ) # existing + inserted - pre-existing
+      (inserted_profiles || []) - @game.player_profiles ) # existing + inserted - pre-existing. --use #union [for arrays]?
   end
 
   # ////////////////// fetch roster(s) from API ////////////////// #
