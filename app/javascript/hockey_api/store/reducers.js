@@ -6,7 +6,7 @@ export const goal = (state=10, action) =>
 		 parseInt(action.payload) :
 		 state
 
-//used only in reducer: allSkiDays
+//helper for another reducer–(allSkiDays)
 export const skiDay = (state=null, action) =>
   (action.type === C.ADD_DAY) ?
   	action.payload :

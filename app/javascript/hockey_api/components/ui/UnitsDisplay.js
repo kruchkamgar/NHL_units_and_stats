@@ -1,8 +1,7 @@
 import PropTypes from 'prop-types';
 import { Link } from 'react'
 import UnitRow from './UnitRow'
-// import Terrain from 'react-icons/md/terrain'
-// import SnowFlake from 'react-icons/ti'
+
 import '../../stylesheets/UnitsDisplay.scss'
 
 const UnitsDisplay = ({ units=[], clearUnits=f=>f, loadTeamUnits=f=>f, fetching=false }) => {
