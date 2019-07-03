@@ -23,14 +23,14 @@ function Axes ({ scaleX, scaleY }){
       g.call(xAxis);
       g.selectAll(".tick text")
         .attr("y", 20)
-        .classed("chart-axis__label", true)
-        .classed("chart-axis__label--x", true);
+        // .classed("chart-axis__label", true)
+        // .classed("chart-axis__label--x", true);
 
       g.selectAll(".tick line")
         .attr("y1", 5)
-        .classed("chart-axis__axis", true);
+        // .classed("chart-axis__axis", true);
 
-      g.selectAll(".domain").classed("chart-axis__axis", true);
+      // g.selectAll(".domain").classed("chart-axis__axis", true);
     });
   }
 
@@ -44,13 +44,13 @@ function Axes ({ scaleX, scaleY }){
       g.call(yAxis);
       g.selectAll(".tick line")
         .attr("x1", -5)
-        .classed("chart-axis__axis", true);
+        // .classed("chart-axis__axis", true);
 
       g.selectAll(".tick text")
         .attr("x", -10)
-        .classed("chart-axis__label", true);
+        // .classed("chart-axis__label", true);
 
-      g.selectAll(".domain").classed("chart-axis__axis", true);
+      // g.selectAll(".domain").classed("chart-axis__axis", true);
     });
   }
 

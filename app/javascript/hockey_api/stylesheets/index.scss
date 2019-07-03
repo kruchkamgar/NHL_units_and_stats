@@ -9,21 +9,22 @@ div.app {
   margin: 0;
 
   .wrapper {
-    margin: auto 20px;
+    display: grid;
+
+    grid-template-columns: 10px 1fr 20px;
+    grid-template-rows: 1fr 100px;
+    grid-template-areas:
+    '. content .'
+    'menu menu menu';
+
+    grid-gap: 10px;
+    background-color: white;
+    padding: 10px 0 0;
   }
 }
 
-body {
-  font-size: 55%;
-}
-
-h1, label {
-  margin: 0
-}
-
 div.app {
-  background-size: cover;
-  background-position: center;
+
 }
 
 div.whoops-404 {
@@ -34,3 +35,15 @@ div.whoops-404 {
   align-items: center;
   flex-wrap: wrap;
 }
+
+/*
+@media (min-width: 480px) {
+  body { width: 100%; }
+}
+@media (min-width: 768px) {
+  body { width: 768px; }
+}
+@media (min-width: 1024px) {
+  body { width: 100%; }
+}
+*/

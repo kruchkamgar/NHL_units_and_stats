@@ -1,65 +1,55 @@
+import React, { useState, useEffect } from 'react';
+
+import prepData from './dataVis/prepData.js'
+import renderPlusMinus from './dataVis/renderD3.js'
+
 import PropTypes from 'prop-types';
-import { Link } from 'react'
-import UnitRow from './UnitRow'
+import { Link } from 'react';
+
+// import Axes from './Axes';
+// import UnitRow from './UnitRow';
 
 import '../../stylesheets/UnitsDisplay.scss'
 
-const UnitsDisplay = ({ units=[], clearUnits=f=>f, loadTeamUnits=f=>f, fetching=false }) => {
+function UnitsDisplay({
+  units = [],
+  clearUnits = f => f,
+  loadTeamUnits = f => f,
+  fetching = false
+}) {
 
-    const activeFilterStyle = {
-        textDecoration: 'none',
-        color: 'black'
-    }
+  useEffect(() => {
+    renderPlusMinus(data_prepped);
+  });
+
+  var unitsData = units.map( prepData.getUnitData );
+
+  var data_prepped = unitsData.slice(0);
+  data_prepped.forEach(prepData.applyFractionArray);
+
+  // var unitsWrapperRef;
 
     let team_number
-
     const query_submit = e => {
       e.preventDefault()
-      loadTeamUnits( team_number.value )
+      loadTeamUnits(team_number.value)
     }
 
     return (
-        <div className="units-wrapper">
-              <div className="unload">
-                <button type="button" onClick={() => clearUnits()}>Clear Units</button>
-              </div>
-          <form onSubmit={query_submit} className="query">
-              <label htmlFor="team">Team number</label>
-              <input id="team" type="number" step="1" min="1"
-                     ref={input => team_number = input}/>
-              <button>load units</button>
-          </form>
-          <div className="units-list">
-            <table>
-              {/* <caption>double click to remove</caption> */}
-                <thead>
-                <tr>
-                    <th>units</th>
-                    <th>+/-</th>
-                    <th>+/- per 60</th>
-                    <th>TOI (hrs)</th>
-                </tr>
-                <tr>
-                    {/* <td colSpan={4}>
-                        <Link to="/list-days">All Days</Link>
-                        <Link to="/list-days/powder" activeStyle={activeFilterStyle}>Powder Days</Link>
-                        <Link to="/list-days/backcountry" activeStyle={activeFilterStyle}>Backcountry Days</Link>
-                    </td> */}
-                </tr>
-                </thead>
-                <tbody>
-                { units.map((unit, i) =>
-                    <UnitRow key={i} {...unit} html_id={"row" + i} />
-                ) }
-                </tbody>
-            </table>
-          </div> {/*units-list*/}
-        </div>
-    )
-}
+      <div id="units-wrapper">
+        <form onSubmit={ query_submit } className="query">
+          <label htmlFor="team">Team number</label>
+          <input id="team" type="number" step="1" min="1" ref={input => team_number = input } />
+          <button>load units</button>
+          <button type="button" onClick={() => clearUnits() }>
+            clear units </button>
+        </form>
+      </div>
+      )
+  } //UnitsDisplay
 
-UnitsDisplay.propTypes = {
+  UnitsDisplay.propTypes = {
 
-}
+  }
 
-export default UnitsDisplay
+  export default UnitsDisplay

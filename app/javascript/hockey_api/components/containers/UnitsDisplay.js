@@ -1,4 +1,4 @@
-import UnitsDisplay from '../ui/UnitsDisplayD3'
+import UnitsDisplay from '../ui/UnitsDisplay'
 import { connect } from 'react-redux'
 import { units, clearUnits, team_units } from '../../actions'
 
