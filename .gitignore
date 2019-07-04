@@ -23,14 +23,15 @@
 
 /yarn-error.log
 
-# Ignore loose and development library files
+# Ignore loose and development files
 /node_modules
 
 /db/*.sql
 /db/*.tar
 /db/sql_extras
 
-app/services/penalties_data.rb
+/app/services/penalties_data.rb
+/scratch
 
 /public/assets
 .byebug_history

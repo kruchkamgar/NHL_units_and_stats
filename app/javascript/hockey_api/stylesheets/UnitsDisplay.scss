@@ -14,7 +14,7 @@ div #units-wrapper {
   [sign="1"] > * { fill: lightgreen; }
   [sign="-1"] > * { fill: pink; }
 
-/* LAYOUT */
+
 
   grid-area: content;
   padding: 10px;
@@ -99,32 +99,3 @@ div #units-wrapper {
     }
   }
 }
-
-/*
-div#units-wrapper {
-
-  table {
-    tbody {
-      caption {
-        background-color: white;
-        background-color: rgba(255,255,255, .9);
-        color: #8f2e32;
-      }
-    }
-    width: 100%;
-    border-collapse: collapse;
-    background-color: rgba(255,255,255, .9);
-    font-family: verdana, sans-serif;
-    font-size: 1.5em;
-    text-align: center;
-
-    td {
-      padding: .2em;
-    }
-
-    a {
-      margin: 15px;
-    }
-  }
-}
-*/
