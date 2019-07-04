@@ -1,6 +1,13 @@
 @import "globals.scss";
 
+
 div #units-wrapper {
+  grid-area: content;
+  padding: 10px;
+  overflow-x: scroll;
+}
+
+#units-wrapper {
 
 /* THEME */
 
@@ -14,11 +21,7 @@ div #units-wrapper {
   [sign="1"] > * { fill: lightgreen; }
   [sign="-1"] > * { fill: pink; }
 
-
-
-  grid-area: content;
-  padding: 10px;
-  overflow-x: scroll;
+/* LAYOUT */
 
   .unitData {
     display: block;
