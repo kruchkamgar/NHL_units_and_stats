@@ -27,5 +27,6 @@ models
 
 
 TECHNOLOGY USED
-* D3js, React-Redux
+* D3js, React-Redux, Sass
+* webpacker
 * Rails, Postgresql
