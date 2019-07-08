@@ -11,9 +11,8 @@ app summary ––
 FUNCTIONALITY
 
 * retrieve game data and process player shifts into units
-
 * update database with new games
-
+* output data to UI [using d3.js] to facilitate analysis
 
 
 DATA MODEL
@@ -25,3 +24,8 @@ models
 * circumstances
 * units
 ...
+
+
+TECHNOLOGY USED
+* D3js, React-Redux
+* Rails, Postgresql
