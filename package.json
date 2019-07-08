@@ -1,6 +1,7 @@
 {
   "name": "hockey_api",
   "private": true,
+  "license": "UNLICENSED",
   "dependencies": {
     "@babel/core": "^7.4.3",
     "@babel/preset-react": "^7.0.0",
