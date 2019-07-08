@@ -2,12 +2,11 @@
 
 
 div #units-wrapper {
-  grid-area: content;
   padding: 10px;
-  overflow-x: scroll;
 }
 
 #units-wrapper {
+  grid-area:content;
 
 /* THEME */
 
@@ -18,22 +17,78 @@ div #units-wrapper {
 
   .per60 { fill: #bfbfbf; }
 
-  [sign="1"] > * { fill: lightgreen; }
-  [sign="-1"] > * { fill: pink; }
+  span[sign="1"], [sign="1"] > .info .plusMinusTotal { color: lightgreen; }
+  [sign="1"] > .games { fill: lightgreen; }
+
+  span[sign="-1"], [sign="-1"] > .info .plusMinusTotal { color: #ffaaaa; }
+  [sign="-1"] > .games { fill: #ffaaaa; }
+
+  .info.data-labels {
+    background: #eee;
+    align-items: start;
+  }
+    .ancillary-label { font-size: 0.6em; color: #aaa;  }
+
+  .info { font-family: sans-serif;}
+  .per60Info { color: #bfbfbf; }
+  .players { text-align: right; }
+
 
 /* LAYOUT */
 
-  .unitData {
-    display: block;
-    width: fit-content;
+  span { float: right; }
+
+  .data-labels.info {
+    padding: 10px 0;
+    margin: 40px 0 10px;
+  }
+
+  .unitsData {
+    padding: 10px 0;
   }
 
   .unit {
-    display: flex;
-    width: fit-content;
+    display: grid;
+    grid-template-columns: minmax(5em, max-content) 1fr;
+    grid-template-areas:
+    'info games';
 
     margin: 5px 0;
   }
+
+  .info {
+    grid-area: info;
+
+    display: grid;
+    grid-template-columns: [players] minmax(5em, 16em) [pMT] minmax(2em, 3em) [per60] minmax(2em, 3em);
+    grid-template-areas: 'players plusMinusTotal per60Info';
+
+    grid-gap: 10px;
+    justify-items: end;
+    align-items: center;
+  }
+
+  .games {
+    display: flex;
+    margin-left: 10px; }
+
+  .game {
+    grid-area: games;
+
+    display: flex;
+    width: fit-content;
+    min-width: 20px;
+    height: 18px;
+
+    margin: 2px;
+    padding: 4px 8px;
+  }
+
+  .per60Info {
+    grid-area: per60Info;
+    text-align: right; }
+  .plusMinusTotal { grid-area: plusMinusTotal; }
+  .players { grid-area: players; }
 
   .pMData {
     display: inherit;
@@ -67,15 +122,6 @@ div #units-wrapper {
     svg { border-radius: 6px; }
   }
 
-  .game {
-    display: flex;
-    width: fit-content;
-    min-width: 20px;
-    min-height: 18px;
-
-    margin: 2px;
-    padding: 4px 8px;
-   }
 
    .pMFraction + .pMData { margin-left: 4px }
 

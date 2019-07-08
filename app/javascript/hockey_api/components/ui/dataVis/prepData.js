@@ -28,22 +28,21 @@ function getUnitData(item, index, units) {
   var game_plusMinus = plusMinusPerGame;
   var i;
   unitData = {
-    players: unit.players,
-    plusMinusTotal: plusMinus,
-    per60: plusMinusPer60,
-    games: []};
+    //d3's #enter() uses arrays to indicate the appending of an element
+    info: [{
+        players: [unit.players],
+        plusMinusTotal: [plusMinus],
+        per60: [plusMinusPer60] }],
+    games: [[]] };
 
   for (i = 1; i <= games; i++) {
     if ( i == games ) { game_plusMinus = lastGame_plusMinus; }
-    unitData.games[i] = {};
-    unitData.games[i].plusMinus = [];
+    unitData.games[0][i] = {};
+    unitData.games[0][i].plusMinus = [];
 
     var n;
     var fraction = 1;
-    //abs value? -- negative numbers will pass through
     // SET FRACTION
-    // for blank slots [where [last game] gPM < pMPG];
-    // OR for fractions of a plus-minus—— 
     // if 'n' equals last iteration, set 'fraction' to remaining decimal
     for (n = 1; n <= Math.ceil(plusMinusPerGame); n++) {
       let g_pMCeil = Math.ceil(game_plusMinus);
@@ -64,23 +63,22 @@ function getUnitData(item, index, units) {
       else if ( n > g_pMCeil ) {
         fraction = 0; }
 
-      unitData.games[i].plusMinus.push({
+      unitData.games[0][i].plusMinus.push({
         ordinal: n,
         fraction: +fraction.toFixed(3) * pMSign
       })
       if (per60Fraction_data !== null) {
-        unitData.games[i].plusMinus.slice(-1)[0].per60Fraction = per60Fraction_data * pMSign; }
+        unitData.games[0][i].plusMinus.slice(-1)[0].per60Fraction = per60Fraction_data * pMSign; }
     }
-
   } //for loops
 
   return unitData;
 }
 
 function applyFractionArray(unit) {
-  for (let i=1; i < unit.games.length; i++) {
+  for (let i=1; i < unit.games[0].length; i++) {
 
-  const plusMinus = unit.games[i].plusMinus;
+  const plusMinus = unit.games[0][i].plusMinus;
   for(let n = 0; n < plusMinus.length; n++ ) {
     const fraction = Math.abs( plusMinus[n].fraction );
     // instances including a per60Fraction, will always exhibit fraction < 1

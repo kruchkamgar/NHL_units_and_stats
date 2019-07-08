@@ -39,13 +39,22 @@ function UnitsDisplay({
       <div id="units-wrapper">
         <form onSubmit={ query_submit } className="query">
           <label htmlFor="team">Team number</label>
-          <input id="team" type="number" step="1" min="1" ref={input => team_number = input } />
+          <input id="team" type="number" step="1" min="1"
+            ref={input => team_number = input } />
           <button>load units</button>
           <button type="button" onClick={() => clearUnits() }>
             clear units </button>
         </form>
+        <div className="data-labels info">
+          <div className="players">players</div>
+          <div className="per60Info">
+            <div>per 60</div>
+            <div className="ancillary-label">[projected] efficiency</div>
+          </div>
+          <div className="plusMinusTotal"><span sign="1">plus</span><span sign="-1">minus</span></div>
+        </div>
       </div>
-      )
+    )
   } //UnitsDisplay
 
   UnitsDisplay.propTypes = {
