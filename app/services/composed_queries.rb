@@ -7,6 +7,8 @@ module ComposedQueries
   #   @unit_size_mark = 5
   # end
 
+
+
   def instances_by_roster_and_game(game_record_id, players_ids)
     # instance_t.project(instance_t[Arel.star]).distinct
     Instance.joins(
@@ -61,7 +63,9 @@ module ComposedQueries
       roster_t[:id].eq(games_rosters_t[:roster_id]) )
   end
 
-  # /////////////       ////////////// #
+  # /////////////   units queries    ////////////// #
+
+
 
   def retrieve_units_rows_by_param()
     # Unit.where( unit_t[:id].in(derived_units_sql).to_sql )
@@ -87,6 +91,53 @@ module ComposedQueries
 
   def instance_id_eq
     events_instances_t[:instance_id].eq(instance_t[:id]) end
+
+# /////////////////////// #
+
+# doesnt work
+  def cte_cir_pro_alias_stmt
+     Arel.sql("u_cir_pro (uid, ppr_id, ppr_pos)") end
+  def cte_as_test
+      alias_(unit_joins_cir_pprfl, cte_cir_pro_alias_stmt )
+  end
+
+  def cte_cir_pro_table
+    # alias_(cte_cir_pro_alias_stmt, unit_joins_cir_pprfl)
+      Arel.sql("u_cir_pro (uid, ppr_id, ppr_pos) AS (#{unit_joins_cir_pprfl.to_sql})")
+  end
+  def unit_joins_cir_pprfl
+    unit_t
+    .project( unit_t[:id], player_profile_t[:player_id], player_profile_t[:position_type] )
+    .join(circumstance_t)
+      .on( circumstance_t[:unit_id].eq(unit_t[:id]) )
+    .join( player_profile_t)
+      .on( player_profile_t[:id].eq(circumstance_t[:player_profile_id]) )
+  end
+
+  def unit_where_pos_eq_()
+    cte_table = Arel::Table.new(:u_cir_pro)
+    # cte_table = cte_cir_pro_alias_stmt
+
+    unit_t
+    .project(unit_t[:id])
+    .join(cte_table)
+      .on( cte_table[:uid].eq(unit_t[:id]) )
+    .where(cte_table[:ppr_pos].eq("Forward"))
+    .group(unit_t[:id])
+    .having( unit_t[:id].count.send(*[:eq, 3]) ) # *_rel_to_unit_size_mark
+    .with(cte_cir_pro_table)
+
+  end
+
+  def derived_units_sql_optimized
+    unit_t
+    .project()
+  end
+
+# /////////////////////// #
+
+
+
 
   def derived_units_sql
     unit_t
@@ -171,6 +222,7 @@ module ComposedQueries
   def roster_t; Roster.arel_table end
   def game_t; Game.arel_table end
   def unit_t; Unit.arel_table end
+  def circumstance_t; Circumstance.arel_table end
   def profile_t; PlayerProfile.arel_table end
   def players_rosters_t; Arel::Table.new(:players_rosters) end
   def log_entry_t; LogEntry.arel_table end

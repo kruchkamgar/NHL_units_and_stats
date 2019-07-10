@@ -136,8 +136,9 @@ module CreateRoster
     new_profiles_data =
     @player_records_with_api_data
     .reject do |player, api_player_hash|
-      player.player_profiles.map(&:position).include? api_player_hash["position"]["name"]
-# use primary position to avoid "Unknown"
+      player.player_profiles.map(&:position).include? api_player_hash["person"]["primaryPosition"]["name"]
+      # *4- use primary position to avoid "Unknown"
+
     end
 
     @existing_profiles_data = @player_records_with_api_data - new_profiles_data
@@ -147,12 +148,11 @@ module CreateRoster
     .map do |player, api_player_hash|
       # then create hash if not exists
       Hash[
-        position: api_player_hash["position"]["name"],
-        position_type: api_player_hash["position"]["type"],
+        position: api_player_hash["person"]["primaryPosition"]["name"],
+        position_type: api_player_hash["person"]["primaryPosition"]["type"],
         player_id: player.id,
         created_at: Time.now,
-        updated_at: Time.now
-      ]
+        updated_at: Time.now ]
     end
 
     if new_profiles_array.any? # *3 (incomplete)
@@ -170,7 +170,7 @@ module CreateRoster
     .map do |record, api_hash|
       record.player_profiles
       .find do |profile|
-        profile.position == api_hash["position"]["name"] end
+        profile.position == api_hash["person"]["primaryPosition"]["name"] end
     end
 #performance: do a prepare-insert instead perhaps
     @game.player_profiles +=
@@ -242,3 +242,7 @@ end
 
 # *3- (incomplete)
 # existing roster check currently forgoes checking for new [or different lineups (combinations) of] player_profiles
+
+
+# *4- API data adjust
+# formerly: api_player_hash["position"]["name"]

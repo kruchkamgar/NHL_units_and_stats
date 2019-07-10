@@ -20,9 +20,10 @@ module ProcessSpecialEvents
       event.event_type == "PPG" end # opposing PPG have no +/- impact
 
     # logic: because ppg do not count toward plus_minus
-    opposing_inst_event_data = assoc_special_events_to_instances(opposing_sans_ppg)
+    opposing_inst_event_data = assoc_special_events_to_instances(opposing_sans_ppg).compact
     team_inst_event_data =
-    assoc_special_events_to_instances(@team_events)
+    assoc_special_events_to_instances(@team_events).compact
+    # #compact removes nil(s) from missing instances
 
     opposing_inst_event_data
     .each do |data|
@@ -77,7 +78,6 @@ module ProcessSpecialEvents
       else
         # log entry signals problem
         event.log_entries.create(action_type: "instance missing")
-          # migrate null: true, for log_entries' player_profile_id?
         nil end
     end # map
 
