@@ -126,20 +126,25 @@ module ComposedQueries
     .project(unit_t[:id].as('uid'))
     .join( alias_(unit_joins_cir_pprfl, :u_cir_pro) )  #alias would work w/o using .with(cte)
       .on( u_cir_pro_t[:uid].eq(unit_t[:id]) )
-    .where( cte_cir_pro_t[:ppr_pos].eq("Forward")) # cte reference
+    .where( cte_cir_pro_t[:ppr_pos].eq(position_type) ) # cte reference
+
+    # requires .with( cte_cir_pro )
+  end
+
+  def unit_where_pos_eq_and_count()
+    unit_where_pos_eq()
     .group(unit_t[:id])
     .having( unit_t[:id].count.send(*_rel_to_pos_type_mark) )
-    # requires .with( cte_cir_pro )
   end
 
   def u_cir_prfl_plyr
 
     unit_t
     .project(unit_t[:id])
-    .join( alias_(unit_where_pos_eq, :unit_ppos) )
+    .join( alias_(unit_where_pos_eq_and_count(), :unit_ppos) )
       .on( Arel::Table.new(:unit_ppos)[:uid].eq(unit_t[:id]) )  # join units to player position CRITERIA
     .join( cte_cir_pro_t )
-      .on( cte_cir_pro_t[:uid].eq(unit_t[:id]) )  # join player_profiles
+      .on( cte_cir_pro_t[:uid].eq(unit_t[:id]) )  # join player_profiles [again, to group & count beyond position criteria]
     .where( unit_t[:id]
       .in(
         unit_t
@@ -159,16 +164,20 @@ module ComposedQueries
 
   def derived_units_with_pids
 
+    unit_ppos_type_t = Arel::Table.new(:unit_ppos_type)
+
     unit_t
     .project( unit_t[:id], player_t[:player_id_num] )
     .join( alias_(u_cir_prfl_plyr, :derived_units) )
       .on( Arel::Table.new(:derived_units)[:id].eq(unit_t[:id]) )
-    .join( cte_cir_pro_t )
-      .on( cte_cir_pro_t[:uid].eq(unit_t[:id]) )
+    .join( alias_(
+            unit_where_pos_eq()
+              .project( cte_cir_pro_t[:ppr_id] ), # avoids need to (re)join circumstances & player_profiles (unit_joins_cir_pprfl)
+            :unit_ppos_type ) )
+      .on( unit_ppos_type_t[:uid].eq(unit_t[:id]) )
     .join( player_t )
-      .on( player_t[:id].eq(cte_cir_pro_t[:ppr_id]) )
+      .on( player_t[:id].eq(unit_ppos_type_t[:ppr_id]) )
   end
-
 
 
 # /////////////  derived units, via units > instances > events > players > player_profiles  ///////////// #
