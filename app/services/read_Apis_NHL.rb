@@ -24,8 +24,8 @@ include NHLTeamAPI
       create_all_teams_by_season()
     end
 
-    teams[n..-1].
-    each do |team|
+    teams[n..-1]
+    .each do |team|
       @team_season =
       TeamSeason.new(season: @season, team: team)
       @team_season.create_records_from_APIs
@@ -43,7 +43,6 @@ include NHLTeamAPI
 
   include ReadApisNHL
     def create_records_from_APIs
-      # create_teams_for_season()
       # create team and get its schedule
       team_adapter =
       NHLTeamAPI::Adapter.new(team: @team)

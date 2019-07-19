@@ -1,17 +1,17 @@
 
 function getUnitData(item, index, units) {
-  // sample data for one unit
-  // [ // unit games (each w/ plus-minus)
+  // sample output data for one unit
+  // games: [[ // unit games (each w/ plus-minus)
   //        { plusMinus:
   //           [ {ordinal: 1, fraction: 1},
   //             {ordinal: 2, fraction: 0.5, per60Fraction: 0.5},
   //        { plusMinus:
   //             {ordinal: 3, fraction: 1},
   //             {ordinal: 4, fraction: 0.3, per60Fraction: 0.5} ] },
-  //   ]
+  //   ]]
 
   const unit = units[index];
-  var unitData = [];
+  let unitData = [];
 
   // using absolute values
   const plusMinus = unit.tallies.plus_minus;
@@ -25,28 +25,27 @@ function getUnitData(item, index, units) {
     const per60Fraction = +( plusMinusPerGame -
       Math.floor(plusMinusPerGame) );
 
-  var game_plusMinus = plusMinusPerGame;
-  var i;
+  let game_plusMinus = plusMinusPerGame;
+
   unitData = {
-    //d3's #enter() uses arrays to indicate the appending of an element
+    //d3's #enter() uses [the content inside of] arrays to indicate the appending of an element
     info: [{
         players: [unit.players],
         plusMinusTotal: [plusMinus],
         per60: [plusMinusPer60] }],
     games: [[]] };
 
-  for (i = 1; i <= games; i++) {
+  for (let i = 1; i <= games; i++) {
     if ( i == games ) { game_plusMinus = lastGame_plusMinus; }
     unitData.games[0][i] = {};
     unitData.games[0][i].plusMinus = [];
 
-    var n;
-    var fraction = 1;
+    let fraction = 1;
     // SET FRACTION
     // if 'n' equals last iteration, set 'fraction' to remaining decimal
-    for (n = 1; n <= Math.ceil(plusMinusPerGame); n++) {
+    for (let n = 1; n <= Math.ceil(plusMinusPerGame); n++) {
       let g_pMCeil = Math.ceil(game_plusMinus);
-      var per60Fraction_data = null;
+      let per60Fraction_data = null;
       let pMP60Ceil = Math.ceil(plusMinusPer60);
       let remainder = +( game_plusMinus - Math.floor(game_plusMinus) );
       // LAST PER60: plusMinusPer60 marks the total plus-minus capacity (per60)

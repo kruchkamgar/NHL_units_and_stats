@@ -1,12 +1,11 @@
 module ComposedQueries
 
-  # def set_inst_variables
-  #   @team_id = 1
-  #   @position_type = "Forward"
-  #   @position_type_mark = 3
-  #   @unit_size_mark = 5
-  # end
-
+  def set_inst_variables
+    @team_id = 1
+    @position_type = "Forward"
+    @position_type_mark = 3
+    @unit_size_mark = 5
+  end
 
 
   def instances_by_roster_and_game(game_record_id, players_ids)
@@ -21,13 +20,6 @@ module ComposedQueries
       .and( event_t[:game_id].eq(game_record_id) ))
     .distinct
   end
-
-#   SELECT DISTINCT instances.id
-# FROM instances
-# JOIN events_instances ON events_instances.instance_id = instances.id
-# JOIN events ON events.id = events_instances.event_id
-# WHERE events.player_id_num IN (8480002, 8475151, 8475791)
-# AND events.game_id = 4 AND events.event_type = 'shift'
 
   def games_by_team_shifts(*columns, team_id)
     query =
@@ -63,14 +55,20 @@ module ComposedQueries
       roster_t[:id].eq(games_rosters_t[:roster_id]) )
   end
 
-  # /////////////   units queries    ////////////// #
 
 
+  # /////////////  units queries  ////////////// #
 
   def retrieve_units_rows_by_param()
     # Unit.where( unit_t[:id].in(derived_units_sql).to_sql )
     ApplicationRecord.connection.execute(
       derived_units_sql.to_sql )
+  end
+
+  def retrieve_units_rows_by_param_optimized()
+    ApplicationRecord.connection.execute(
+      derived_units_with_pids
+        .with(cte_cir_pro).to_sql )
   end
 
   def team_id; @team_id end
@@ -92,52 +90,88 @@ module ComposedQueries
   def instance_id_eq
     events_instances_t[:instance_id].eq(instance_t[:id]) end
 
-# /////////////////////// #
+# /////////////  derived units, via units > circumstances > player_profiles > players  ///////////// #
 
-# doesnt work
-  def cte_cir_pro_alias_stmt
-     Arel.sql("u_cir_pro (uid, ppr_id, ppr_pos)") end
-  def cte_as_test
-      alias_(unit_joins_cir_pprfl, cte_cir_pro_alias_stmt )
+  # porformance: adding a view instead of the cte
+  def create_cir_pro_join_view
+    Arel.sql("CREATE VIEW cir_pro_join_view").as(
+    '(' + unit_joins_cir_pprfl.to_sql + ')' )
   end
 
-  def cte_cir_pro_table
-    # alias_(cte_cir_pro_alias_stmt, unit_joins_cir_pprfl)
-      Arel.sql("u_cir_pro (uid, ppr_id, ppr_pos) AS (#{unit_joins_cir_pprfl.to_sql})")
-  end
+  # join units to player_profiles, through circumstances
+
+  def cte_cir_pro_t
+    Arel::Table.new(:u_cir_pro) end
+
+  def cte_cir_pro
+    Arel.sql("u_cir_pro").as(
+      '(' + unit_joins_cir_pprfl.to_sql + ')' )
+      # Arel.sql("u_cir_pro AS (#{unit_joins_cir_pprfl.to_sql})")
+  end #add .WITH at end of queries which incorporate this
+
+  # join player_profiles via circumstances
   def unit_joins_cir_pprfl
     unit_t
-    .project( unit_t[:id], player_profile_t[:player_id], player_profile_t[:position_type] )
-    .join(circumstance_t)
+    .project( unit_t[:id].as('uid'), player_profile_t[:player_id].as('ppr_id'), player_profile_t[:position_type].as('ppr_pos') )
+    .join( circumstance_t )
       .on( circumstance_t[:unit_id].eq(unit_t[:id]) )
     .join( player_profile_t)
       .on( player_profile_t[:id].eq(circumstance_t[:player_profile_id]) )
   end
 
-  def unit_where_pos_eq_()
-    cte_table = Arel::Table.new(:u_cir_pro)
-    # cte_table = cte_cir_pro_alias_stmt
+  def unit_where_pos_eq()
+    u_cir_pro_t = Arel::Table.new(:u_cir_pro) # not really sure the point of using a CTE when using Arel already?
+
+    unit_t
+    .project(unit_t[:id].as('uid'))
+    .join( alias_(unit_joins_cir_pprfl, :u_cir_pro) )  #alias would work w/o using .with(cte)
+      .on( u_cir_pro_t[:uid].eq(unit_t[:id]) )
+    .where( cte_cir_pro_t[:ppr_pos].eq("Forward")) # cte reference
+    .group(unit_t[:id])
+    .having( unit_t[:id].count.send(*_rel_to_pos_type_mark) )
+    # requires .with( cte_cir_pro )
+  end
+
+  def u_cir_prfl_plyr
 
     unit_t
     .project(unit_t[:id])
-    .join(cte_table)
-      .on( cte_table[:uid].eq(unit_t[:id]) )
-    .where(cte_table[:ppr_pos].eq("Forward"))
+    .join( alias_(unit_where_pos_eq, :unit_ppos) )
+      .on( Arel::Table.new(:unit_ppos)[:uid].eq(unit_t[:id]) )  # join units to player position CRITERIA
+    .join( cte_cir_pro_t )
+      .on( cte_cir_pro_t[:uid].eq(unit_t[:id]) )  # join player_profiles
+    .where( unit_t[:id]
+      .in(
+        unit_t
+        .project(unit_t[:id])
+        .join( cte_cir_pro_t )
+          .on(cte_cir_pro_t[:uid].eq(unit_t[:id]))  #join player_profiles
+        .join(player_t)
+          .on(player_t[:id].eq(cte_cir_pro_t[:ppr_id])) # join players, to player profiles [ultimately] joined to units
+        .where( player_t[:player_id_num]
+          .in(pid_w_plrs_rtrs_w_plr_prfls()
+              .where( plr_rtrs_rtr_ids_for_team() ) )) # player_id_num CRITERIA (team_id_eq)
+        .group(unit_t[:id])
+        .having(Arel.star.count.send(*_rel_to_pos_type_mark) ) )) # quantity of position-type CRITERIA
     .group(unit_t[:id])
-    .having( unit_t[:id].count.send(*[:eq, 3]) ) # *_rel_to_unit_size_mark
-    .with(cte_cir_pro_table)
-
+    .having(unit_t[:id].count.send(*_rel_to_unit_size_mark) )
   end
 
-  def derived_units_sql_optimized
+  def derived_units_with_pids
+
     unit_t
-    .project()
+    .project( unit_t[:id], player_t[:player_id_num] )
+    .join( alias_(u_cir_prfl_plyr, :derived_units) )
+      .on( Arel::Table.new(:derived_units)[:id].eq(unit_t[:id]) )
+    .join( cte_cir_pro_t )
+      .on( cte_cir_pro_t[:uid].eq(unit_t[:id]) )
+    .join( player_t )
+      .on( player_t[:id].eq(cte_cir_pro_t[:ppr_id]) )
   end
 
-# /////////////////////// #
 
 
-
+# /////////////  derived units, via units > instances > events > players > player_profiles  ///////////// #
 
   def derived_units_sql
     unit_t
@@ -159,9 +193,11 @@ module ComposedQueries
 
     # .where event in [x games] -- temporal data
   end
-    # where calculation: TOI > 1:00 OR
-    # total goals while on ice > 0 --goals + abs(plus-minus - goals
-    # goals per TOI calc-- 0.001 < ( goals + abs(plus-minus - goals) )/TOI
+  # more concisely relevant results——
+    # calculation:
+      # TOI > 1:00 OR
+      # total goals while on ice > 0. ——goals + abs(plus-minus - goals)
+        # refinement: goals per TOI calc-- 0.001 < ( goals + abs(plus-minus - goals) )/TOI
 
   def unit_ids_filter
     instance_t
@@ -182,7 +218,7 @@ module ComposedQueries
     instance_t
     .project( instance_t[:id] ) end
 
-  # instances of players from a team roster, with player count of a position-type matching given number.
+  # instances of players from a team roster, with player count criteria for position-type criteria.
   def instance_id_via_count_of_position_type
     events_instances_t
     .project( events_instances_t[:instance_id] )
@@ -198,6 +234,10 @@ module ComposedQueries
     .having( Arel.star.count.send(*_rel_to_pos_type_mark) )
   end
 
+
+# ///////////////////////  derived units: helpers  /////////////////////// #
+
+  # select player_id_num; join rosters and profiles
   def pid_w_plrs_rtrs_w_plr_prfls
     player_t
     .project( player_t[:player_id_num] ).distinct
@@ -206,16 +246,21 @@ module ComposedQueries
     .join(player_profile_t).on(
       player_profile_t[:player_id].eq(player_t[:id]) ) end
 
+  # players_rosters' roster_id, for rosters' id, for teams' id
   def plr_rtrs_rtr_ids_for_team
     players_rosters_t[:roster_id]
       .in( rosters_join_team()
-        .where( team_id_eq )) end
+        .where( team_id_eq ) ) end
 
+  # select rosters' ids, join team
   def rosters_join_team
     roster_t
     .project( roster_t[:id] )
     .join(team_t).on(
       roster_t[:team_id].eq(team_t[:id]) ) end
+
+
+# ///////////////////////  [table] definitions  /////////////////////// #
 
 
   def team_t; Team.arel_table end
