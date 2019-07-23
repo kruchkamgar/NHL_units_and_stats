@@ -25,7 +25,11 @@ module QueryDerivedUnits
     def player_data(players)
       players
       .map do |plyr_id_num|
-        @@team_players[plyr_id_num].first.last_name end
+        if @@team_players[plyr_id_num]
+          @@team_players[plyr_id_num].first.last_name
+        else
+          plyr_id_num end
+      end
     end
 
     def attributes
@@ -39,10 +43,10 @@ include Utilities
 
     @team_id, @position_type, @position_type_mark, @unit_size_mark = team_id, position_type, position_type_mark, unit_size_mark
 
-    # set hash of team's players
+    # query team's players based on team_id; set hash for reference data, grouped by player_id_num
     DerivedUnits.team_players(@team_id)
 
-    units_rows = retrieve_units_rows_by_param()
+    units_rows = retrieve_units_rows_by_param_optimized()
 
     rows_grouped_by_unit = units_rows
     .group_by do |unit| unit["id"] end

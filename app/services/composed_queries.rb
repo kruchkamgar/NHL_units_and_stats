@@ -1,7 +1,7 @@
 module ComposedQueries
 
   def set_inst_variables
-    @team_id = 1
+    @team_id = 4
     @position_type = "Forward"
     @position_type_mark = 3
     @unit_size_mark = 5
@@ -67,8 +67,7 @@ module ComposedQueries
 
   def retrieve_units_rows_by_param_optimized()
     ApplicationRecord.connection.execute(
-      derived_units_with_pids
-        .with(cte_cir_pro).to_sql )
+      derived_units_with_pids.to_sql )
   end
 
   def team_id; @team_id end
@@ -109,6 +108,8 @@ module ComposedQueries
       # Arel.sql("u_cir_pro AS (#{unit_joins_cir_pprfl.to_sql})")
   end #add .WITH at end of queries which incorporate this
 
+  def u_cir_pro_t; Arel::Table.new(:u_cir_pro) end
+
   # join player_profiles via circumstances
   def unit_joins_cir_pprfl
     unit_t
@@ -120,15 +121,13 @@ module ComposedQueries
   end
 
   def unit_where_pos_eq()
-    u_cir_pro_t = Arel::Table.new(:u_cir_pro) # not really sure the point of using a CTE when using Arel already?
 
     unit_t
     .project(unit_t[:id].as('uid'))
     .join( alias_(unit_joins_cir_pprfl, :u_cir_pro) )  #alias would work w/o using .with(cte)
       .on( u_cir_pro_t[:uid].eq(unit_t[:id]) )
-    .where( cte_cir_pro_t[:ppr_pos].eq(position_type) ) # cte reference
+    .where( u_cir_pro_t[:ppr_pos].eq(position_type) )
 
-    # requires .with( cte_cir_pro )
   end
 
   def unit_where_pos_eq_and_count()
@@ -137,25 +136,51 @@ module ComposedQueries
     .having( unit_t[:id].count.send(*_rel_to_pos_type_mark) )
   end
 
+  def u_cir_prfl_plyr_by_team
+    unit_t
+    .project(unit_t[:id])
+    .join( alias_(unit_joins_cir_pprfl, :u_cir_pro) )
+      .on( u_cir_pro_t[:uid].eq(unit_t[:id]))  #join player_profiles
+    .join(player_t)
+      .on(player_t[:id].eq(u_cir_pro_t[:ppr_id])) # join players, to player profiles [joined to units]
+    .where( player_t[:player_id_num]
+      .in(pid_w_plrs_rtrs_w_plr_prfls()
+          .where( plr_rtrs_rtr_ids_for_team()
+                  .and(position_type_eq) ) )) # player_id_num CRITERIA (team_id_eq)
+    .group(unit_t[:id])
+    .having(Arel.star.count.send(*_rel_to_pos_type_mark) )
+  end
+
+  def unit_joins_star
+    unit_t
+    .project(Arel.star)
+    .join( alias_(u_cir_prfl_plyr_by_team, :by_team) )
+      .on( Arel::Table.new(:by_team)[:id].eq(unit_t[:id]) )
+    .join( alias_(unit_joins_cir_pprfl, :u_cir_pro) )
+      .on( u_cir_pro_t[:uid].eq(unit_t[:id]) )
+    .join(player_t)
+      .on(player_t[:id].eq(u_cir_pro_t[:ppr_id]))
+  end
+
+
   def u_cir_prfl_plyr
 
     unit_t
-    .project(unit_t[:id])
-    .join( alias_(unit_where_pos_eq_and_count(), :unit_ppos) )
-      .on( Arel::Table.new(:unit_ppos)[:uid].eq(unit_t[:id]) )  # join units to player position CRITERIA
-    .join( cte_cir_pro_t )
-      .on( cte_cir_pro_t[:uid].eq(unit_t[:id]) )  # join player_profiles [again, to group & count beyond position criteria]
+    .project(unit_t[:id]) # .join( alias_(unit_where_pos_eq_and_count(), :unit_ppos) ) #   .on( Arel::Table.new(:unit_ppos)[:uid].eq(unit_t[:id]) )  # join units to player position CRITERIA
+    .join( alias_(unit_joins_cir_pprfl, :u_cir_pro) )
+      .on( u_cir_pro_t[:uid].eq(unit_t[:id]) )  # join player_profiles [again, to group & count beyond position criteria]
     .where( unit_t[:id]
       .in(
-        unit_t
+        unit_t # add roster/team criteria here (given: units >-< rosters )
         .project(unit_t[:id])
-        .join( cte_cir_pro_t )
-          .on(cte_cir_pro_t[:uid].eq(unit_t[:id]))  #join player_profiles
+        .join( alias_(unit_joins_cir_pprfl, :u_cir_pro) )
+          .on( u_cir_pro_t[:uid].eq(unit_t[:id]))  #join player_profiles
         .join(player_t)
-          .on(player_t[:id].eq(cte_cir_pro_t[:ppr_id])) # join players, to player profiles [ultimately] joined to units
+          .on(player_t[:id].eq(u_cir_pro_t[:ppr_id])) # join players, to player profiles [joined to units]
         .where( player_t[:player_id_num]
           .in(pid_w_plrs_rtrs_w_plr_prfls()
-              .where( plr_rtrs_rtr_ids_for_team() ) )) # player_id_num CRITERIA (team_id_eq)
+              .where( plr_rtrs_rtr_ids_for_team()
+                      .and(position_type_eq) ) )) # player_id_num CRITERIA (team_id_eq, position_type_eq)
         .group(unit_t[:id])
         .having(Arel.star.count.send(*_rel_to_pos_type_mark) ) )) # quantity of position-type CRITERIA
     .group(unit_t[:id])
@@ -172,7 +197,7 @@ module ComposedQueries
       .on( Arel::Table.new(:derived_units)[:id].eq(unit_t[:id]) )
     .join( alias_(
             unit_where_pos_eq()
-              .project( cte_cir_pro_t[:ppr_id] ), # avoids need to (re)join circumstances & player_profiles (unit_joins_cir_pprfl)
+              .project( u_cir_pro_t[:ppr_id] ), # avoids need to (re)join circumstances & player_profiles (unit_joins_cir_pprfl)
             :unit_ppos_type ) )
       .on( unit_ppos_type_t[:uid].eq(unit_t[:id]) )
     .join( player_t )
