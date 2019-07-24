@@ -4,8 +4,6 @@
 module ReadApisNHL
 
 
-  #  create class/ Adapter for each team, to enable processing games only once per team (@processed_games)
-    # -- can then replace NHLGameEventsAPI gate
 $season = 20182019
 
 include NHLTeamAPI

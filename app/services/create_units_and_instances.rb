@@ -346,7 +346,7 @@ module CreateUnitsAndInstances
     events[queue_head..-1]
     .each_with_index do |comparison, i|
       if events[queue_head].end_time > comparison.start_time &&
-      # time_mark used as 'end time of last instance', to exclude already-processed, sequentially prior events
+      # time_mark used as 'end time of last instance', to exclude already-processed, prior temporally-ordered events
       time_mark < comparison.end_time
         @overlap_set.push comparison
       else
@@ -354,7 +354,7 @@ module CreateUnitsAndInstances
           (queue_head+i) < queue_tail then break end
       end
       # byebug if @interrupt # populating @overlap_set
-    end # for
+    end
   end
 
   def call_overlap_test(basis_data, comparison_data, instances: )
