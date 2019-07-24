@@ -1,4 +1,5 @@
 module ComposedQueries
+  include TestComposedQueries
 
   def set_inst_variables
     @team_id = 4
@@ -81,7 +82,7 @@ module ComposedQueries
     team_t[:team_id].eq( team_id ) end
 
   def position_type_eq
-    profile_t[:position_type].eq(position_type) if position_type end
+    player_profile_t[:position_type].eq(position_type) if position_type end
 
   def event_type_eq
     event_t[:event_type].eq('shift') end
@@ -117,7 +118,7 @@ module ComposedQueries
     .join( circumstance_t )
       .on( circumstance_t[:unit_id].eq(unit_t[:id]) )
     .join( player_profile_t)
-      .on( player_profile_t[:id].eq(circumstance_t[:player_profile_id]) )
+      .on( player_profile_t[:id].eq(circumstance_t[:player_profile_id]) ) # one profile, per player on a unit
   end
 
   def unit_where_pos_eq()
@@ -136,51 +137,35 @@ module ComposedQueries
     .having( unit_t[:id].count.send(*_rel_to_pos_type_mark) )
   end
 
-  def u_cir_prfl_plyr_by_team
+  def u_rstr_tm
     unit_t
-    .project(unit_t[:id])
-    .join( alias_(unit_joins_cir_pprfl, :u_cir_pro) )
-      .on( u_cir_pro_t[:uid].eq(unit_t[:id]))  #join player_profiles
-    .join(player_t)
-      .on(player_t[:id].eq(u_cir_pro_t[:ppr_id])) # join players, to player profiles [joined to units]
-    .where( player_t[:player_id_num]
-      .in(pid_w_plrs_rtrs_w_plr_prfls()
-          .where( plr_rtrs_rtr_ids_for_team()
-                  .and(position_type_eq) ) )) # player_id_num CRITERIA (team_id_eq)
-    .group(unit_t[:id])
-    .having(Arel.star.count.send(*_rel_to_pos_type_mark) )
+    .project( unit_t[:id] ).distinct
+    .join( rosters_units_t )
+      .on( rosters_units_t[:unit_id].eq(unit_t[:id]) )
+    .join( roster_t )
+       .on( roster_t[:id].eq(rosters_units_t[:roster_id]) )
+    .join( team_t )
+      .on( team_t[:id].eq(roster_t[:team_id]) )
+    .where( team_t[:team_id].eq(team_id) )
   end
-
-  def unit_joins_star
-    unit_t
-    .project(Arel.star)
-    .join( alias_(u_cir_prfl_plyr_by_team, :by_team) )
-      .on( Arel::Table.new(:by_team)[:id].eq(unit_t[:id]) )
-    .join( alias_(unit_joins_cir_pprfl, :u_cir_pro) )
-      .on( u_cir_pro_t[:uid].eq(unit_t[:id]) )
-    .join(player_t)
-      .on(player_t[:id].eq(u_cir_pro_t[:ppr_id]))
-  end
-
 
   def u_cir_prfl_plyr
 
     unit_t
-    .project(unit_t[:id]) # .join( alias_(unit_where_pos_eq_and_count(), :unit_ppos) ) #   .on( Arel::Table.new(:unit_ppos)[:uid].eq(unit_t[:id]) )  # join units to player position CRITERIA
+    .project(unit_t[:id])
     .join( alias_(unit_joins_cir_pprfl, :u_cir_pro) )
-      .on( u_cir_pro_t[:uid].eq(unit_t[:id]) )  # join player_profiles [again, to group & count beyond position criteria]
+      .on( u_cir_pro_t[:uid].eq(unit_t[:id]) )  # join player_profiles [to group & count]
+    .join( alias_( u_rstr_tm, :units_by_team ) )
+      .on( Arel::Table.new(:units_by_team)[:id].eq(unit_t[:id]) )
     .where( unit_t[:id]
       .in(
-        unit_t # add roster/team criteria here (given: units >-< rosters )
+        unit_t
         .project(unit_t[:id])
         .join( alias_(unit_joins_cir_pprfl, :u_cir_pro) )
-          .on( u_cir_pro_t[:uid].eq(unit_t[:id]))  #join player_profiles
-        .join(player_t)
-          .on(player_t[:id].eq(u_cir_pro_t[:ppr_id])) # join players, to player profiles [joined to units]
-        .where( player_t[:player_id_num]
-          .in(pid_w_plrs_rtrs_w_plr_prfls()
-              .where( plr_rtrs_rtr_ids_for_team()
-                      .and(position_type_eq) ) )) # player_id_num CRITERIA (team_id_eq, position_type_eq)
+          .on( u_cir_pro_t[:uid].eq(unit_t[:id]) )  #join player_profiles
+        .join( player_t )
+          .on( player_t[:id].eq(u_cir_pro_t[:ppr_id]) ) # join players, to player profiles [joined to units]
+        .where( u_cir_pro_t[:ppr_pos].eq(position_type) )  # player_id_num CRITERIA (plr_prfls: position_type_eq)
         .group(unit_t[:id])
         .having(Arel.star.count.send(*_rel_to_pos_type_mark) ) )) # quantity of position-type CRITERIA
     .group(unit_t[:id])
@@ -302,7 +287,6 @@ module ComposedQueries
   def game_t; Game.arel_table end
   def unit_t; Unit.arel_table end
   def circumstance_t; Circumstance.arel_table end
-  def profile_t; PlayerProfile.arel_table end
   def players_rosters_t; Arel::Table.new(:players_rosters) end
   def log_entry_t; LogEntry.arel_table end
   def events_instances_t; Arel::Table.new(:events_instances) end
@@ -312,6 +296,7 @@ module ComposedQueries
   def roster_t; Roster.arel_table end
   def player_profile_t; PlayerProfile.arel_table end
   def games_rosters_t; Arel::Table.new(:games_rosters) end
+  def rosters_units_t; Arel::Table.new(:rosters_units) end
 
   def alias_(table, name)
     Arel::Nodes::As.new( table, Arel::Table.new(name) ) end

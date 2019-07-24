@@ -16,6 +16,7 @@ module QueryDerivedUnits
       .where(teams: {team_id: team_id}).distinct
       .group_by do |plyr|
         plyr.player_id_num end
+      byebug
     end
 
     def initialize(players, tallies)

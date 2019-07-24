@@ -30,6 +30,7 @@
 /db/*.tar
 /db/sql_extras
 
+/app/services/test_composed_queries.rb
 /app/services/penalties_data.rb
 /scratch
 
