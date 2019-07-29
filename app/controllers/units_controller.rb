@@ -26,6 +26,9 @@ include QueryDerivedUnits
     # render json: unit.to_json
   end
 
+  def utility_json
+  end
+
 private
   def unit_params
     params.permit(:team_id, :position_type_mark, :role)

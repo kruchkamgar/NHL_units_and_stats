@@ -4,6 +4,7 @@ class Tally < ApplicationRecord
 
   #  *1 - conceivably store these in table, with game_ids
 
+  # select instances per season, to create tallies per season (time-stamps in zulu?)
   def tally_instances
     plus_minus_values()
     toi_values()
@@ -45,8 +46,8 @@ include Utilities
 
   def plus_minus_values
       plus_minus_values =
-      self.unit.instances.
-      map(&:plus_minus).compact
+      self.unit.instances
+      .map(&:plus_minus).compact
       self.plus_minus =
       plus_minus_values.reduce(:+) if plus_minus_values.any?
   end

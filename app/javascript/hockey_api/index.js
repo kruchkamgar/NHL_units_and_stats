@@ -1,7 +1,7 @@
 import C from './constants'
 import React from 'react'
 import { render } from 'react-dom'
-import sampleData from './initialState.json'
+import initData from './initialState.json'
 import storeFactory from './store'
 import { Provider } from 'react-redux'
 import { BrowserRouter, Switch, Route, Link } from 'react-router-dom'
@@ -11,7 +11,7 @@ import { addError } from './actions'
 // local storage
 const initialState = (localStorage["redux-store"]) ?
     JSON.parse(localStorage["redux-store"]) :
-    sampleData
+    initData
 
 const saveState = () =>
     localStorage["redux-store"] = JSON.stringify(store.getState())

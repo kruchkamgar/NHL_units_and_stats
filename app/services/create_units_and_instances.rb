@@ -91,6 +91,7 @@ module CreateUnitsAndInstances
       #   bind_targets.push("$#{index + 1}")
       #   assemble_binds("player_id_num", value) end
 
+# performance: use the 'u_cir_pro' view for the joins?
       unit_record =
       Unit
       .select(:id)

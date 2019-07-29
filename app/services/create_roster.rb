@@ -48,6 +48,7 @@ module CreateRoster
     .group("rosters.id")
     .having("COUNT(rosters.id) = ?", @player_id_nums.size )
     .preload(players: [:player_profiles]) || nil
+# outer .having appears extraneous? 
 
   end
 
