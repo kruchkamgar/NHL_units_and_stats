@@ -17,5 +17,5 @@
 
 console.log('Hello World from Webpacker')
 
-import 'hockey_api'
-import '../src/application.css'
+import '../src/hockey_api'
+import '../src/hockey_api/stylesheets/application.css'

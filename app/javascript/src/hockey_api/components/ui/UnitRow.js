@@ -26,8 +26,8 @@ const UnitRow = ({html_id, players, tallies/*, id, created_at, instances, plus_m
 
 UnitRow.propTypes = {
     /* date: PropTypes.string.isRequired,
-    backcountry: PropTypes.bool,*/
-    onRemoveDay: PropTypes.func
+    bool: PropTypes.bool,*/
+    // function: PropTypes.func
 }
 
 export default UnitRow

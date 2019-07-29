@@ -11,6 +11,6 @@ Rails.application.routes.draw do
   get '/units' => 'units#index'
   get '/units/:team_id' => 'units#show_units'
 
-  get '/utility_json' => 'units#utility_json'
+  get '/units/utility_json' => 'units#utility_json'
 
 end
