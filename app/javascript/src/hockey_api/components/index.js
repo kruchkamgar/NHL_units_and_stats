@@ -1,22 +1,20 @@
 import Menu from './ui/Menu'
 import ShowErrors from './containers/ShowErrors'
-import { BrowserRouter, Route, Link} from 'react-router-dom'
+import { Route } from 'react-router-dom'
 import UnitsDisplay from './containers/UnitsDisplay'
 import '../stylesheets/index.scss'
 
 export const App = () =>
-  <div>
+  <div className="app">
     <FirstLevel/>
   </div>
 
 const FirstLevel = () => (
-  <div className="app">
     <div className="wrapper">
       { /*<ShowErrors /> */ }
       <Route path='/units' component={UnitsDisplay}/>
       <Route path='/' component={Menu}/>
     </div>
-  </div>
 )
 
 export const Whoops404 = ({ match }) =>

@@ -4,7 +4,7 @@ import { render } from 'react-dom'
 import initData from './initialState.json'
 import storeFactory from './store'
 import { Provider } from 'react-redux'
-import { BrowserRouter, Switch, Route, Link } from 'react-router-dom'
+import { BrowserRouter as Router, Switch, Route, Link } from 'react-router-dom'
 import { App, Whoops404 } from './components/index'
 import { addError } from './actions'
 
@@ -32,12 +32,12 @@ window.addEventListener("error", handleError)
 document.addEventListener('DOMContentLoaded', () => {
 render(
 	<Provider store={store}>
-    <BrowserRouter>
+    <Router>
       <Switch>
         <Route path='/' component={App}/>
         <Route path="*" component={Whoops404}/>
       </Switch>
-    </BrowserRouter>
+    </Router>
 	</Provider>,
   document.getElementById('react-container') )
 })

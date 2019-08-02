@@ -10,7 +10,7 @@ const Menu = () =>
            <FaHome />
         </NavLink> */}
         {/*
-        // <NavLink to="/add-day" activeClassName="selected">
+        // <NavLink to="/" activeClassName="selected">
         //     <FaCalendarPlusO />
         // </NavLink> */}
         <NavLink to="/latest" activeClassName="selected">

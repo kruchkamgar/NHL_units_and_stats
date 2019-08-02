@@ -1,6 +1,9 @@
 import PropTypes from 'prop-types';
 
-const UnitRow = ({html_id, players, tallies/*, id, created_at, instances, plus_minus*/ }) =>
+const UnitRow = ({
+  html_id,
+  players,
+  tallies/*, id, created_at, instances, plus_minus*/ }) =>
     <tr id = {html_id} >
         <td>
             { players
