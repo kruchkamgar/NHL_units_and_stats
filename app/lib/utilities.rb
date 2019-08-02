@@ -56,4 +56,13 @@ module Utilities
     else seconds end
   end
 
+
+  # ////////////// Time class conversions ////////////// #
+
+  def date_string_to_array(string)
+    gsub = string.gsub(/\D/, ',')[0..-3]
+
+    gsub_to_a = gsub.split(',')
+  end
+
 end

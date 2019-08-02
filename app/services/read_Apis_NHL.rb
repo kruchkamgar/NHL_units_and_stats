@@ -27,6 +27,8 @@ include NHLTeamAPI
       @team_season =
       TeamSeason.new(season: @season, team: team)
       @team_season.create_records_from_APIs
+      # method that queries API vs database (?)
+      # - latest game including team events...
       @team_season.create_tallies # if updates, update tallies
       # updates: new games; or events, in case of live updating
     end
@@ -40,6 +42,7 @@ include NHLTeamAPI
 
 
   include ReadApisNHL
+  include Utilities
     def create_records_from_APIs
       # create team and get its schedule
       team_adapter =
@@ -50,10 +53,17 @@ include NHLTeamAPI
       schedule_dates =
       get_schedule_dates(schedule_hash)
       .select do |date|
-        date["date"] < (Time.now - 100000) end
+          # date["date"] < (Time.now - 100000)
+        game_date = date["games"]["gameDate"]
+        game_date_transpired =
+        Time.utc(
+          *date_string_to_array(game_date)) <
+        Time.now.utc() - 86400  # one day, in seconds
+      end
 # zulu time = 4 hrs ahead of EST
-# (same lvl as "date")--
-# "games" : [{ "gameDate" : "2019-04-24T23:30:00Z",
+# https://statsapi.web.nhl.com/api/v1/schedule?teamId=12&startDate=2018-09-01&endDate=2019-07-01
+  # (same lvl as "date")--
+  # "games" : [{ "gameDate" : "2019-04-24T23:30:00Z",
 
       schedule_dates[ get_next_date_index(schedule_dates)..-1]
       .each do |date_hash|
