@@ -56,9 +56,9 @@ include NHLTeamAPI
           # date["date"] < (Time.now - 100000)
         game_date = date["games"]["gameDate"]
         game_date_transpired =
+        Time.now.utc() - 86400 > # one day, in seconds
         Time.utc(
-          *date_string_to_array(game_date)) <
-        Time.now.utc() - 86400  # one day, in seconds
+          *date_string_to_array(game_date))
       end
 # zulu time = 4 hrs ahead of EST
 # https://statsapi.web.nhl.com/api/v1/schedule?teamId=12&startDate=2018-09-01&endDate=2019-07-01
