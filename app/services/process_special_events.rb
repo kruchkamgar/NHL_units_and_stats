@@ -17,14 +17,18 @@ module ProcessSpecialEvents
     #   event.event_type == "SHG" end
     opposing_sans_ppg =
     @opposing_events.reject do |event|
-      event.event_type == "PPG" end # opposing PPG have no +/- impact
+      event.event_type == "PPG" end
+# end #process_special_events
 
-    # logic: because ppg do not count toward plus_minus
+# def create_associations
+    # logic: ppg do not count toward plus_minus
     opposing_inst_event_data = assoc_special_events_to_instances(opposing_sans_ppg).compact
     team_inst_event_data =
     assoc_special_events_to_instances(@team_events).compact
     # #compact removes nil(s) from missing instances
 
+
+    # tally events' data to instances
     opposing_inst_event_data
     .each do |data|
       special_events_tally_logic(data) end
@@ -32,6 +36,7 @@ module ProcessSpecialEvents
     .each do |data|
       special_events_tally_logic(data, true) end
   end
+# end #create_associations
 
   def get_special_events_data
 
@@ -49,8 +54,8 @@ module ProcessSpecialEvents
     .eager_load(:log_entries)
 
     @opposing_events =
-    @special_events.
-    reject do |event|
+    @special_events
+    .reject do |event|
       @roster.players
       .any? do |player|
         player.player_id_num == event.player_id_num end

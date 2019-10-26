@@ -70,6 +70,8 @@ include NHLTeamAPI
         create_game_records(date_hash) end
     end
 
+  # include NHLGameAPI
+  # include NHLGameEventsAPI
   include CreateUnitsAndInstances
   include ProcessSpecialEvents
     def create_game_records(date_hash)
@@ -171,7 +173,7 @@ include ComposedQueries
 # game processing LOGIC
     # find the last complete game [for season], if any
     # - find one with shift events
-      # - unless this game represents the last game record, use the subsequent game as starting index
+      # - unless this game corresponds to the last game record, use the subsequent game as starting index
       # - else, run live-game check for shift-completion
 
     query = games_by_team_shifts(:game_id, @team.id)

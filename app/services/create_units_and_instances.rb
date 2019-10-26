@@ -27,8 +27,12 @@ module CreateUnitsAndInstances
     # @team, @units_includes_events = team, units
     puts "\n\n#create_records_from_shifts\n\n"
 
-    @game = Game.where(id: @game).includes(events: [:player_profiles])[0]
-    @roster = Roster.where(id: @roster).includes(:players)[0]
+    @game =
+    Game.where(id: @game)
+    .includes(events: [:player_profiles])[0]
+    @roster =
+    Roster.where(id: @roster)
+    .includes(:players)[0]
 
       roster_sample = get_roster_sample (UNIT_HASH[5])
       #find the shifts matching the roster sample
@@ -37,7 +41,7 @@ module CreateUnitsAndInstances
         # {[period1 event1, 2...], [p2 event1, 2, ...] ... }
       period_chronology = shifts_into_periods(shifts)
       #find all unit instances by shift events' temporal overlaps
-        # (format: array of arrays)
+        # (format: array of hashes)
       instances_by_events_arrays = form_instances_by_events(period_chronology)
 
       group_by_players(instances_by_events_arrays)
@@ -130,6 +134,8 @@ module CreateUnitsAndInstances
     if units_changes > 0
       @inserted_units =
       Unit.order(id: :desc).limit(units_changes)
+# performance:
+  # collect-then-insert rewrite—— just track the IDs [and persist safely in redis] before writing to DB?
     end
 
     # replaces queue nils with the freshly inserted units
@@ -276,15 +282,18 @@ module CreateUnitsAndInstances
   # game -< player_profiles
   # get the shifts for the roster
   def get_shifts roster_sample
+# live updating:
+# use shifts >= timemark, or pass incremental shift events directly (w/ if statement)
+
     # select shifts by matching to roster sample's player_profiles
     shifts =
     @game.events
     .select do |event|
       event.event_type == "shift" &&
-      roster_sample.
-      any? do |player|
-        event.player_profiles.
-        any? do |profile|
+      roster_sample
+      .any? do |player|
+        event.player_profiles
+        .any? do |profile|
           profile.player_id == player.id end
       end
     end #select
