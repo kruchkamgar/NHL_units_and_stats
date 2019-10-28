@@ -68,7 +68,7 @@ include NHLTeamAPI
       schedule_dates[ get_next_date_index(schedule_dates)..-1]
       .each do |date_hash|
         create_game_records(date_hash) end
-    end
+    end #create records from APIs
 
   # include NHLGameAPI
   # include NHLGameEventsAPI
@@ -90,6 +90,7 @@ include NHLTeamAPI
       rosters.find do |roster|
         roster.team.eql?(@team) end
 
+      # if live updating... call #set_live_data_worker_schedule instead of this step
       events_boolean =
       NHLGameEventsAPI::Adapter
       .new(team:
@@ -197,9 +198,15 @@ include ComposedQueries
   end
 
   def live_game_data_url (start_time, end_time)
-    url = 'https://statsapi.web.nhl.com/api/v1/game/ID/feed/live/diffPatch?startTimecode=yyyymmdd_hhmmss'
+    url = "https://statsapi.web.nhl.com/api/v1/game/ID/feed/live/diffPatch?startTimecode=#{start_time}" # startTimecode=yyyymmdd_hhmmss
 
-    data = fetch(url)
+  end
+
+  def set_live_data_worker_schedule(team, game)
+    Sidekiq.set_schedule('live_data',
+      { 'every' => ['2m'], 'class' => 'LiveData',
+        'args' => [ url, NHLGameEventsAPI::Adapter.new(team: team, game: game) ]
+      })
   end
 
   def get_game_data
