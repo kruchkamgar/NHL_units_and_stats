@@ -67,14 +67,14 @@ include NHLTeamAPI
 
       schedule_dates[ get_next_date_index(schedule_dates)..-1]
       .each do |date_hash|
-        create_game_records(date_hash) end
+        create_records_per_game(date_hash) end
     end #create records from APIs
 
   # include NHLGameAPI
   # include NHLGameEventsAPI
   include CreateUnitsAndInstances
   include ProcessSpecialEvents
-    def create_game_records(date_hash)
+    def create_records_per_game(date_hash)
     # create a game for each schedule date
       game_id =
       date_hash["games"].first["gamePk"]
@@ -91,20 +91,20 @@ include NHLTeamAPI
         roster.team.eql?(@team) end
 
       # if live updating... call #set_live_data_worker_schedule instead of this step
-      events_boolean =
+      inserted_events_array =
       NHLGameEventsAPI::Adapter
-      .new(team:
-        @team, game: @game )
+      .new(team: team, game: @game )
       .create_game_events_and_log_entries # *1
 
       # byebug
-      if events_boolean
-        units_groups_hash = create_records_from_shifts()
+      if inserted_events_array
+        # fix here
+        units_groups_hash = create_records_from_shifts(inserted_events_array)
         create_units_and_instances(units_groups_hash)
 
         process_special_events()
       end
-    end #create_game_records
+    end #create_records_per_game
 
             # option: create the main roster
             # NHLRosterAPI::Adapter.new(team.team_id, season: team.season).fetch_roster
@@ -197,17 +197,18 @@ include ComposedQueries
       0 end
   end
 
+  def set_live_data_worker_schedule(team, game, start_time, end_time)
+    Sidekiq.set_schedule('live_data',
+      { 'every' => ['2m'], 'class' => 'LiveData',
+        'args' => [ live_game_data_url(start_time, end_time), NHLGameEventsAPI::Adapter.new(team: team, game: game) ]
+        })
+  end
+
   def live_game_data_url (start_time, end_time)
     url = "https://statsapi.web.nhl.com/api/v1/game/ID/feed/live/diffPatch?startTimecode=#{start_time}" # startTimecode=yyyymmdd_hhmmss
 
   end
 
-  def set_live_data_worker_schedule(team, game)
-    Sidekiq.set_schedule('live_data',
-      { 'every' => ['2m'], 'class' => 'LiveData',
-        'args' => [ url, NHLGameEventsAPI::Adapter.new(team: team, game: game) ]
-      })
-  end
 
   def get_game_data
     JSON.parse(RestClient.get(TEAM_URL+"#{@team.team_id}"))

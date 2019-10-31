@@ -30,26 +30,29 @@ module NHLGameEventsAPI
         event["teamId"] == @team.team_id end
 
       shift_events_by_team =
-      events_by_team.
-      reject do |event|
+      events_by_team
+      .reject do |event|
         event["typeCode"] == 505 end
 
       inserted_events =
       create_events (shift_events_by_team)
+      inserted_log_entries =
       create_log_entries (inserted_events)
 
+      # process all special events, only at the time of processing the first team to participate in this game
       unless game_record
         goal_events =
         events
         .select do |event|
           event["typeCode"] == 505 end
         inserted_goal_events =
-        create_goal_events goal_events
+        create_goal_events(goal_events)
         couple_api_and_created_events(goal_events, inserted_goal_events)
         create_goal_log_entries()
       end
 
-      inserted_events.any?
+      # inserted_events.any?
+      return [inserted_events, inserted_log_entries, inserted_goal_events]
     end #create_game_events_and_log_entries
 
     def create_events (shift_events_by_team)
@@ -91,8 +94,8 @@ module NHLGameEventsAPI
       end.compact #if an event does not have a log_entry, then API error
 
       new_log_entries_array =
-      new_log_entries_data.
-      map do |event, records_hash|
+      new_log_entries_data
+      .map do |event, records_hash|
         Hash[
           event_id: event.id,
           player_profile_id:
@@ -103,7 +106,7 @@ module NHLGameEventsAPI
         ] #*3
       end
       # insert events
-      log_entries_changes = SQLOperations.sql_insert_all("log_entries", new_log_entries_array )
+      log_entries = SQLOperations.sql_insert_all("log_entries", new_log_entries_array )
       # grab events
 
     end #create_game_events

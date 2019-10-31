@@ -1,11 +1,9 @@
 =begin
 
-
 - get shifts by team, for a game
 - create instances [of units], by processing shifts
 
 - note: will NOT look for previous instances, will create duplicates; (does look for existing units)
-
 
 -- TODO -- add units-rosters relationship? (alt. find by roster players for Units' shift-events only)
 =end
@@ -34,8 +32,9 @@ module CreateUnitsAndInstances
     Roster.where(id: @roster)
     .includes(:players)[0]
 
+      # sample roster based on player types
       roster_sample = get_roster_sample (UNIT_HASH[5])
-      #find the shifts matching the roster sample
+      # find the shifts matching the roster sample
       shifts = get_shifts(roster_sample)
       # sort shifts by start time, for each period
         # {[period1 event1, 2...], [p2 event1, 2, ...] ... }
