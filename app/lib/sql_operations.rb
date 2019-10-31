@@ -28,7 +28,7 @@ module SQLOperations
       puts "\n\n error: \n\n #{e}"
     end
     # postgresql--
-    returning.count
+    return returning
     # sqlite3--
     # ApplicationRecord.connection.execute("SELECT Changes()").first["Changes()"]
   end
