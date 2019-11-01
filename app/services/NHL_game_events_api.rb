@@ -52,7 +52,10 @@ module NHLGameEventsAPI
       end
 
       # inserted_events.any?
-      return [inserted_events, inserted_log_entries, inserted_goal_events]
+      return {
+        events: inserted_events,
+        log_entries: inserted_log_entries,
+        goal_events: inserted_goal_events }
     end #create_game_events_and_log_entries
 
     def create_events (shift_events_by_team)

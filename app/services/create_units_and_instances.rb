@@ -21,16 +21,18 @@ module CreateUnitsAndInstances
     # 6 => ["Forward", "Defenseman", "Goalie"], #6-skater
   }
 
-  def create_records_from_shifts #(team, roster, game, units)
+  def create_records_from_shifts(inserted_events) #(team, roster, game, units)
     # @team, @units_includes_events = team, units
     puts "\n\n#create_records_from_shifts\n\n"
 
-    @game =
-    Game.where(id: @game)
-    .includes(events: [:player_profiles])[0]
+    # @game =
+    # Game.where(id: @game)
+    # .includes(events: [:player_profiles])[0]
     @roster =
     Roster.where(id: @roster)
     .includes(:players)[0]
+
+
 
       # sample roster based on player types
       roster_sample = get_roster_sample (UNIT_HASH[5])
@@ -286,7 +288,8 @@ module CreateUnitsAndInstances
 
     # select shifts by matching to roster sample's player_profiles
     shifts =
-    @game.events
+    inserted_events[:events]
+    # @game.events
     .select do |event|
       event.event_type == "shift" &&
       roster_sample
