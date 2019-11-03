@@ -26,9 +26,11 @@ include NHLTeamAPI
     .each do |team|
       @team_season =
       TeamSeason.new(season: @season, team: team)
-      @team_season.create_records_from_APIs
-      # method that queries API vs database (?)
-      # - latest game including team events...
+      @team_season.create_records_from_transpired_schedule
+        # method that queries API vs database (?)
+        # - latest game including team events...
+      # @team_season.set_workers_for_coming_schedule # use a distinct function for this?
+      # - call #create_records_per_game, then segment the game events methods, such that a worker may call this for each batch of events data
       @team_season.create_tallies # if updates, update tallies
       # updates: new games; or events, in case of live updating
     end
@@ -43,7 +45,7 @@ include NHLTeamAPI
 
   include ReadApisNHL
   include Utilities
-    def create_records_from_APIs
+    def create_records_from_transpired_schedule
       # create team and get its schedule
       team_adapter =
       NHLTeamAPI::Adapter.new(team: @team)
