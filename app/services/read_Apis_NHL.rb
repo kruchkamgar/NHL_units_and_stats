@@ -7,33 +7,40 @@ module ReadApisNHL
 $season = 20182019
 
 include NHLTeamAPI
-  def create_teams_seasons(n = 0)
+  def create_teams_seasons(i = 0, n = -1)
     set_season($season)
 
     teams = Team.all
-    # Team.left_outer_joins(rosters: [:units])
-    # .where(season: @season)
-    # .group("teams.id").having("COUNT(units.id) = 0")
-    # .order(team_id: :asc)
-        # ?-- having COUNT(games) < (number of games to date)
 
     if teams.empty?
       # teams to which to associate opposing team rosters, per game
       create_all_teams_by_season()
     end
 
-    teams[n..-1]
+    @live_updating = false;
+    # create records for transpired schedules
+    teams[i..n]
     .each do |team|
       @team_season =
       TeamSeason.new(season: @season, team: team)
       @team_season.create_records_from_transpired_schedule
         # method that queries API vs database (?)
         # - latest game including team events...
-      # @team_season.set_workers_for_coming_schedule # use a distinct function for this?
-      # - call #create_records_per_game, then segment the game events methods, such that a worker may call this for each batch of events data
       @team_season.create_tallies # if updates, update tallies
       # updates: new games; or events, in case of live updating
     end
+
+    @live_updating = true;
+    # set workers for live-update during coming schedule dates
+    teams[i..n]
+    .each do |team|
+      @team_season =
+      TeamSeason.new(season: @season, team: team)
+      @team_season.set_workers_for_coming_schedule
+      # @team_season.create_tallies # if updates, update tallies
+      # updates: new games; or events, in case of live updating
+    end
+
   end
 
   class TeamSeason
@@ -42,9 +49,10 @@ include NHLTeamAPI
       @season, @team = season, team
     end
 
-
+    # two creation methods: one for transpired games and one to schedule worker for games to come
   include ReadApisNHL
   include Utilities
+
     def create_records_from_transpired_schedule
       # create team and get its schedule
       team_adapter =
@@ -69,11 +77,17 @@ include NHLTeamAPI
 
       schedule_dates[ get_next_date_index(schedule_dates)..-1]
       .each do |date_hash|
-        create_records_per_game(date_hash) end
-    end #create records from APIs
+        create_records_per_game(date_hash) #sets @game for:
+        create_game() end
+    end #create_records_from_transpired_schedule
 
-  # include NHLGameAPI
-  # include NHLGameEventsAPI
+    def set_workers_for_coming_schedule
+
+      # set worker to get schedule dates for the next 3 days, every...3 days
+      # - call #create_records_per_game,
+      # - then segment the game events creation methods, such that a worker scheduled after #create_records_per_game, may call these methods for each batch of events data
+    end #set_workers_for_coming_schedule
+
   include CreateUnitsAndInstances
   include ProcessSpecialEvents
     def create_records_per_game(date_hash)
@@ -92,10 +106,12 @@ include NHLTeamAPI
       rosters.find do |roster|
         roster.team.eql?(@team) end
 
-      # if live updating... call #set_live_data_worker_schedule instead of this step
+    end #create_records_per_game
+
+    def create_events
       inserted_events_array =
       NHLGameEventsAPI::Adapter
-      .new(team: team, game: @game )
+      .new(team: @team, game: @game )
       .create_game_events_and_log_entries # *1
 
       # byebug
@@ -106,11 +122,11 @@ include NHLTeamAPI
 
         process_special_events()
       end
-    end #create_records_per_game
+    end
 
             # option: create the main roster
             # NHLRosterAPI::Adapter.new(team.team_id, season: team.season).fetch_roster
-    def create_rosters(game, teams_hash)
+    def create_rosters(game, teams_hash) #library method?
       teams_data =
       teams_hash
       .map do |side, side_hash|
@@ -155,6 +171,17 @@ include NHLTeamAPI
         SQLOperations.sql_insert_all("tallies", prepared_tallies)
       end
     end #create_tallies
+
+    def set_live_data_worker_schedule(team, game, start_time, end_time)
+      Sidekiq.set_schedule('live_data',
+        { 'every' => ['2m'], 'class' => 'LiveData',
+          'args' => [ live_game_data_url(start_time, end_time),
+                      # NHLGameEventsAPI::Adapter.new(team: team, game: game)
+                      self ]
+          })
+    end
+
+    private_class_method :set_live_data_worker_schedule, :
   end #TeamSeason
 
 
@@ -197,13 +224,6 @@ include ComposedQueries
       .index(latest_game_record) + 1
     else
       0 end
-  end
-
-  def set_live_data_worker_schedule(team, game, start_time, end_time)
-    Sidekiq.set_schedule('live_data',
-      { 'every' => ['2m'], 'class' => 'LiveData',
-        'args' => [ live_game_data_url(start_time, end_time), NHLGameEventsAPI::Adapter.new(team: team, game: game) ]
-        })
   end
 
   def live_game_data_url (start_time, end_time)
