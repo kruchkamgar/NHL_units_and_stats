@@ -5,6 +5,7 @@ class ScheduleLiveData
 include Utilities
 
   def perform(coming_schedule_dates, ts_instance)
+    coming_schedule_dates = args[:coming_schedule_dates]; instance = args[:instance];
     # find the dates that fall in the next three days
     next_three_dates =
     coming_schedule_dates
@@ -19,7 +20,7 @@ include Utilities
     # call method to schedule init
     coming_schedule_dates
     .each do |date|
-      schedule_live_data_init(date, ts_instance) end
+      ReadApisNHL::schedule_live_data_init(date_hash, instance) end
     # live_data = fetch(url_and_instance.first)
 
   end

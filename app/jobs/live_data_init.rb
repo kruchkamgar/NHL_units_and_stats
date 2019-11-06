@@ -2,11 +2,10 @@
 class LiveDataInit
   queue_as :live_data
 
-  def perform(ts_instance)
+  def perform(args)
 
-    # live_data = fetch(url_and_instance.first)
-    ts_instance.create_events()
-    ReadApisNHL::schedule_live_data_job(ts_instance)
+    args[:instance].create_records_per_game( args[:date_hash])
+    ReadApisNHL::schedule_live_data_job( args[:instance] )
   end
 
 end
