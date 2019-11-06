@@ -3,7 +3,6 @@
 
 module ReadApisNHL
 
-
 $season = 20182019
 
 include NHLTeamAPI
@@ -47,6 +46,17 @@ include NHLTeamAPI
 
     def initialize (season:, team:)
       @season, @team = season, team
+      @schedule_dates = set_schedule_dates()
+    end
+
+    def set_schedule_dates
+      # create team and get its schedule
+      team_adapter =
+      NHLTeamAPI::Adapter.new(team: @team)
+      .find_or_create_team
+
+      team_adapter.fetch_data
+      @schedule_dates = get_schedule_dates(schedule_hash)
     end
 
     # two creation methods: one for transpired games and one to schedule worker for games to come
@@ -54,38 +64,41 @@ include NHLTeamAPI
   include Utilities
 
     def create_records_from_transpired_schedule
-      # create team and get its schedule
-      team_adapter =
-      NHLTeamAPI::Adapter.new(team: @team)
-      .find_or_create_team
-
-      schedule_hash = team_adapter.fetch_data
-      schedule_dates =
-      get_schedule_dates(schedule_hash)
+      transpired_schedule_dates =
+      schedule_dates
       .select do |date|
-          # date["date"] < (Time.now - 100000)
         game_date = date["games"]["gameDate"]
-        game_date_transpired =
+        game_date_transpired? =
         Time.now.utc() - 86400 > # one day, in seconds
         Time.utc(
-          *date_string_to_array(game_date))
+          *date_string_to_array(game_date)) # a lead time exists for populating game data
       end
 # zulu time = 4 hrs ahead of EST
 # https://statsapi.web.nhl.com/api/v1/schedule?teamId=12&startDate=2018-09-01&endDate=2019-07-01
   # (same lvl as "date")--
   # "games" : [{ "gameDate" : "2019-04-24T23:30:00Z",
 
-      schedule_dates[ get_next_date_index(schedule_dates)..-1]
+      transpired_schedule_dates[ get_next_date_index(transpired_schedule_dates)..-1]
       .each do |date_hash|
-        create_records_per_game(date_hash) #sets @game for:
+        create_records_per_game(date_hash) # sets @game for:
         create_game() end
     end #create_records_from_transpired_schedule
 
     def set_workers_for_coming_schedule
+      coming_schedule_dates =
+      @schedule_dates
+      .select do |date|
+        game_date = date["games"]["gameDate"]
+        game_date_coming? =
+        Time.now.utc() <
+        Time.utc(
+          *date_string_to_array(game_date)) end
 
       # set worker to get schedule dates for the next 3 days, every...3 days
-      # - call #create_records_per_game,
-      # - then segment the game events creation methods, such that a worker scheduled after #create_records_per_game, may call these methods for each batch of events data
+      schedule_game_scheduler_jobs(coming_schedule_dates)  # can this accommodate recently completed and NHL-API-processed games?
+
+        # - call #create_records_per_game, at start of each scheduled game
+        # - then segment the game events creation methods, such that a worker scheduled after #create_records_per_game, may call these methods for each batch of events data
     end #set_workers_for_coming_schedule
 
   include CreateUnitsAndInstances
@@ -116,7 +129,6 @@ include NHLTeamAPI
 
       # byebug
       if inserted_events_array
-        # fix here
         units_groups_hash = create_records_from_shifts(inserted_events_array)
         create_units_and_instances(units_groups_hash)
 
@@ -172,16 +184,29 @@ include NHLTeamAPI
       end
     end #create_tallies
 
-    def set_live_data_worker_schedule(team, game, start_time, end_time)
+    def schedule_game_scheduler_jobs(coming_schedule_dates, ts_instance) # problems with
+      Sidekiq.set_schedule('schedule_live_data',
+        { 'cron' => '0 0 2 */3 * *', 'class' => 'ScheduleLiveData',
+          'args' => coming_schedule_dates
+          })
+    end
+
+    def schedule_live_data_init(date, ts_instance)
+      Sidekiq.set_schedule('schedule_live_data',
+        { 'at' => date, 'class' => 'LiveDataInit',
+          'args' => ts_instance })
+    end
+
+    def schedule_live_data_job(start_time, end_time, ts_instance)
       Sidekiq.set_schedule('live_data',
         { 'every' => ['2m'], 'class' => 'LiveData',
           'args' => [ live_game_data_url(start_time, end_time),
                       # NHLGameEventsAPI::Adapter.new(team: team, game: game)
-                      self ]
+                      ts_instance ]
           })
     end
 
-    private_class_method :set_live_data_worker_schedule, :
+    private_class_method :set_live_data_worker_schedule
   end #TeamSeason
 
 
