@@ -29,7 +29,6 @@ include NHLTeamAPI
       # updates: new games; or events, in case of live updating
     end
 
-    @live_updating = true;
     # set workers for live-update during coming schedule dates
     teams[i..n]
     .each do |team|
@@ -47,6 +46,8 @@ include NHLTeamAPI
     def initialize (season:, team:)
       @season, @team = season, team
       @schedule_dates = set_schedule_dates()
+
+      @start_time = nil; @end_time = nil; # store these in redis in case of server fail?
     end
 
     def set_schedule_dates
@@ -72,11 +73,8 @@ include NHLTeamAPI
         Time.now.utc() - 86400 > # one day, in seconds
         Time.utc(
           *date_string_to_array(game_date)) # a lead time exists for populating game data
+        # *2- zulu time, date hash format
       end
-# zulu time = 4 hrs ahead of EST
-# https://statsapi.web.nhl.com/api/v1/schedule?teamId=12&startDate=2018-09-01&endDate=2019-07-01
-  # (same lvl as "date")--
-  # "games" : [{ "gameDate" : "2019-04-24T23:30:00Z",
 
       transpired_schedule_dates[ get_next_date_index(transpired_schedule_dates)..-1]
       .each do |date_hash|
@@ -184,25 +182,25 @@ include NHLTeamAPI
       end
     end #create_tallies
 
-    def schedule_game_scheduler_jobs(coming_schedule_dates, ts_instance) # problems with
+    def schedule_game_scheduler_jobs(coming_schedule_dates, ts_instance)
       Sidekiq.set_schedule('schedule_live_data',
         { 'cron' => '0 0 2 */3 * *', 'class' => 'ScheduleLiveData',
-          'args' => coming_schedule_dates
+          'args' => { coming_schedule_dates: coming_schedule_dates, instance: ts_instance }
           })
     end
 
-    def schedule_live_data_init(date, ts_instance)
+    def schedule_live_data_init(date_hash, ts_instance)
       Sidekiq.set_schedule('schedule_live_data',
-        { 'at' => date, 'class' => 'LiveDataInit',
-          'args' => ts_instance })
+        { 'at' => date_hash["games"]["gameDate"], 'class' => 'LiveDataInit',
+          'args' => { instance: ts_instance, date_hash: date_hash }
+          })
     end
 
-    def schedule_live_data_job(start_time, end_time, ts_instance)
+    def schedule_live_data_job(game_start_time, ts_instance)
+
       Sidekiq.set_schedule('live_data',
         { 'every' => ['2m'], 'class' => 'LiveData',
-          'args' => [ live_game_data_url(start_time, end_time),
-                      # NHLGameEventsAPI::Adapter.new(team: team, game: game)
-                      ts_instance ]
+          'args' => { game_start_time: game_start_time, instance: ts_instance }
           })
     end
 
@@ -251,7 +249,7 @@ include ComposedQueries
       0 end
   end
 
-  def live_game_data_url (start_time, end_time)
+  def live_game_data_url (start_time)
     url = "https://statsapi.web.nhl.com/api/v1/game/ID/feed/live/diffPatch?startTimecode=#{start_time}" # startTimecode=yyyymmdd_hhmmss
 
   end
@@ -277,6 +275,15 @@ include ComposedQueries
   module_function :create_teams_seasons
 end
 
+=begin
 
 # *1 -
 #  (improvement) store record of games processed, to track events already inserted. also [to conceivably allow for mutation of (external) API game data] track the results of ProcessSpecialEvents per game
+
+*2 - zulu time
+  zulu time = 4 hrs ahead of EST
+  https://statsapi.web.nhl.com/api/v1/schedule?teamId=12&startDate=2018-09-01&endDate=2019-07-01
+    (same lvl as "date")--
+    "games" : [{ "gameDate" : "2019-04-24T23:30:00Z",
+
+=end
