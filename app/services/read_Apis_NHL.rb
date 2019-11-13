@@ -16,7 +16,6 @@ include NHLTeamAPI
       create_all_teams_by_season()
     end
 
-    @live_updating = false;
     # create records for transpired schedules
     teams[i..n]
     .each do |team|
@@ -249,8 +248,8 @@ include ComposedQueries
       0 end
   end
 
-  def live_game_data_url (start_time)
-    url = "https://statsapi.web.nhl.com/api/v1/game/ID/feed/live/diffPatch?startTimecode=#{start_time}" # startTimecode=yyyymmdd_hhmmss
+  def live_game_data_url (game_id, start_time)
+    url = "https://statsapi.web.nhl.com/api/v1/game/#{game_id}/feed/live/diffPatch?startTimecode=#{start_time}" # startTimecode=yyyymmdd_hhmmss
 
   end
 
