@@ -1,10 +1,14 @@
 
+require 'sidekiq-scheduler'
+
 class LiveDataInit
-  queue_as :live_data
+  include Sidekiq::Worker
 
-  def perform(args)
+  def perform(date_hash, ts_instance)
 
-    args[:instance].create_records_per_game( args[:date_hash])
+    byebug
+
+    ts_instance.create_records_per_game(  ) # sets @game, including its game_id
     ReadApisNHL::schedule_live_data_job( args[:instance] )
   end
 

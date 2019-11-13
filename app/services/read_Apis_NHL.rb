@@ -1,9 +1,11 @@
 # reload!; include ReadApisNHL; ReadApisNHL.create_teams_seasons
 # ts = TeamSeason.new(season: 20182019, team: Team.first); ts.create_tallies;
+require 'sidekiq'
+require 'sidekiq-scheduler'
 
 module ReadApisNHL
 
-$season = 20182019
+$season = 20192020
 
 include NHLTeamAPI
   def create_teams_seasons(i = 0, n = -1)
@@ -17,23 +19,23 @@ include NHLTeamAPI
     end
 
     # create records for transpired schedules
-    teams[i..n]
-    .each do |team|
-      @team_season =
-      TeamSeason.new(season: @season, team: team)
-      @team_season.create_records_from_transpired_schedule
-        # method that queries API vs database (?)
-        # - latest game including team events...
-      @team_season.create_tallies # if updates, update tallies
-      # updates: new games; or events, in case of live updating
-    end
+    # teams[i..n]
+    # .each do |team|
+    #   @team_season =
+    #   TeamSeason.new(season: @season, team: team)
+    #   @team_season.create_records_from_transpired_schedule
+    #     # method that queries API vs database (?)
+    #     # - latest game including team events...
+    #   @team_season.create_tallies # if updates, update tallies
+    #   # updates: new games; or events, in case of live updating
+    # end
 
     # set workers for live-update during coming schedule dates
     teams[i..n]
     .each do |team|
       @team_season =
       TeamSeason.new(season: @season, team: team)
-      @team_season.set_workers_for_coming_schedule
+      @team_season.set_workers_for_coming_schedule()
       # @team_season.create_tallies # if updates, update tallies
       # updates: new games; or events, in case of live updating
     end
@@ -49,17 +51,21 @@ include NHLTeamAPI
       @start_time = nil; @end_time = nil; # store these in redis in case of server fail?
     end
 
+    def start_time; @start_time end
+    def end_time; @end_time end
+    def game; @game end
+
     def set_schedule_dates
       # create team and get its schedule
       team_adapter =
       NHLTeamAPI::Adapter.new(team: @team)
       .find_or_create_team
 
-      team_adapter.fetch_data
+      schedule_hash = team_adapter.fetch_data
       @schedule_dates = get_schedule_dates(schedule_hash)
     end
 
-    # two creation methods: one for transpired games and one to schedule worker for games to come
+    # two creation methods: one for transpired games and one to schedule worker/job for games to come
   include ReadApisNHL
   include Utilities
 
@@ -68,7 +74,7 @@ include NHLTeamAPI
       schedule_dates
       .select do |date|
         game_date = date["games"]["gameDate"]
-        game_date_transpired? =
+        game_date_transpired =
         Time.now.utc() - 86400 > # one day, in seconds
         Time.utc(
           *date_string_to_array(game_date)) # a lead time exists for populating game data
@@ -85,14 +91,14 @@ include NHLTeamAPI
       coming_schedule_dates =
       @schedule_dates
       .select do |date|
-        game_date = date["games"]["gameDate"]
-        game_date_coming? =
+        game_date = date["games"].first["gameDate"]
+        game_date_coming =
         Time.now.utc() <
         Time.utc(
           *date_string_to_array(game_date)) end
 
       # set worker to get schedule dates for the next 3 days, every...3 days
-      schedule_game_scheduler_jobs(coming_schedule_dates)  # can this accommodate recently completed and NHL-API-processed games?
+      schedule_game_scheduler_jobs(coming_schedule_dates, self)  # can this accommodate recently completed and NHL-API-processed games?
 
         # - call #create_records_per_game, at start of each scheduled game
         # - then segment the game events creation methods, such that a worker scheduled after #create_records_per_game, may call these methods for each batch of events data
@@ -183,27 +189,31 @@ include NHLTeamAPI
 
     def schedule_game_scheduler_jobs(coming_schedule_dates, ts_instance)
       Sidekiq.set_schedule('schedule_live_data',
-        { 'cron' => '0 0 2 */3 * *', 'class' => 'ScheduleLiveData',
+        { 'every' => ['1h', first_in: '0s'], 'class' => 'ScheduleLiveData', 'queue' => 'schedule_live_data',
           'args' => { coming_schedule_dates: coming_schedule_dates, instance: ts_instance }
           })
     end
 
-    def schedule_live_data_init(date_hash, ts_instance)
-      Sidekiq.set_schedule('schedule_live_data',
-        { 'at' => date_hash["games"]["gameDate"], 'class' => 'LiveDataInit',
-          'args' => { instance: ts_instance, date_hash: date_hash }
-          })
+    class << self
+      def schedule_live_data_init(date_hash, ts_instance)
+        date = date_hash["games"].first["gameDate"]
+        byebug
+        Sidekiq.set_schedule("init_live_data_#{date}",
+          { 'at' => "#{DateTime.now + 5}", 'class' => 'LiveDataInit', 'queue' => 'live_data',
+            'args' => { date_hash: date_hash, instance: ts_instance }
+            })
+      end
+
+      def schedule_live_data_job(game_start_time, ts_instance)
+        Sidekiq.set_schedule('live_data',
+          { 'every' => ['2m'], 'class' => 'LiveData',
+            'args' => [ game_start_time, ts_instance ]
+            })
+      end
     end
 
-    def schedule_live_data_job(game_start_time, ts_instance)
+    # private_class_method :schedule_game_scheduler_jobs
 
-      Sidekiq.set_schedule('live_data',
-        { 'every' => ['2m'], 'class' => 'LiveData',
-          'args' => { game_start_time: game_start_time, instance: ts_instance }
-          })
-    end
-
-    private_class_method :set_live_data_worker_schedule
   end #TeamSeason
 
 
@@ -253,23 +263,9 @@ include ComposedQueries
 
   end
 
-
   def get_game_data
     JSON.parse(RestClient.get(TEAM_URL+"#{@team.team_id}"))
   end
-  # def select_team_hash (teams_hash, team_id = nil)
-  #   team_id ||= @team.team_id
-  #
-  #   teams_hash.select { |side|
-  #     teams_hash[side]["team"]["id"] == team_id
-  #   }.first[1]
-  # end
-
-  # add method #game_exists_query
-  # games = @team.games.load unless @team.games.loaded?
-  # if games.find do |game|
-  #   game.game_id == game_id end
-  # then return end
 
   module_function :create_teams_seasons
 end

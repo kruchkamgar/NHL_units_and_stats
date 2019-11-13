@@ -1,13 +1,19 @@
 
 
 :verbose: false
-:concurrency: <%= ENV.fetch("RAILS_MAX_THREADS") {3} %>
+:dynamic: true
+:concurrency: <%= ENV.fetch("RAILS_MAX_THREADS") {5} %>
 :timeout: 30
+
 :queues:
+  - [live_data]
+  - [schedule_live_data]
 
 
 :schedule:
-   LiveData:
-    cron: '0 8 * * *'
-    queue: scheduler
+  LiveData:
     enabled: true
+    queue: live_data
+  ScheduleLiveData:
+    enabled: true
+    queue: live_data
