@@ -13,4 +13,8 @@ Rails.application.routes.draw do
 
   get '/units/utility_json' => 'units#utility_json'
 
+  # sidekiq dashboard – localhost:3000/sidekiq
+require 'sidekiq/web'
+mount Sidekiq::Web => '/sidekiq'
+
 end
