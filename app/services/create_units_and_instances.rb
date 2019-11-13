@@ -32,8 +32,6 @@ module CreateUnitsAndInstances
     Roster.where(id: @roster)
     .includes(:players)[0]
 
-
-
       # sample roster based on player types
       roster_sample = get_roster_sample (UNIT_HASH[5])
       # find the shifts matching the roster sample
@@ -287,9 +285,10 @@ module CreateUnitsAndInstances
 # use shifts >= timemark, or pass incremental shift events directly (w/ if statement)
 
     # select shifts by matching to roster sample's player_profiles
+
     shifts =
-    inserted_events[:events]
     # @game.events
+    inserted_events[:events]
     .select do |event|
       event.event_type == "shift" &&
       roster_sample
@@ -313,13 +312,15 @@ module CreateUnitsAndInstances
     end
   end #shifts_into_periods
 
-  def form_instances_by_events (p_chron) # *4
+  def form_instances_by_events (p_chron) # *4, *7
   puts "\n\n#form_instances_by_events\n\n"
   # abstract--
   # 1. use a QUEUE_HEAD to track progress;
   # 2. through iterations-(@OVERLAP_SET) of groups of events; each event of a group overlaps its "basis" (aka first) event
   # 3. create INSTANCES via proc, whenever conditions meet the criteria [recursively called on the iterations]
   # 4. return the END TIME of the last created instance (TIME_MARK), for continuity b/n iterations
+
+      # live-update: 'patch' event arrays, by redoing or checking that the last-created instance includes all overlapping shifts
     p_chron
     .map do |period, events|
       time_mark = "00:00"; queue_head = 0;
@@ -580,6 +581,9 @@ end
 #   - even a 2-second overlap can form a difference in the play (relevant unit criteria)
 
 #   -? if using minimum overlap time, use on top of 2 or 4 plyrs (3, or 5-man unit)
+
+# *7- (refactor)
+# - put method in library file
 
 # ///////////// extra ///////////// #
 

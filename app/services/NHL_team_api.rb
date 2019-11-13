@@ -20,8 +20,8 @@ module NHLTeamAPI
     JSON.parse(RestClient.get(TEAM_URL))
 
     prepared_teams =
-    teams_data["teams"].
-    map do |info_hash|
+    teams_data["teams"]
+    .map do |info_hash|
       Hash[
         team_id: info_hash["id"],
         name: info_hash["name"],
