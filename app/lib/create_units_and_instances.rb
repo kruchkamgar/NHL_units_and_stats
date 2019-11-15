@@ -9,7 +9,6 @@
 =end
 
 
-
 module CreateUnitsAndInstances
   include Utilities # time calculations
 
@@ -21,19 +20,21 @@ module CreateUnitsAndInstances
     # 6 => ["Forward", "Defenseman", "Goalie"], #6-skater
   }
 
-  def create_records_from_shifts(inserted_events) #(team, roster, game, units)
+  def create_records_from_shifts(inserted_events: , roster:) #(team, roster, game, units)
     # @team, @units_includes_events = team, units
     puts "\n\n#create_records_from_shifts\n\n"
 
     # @game =
     # Game.where(id: @game)
     # .includes(events: [:player_profiles])[0]
-    @roster =
-    Roster.where(id: @roster)
+    roster_incl_players =
+    Roster.where(id: roster.id)
     .includes(:players)[0]
 
       # sample roster based on player types
-      roster_sample = get_roster_sample (UNIT_HASH[5])
+      roster_sample = get_roster_sample (
+        player_types: UNIT_HASH[5]
+        roster: roster_incl_players )
       # find the shifts matching the roster sample
       shifts = get_shifts(roster_sample)
       # sort shifts by start time, for each period
@@ -46,227 +47,38 @@ module CreateUnitsAndInstances
       group_by_players(instances_by_events_arrays)
   end #create_records_from_shifts
 
-  def create_units_and_instances (units_groups_hash)
+
+  def create_units_and_instances(units_groups_hash, roster: )
     queued_units =
     find_or_create_units(units_groups_hash.keys)
 
     queued_instances =
-    create_instances_and_circumstances(queued_units, units_groups_hash.values)
+    create_instances_and_circumstances(
+      queued_units, units_groups_hash.values)
 
-    associate_events_to_instances(
-      queued_instances,
+    formed_instances =
       units_groups_hash.values
       .map do |instances|
         instances
         .map do |inst_hash|
         inst_hash[:events] end
-      end.flatten(1) )
+      end.flatten(1)
 
-    puts "\n\n @units_includes_events \n\n"
+    associate_events_to_instances(
+      queued_instances, formed_instances )
 
-    associate_roster_to_units(queued_units)
+      puts "\n\n @units_includes_events \n\n"
+
+    associate_roster_to_units(queued_units, roster)
   end
 
-  def find_or_create_units (formed_units)
-    new_formed_units, units_records_queue = get_preexisting_units(formed_units)
-
-    # nils stand for new units [absent from records]
-    if units_records_queue.any? nil
-      units_queue =
-      insert_units(
-        new_formed_units,
-        (@units_records_queue = units_records_queue).clone )
-      units_queue
-    else units_records_queue end
-  end
-
-  def get_preexisting_units (formed_units)
-    new_formed_units = formed_units.clone
-    # nils act as placeholders for queued new units. swaps pre-existing units with their records from db.
-    puts "\n\n #get_preexisting_units #{formed_units.map(&:size)} \n\n"
-
-    units_records_queue =
-    formed_units
-    .map do |unit|
-      # bind_targets = []
-      # binds =
-      # unit.map.with_index do |value, index|
-      #   bind_targets.push("$#{index + 1}")
-      #   assemble_binds("player_id_num", value) end
-
-# performance: use the 'u_cir_pro' view for the joins?
-      unit_record =
-      Unit
-      .select(:id)
-      .joins(circumstances: [player_profile: [:player]])
-      .where(players: {player_id_num: unit })
-      .group(:id)
-      .having('COUNT(players.player_id_num) = ?', unit.size)[0]
-
-      # ApplicationRecord.connection.exec_query(
-      #   retrieve_unit_sql(bind_targets),
-      #   "SQL",
-      #   binds ).rows.first
-      if (unit_record)
-        new_formed_units
-        .delete_at(new_formed_units.index(unit)) end
-      unit_record
-    end #map
-
-    puts "\n\n get_preexisting_units done \n\n"
-
-    [new_formed_units, units_records_queue]
-  end
-
-  def insert_units(formed_units, records_queue)
-    @inserted_units = []
-    prepared_units =
-    formed_units.
-    map do |unit|
-      Hash[
-        created_at: Time.now,
-        updated_at: Time.now ]
-    end
-    units_changes =
-    SQLOperations.sql_insert_all("units", prepared_units)
-
-    if units_changes > 0
-      @inserted_units =
-      Unit.order(id: :desc).limit(units_changes)
-# performance:
-  # collect-then-insert rewrite—— just track the IDs [and persist safely in redis] before writing to DB?
-    end
-
-    # replaces queue nils with the freshly inserted units
-    @inserted_units.reverse
-    .each do |record|
-      nil_i = records_queue.index(nil)
-      if nil_i
-        records_queue[nil_i] = record end
-      end if @inserted_units.any?
-
-    records_queue
-  end
-
-  def create_instances_and_circumstances(queued_units, units_groups_values)
-    # penalty_data = get_special_teams_api_data()
-    # penalities = add_penalty_end_times(penalty_data)
-    # made_instances = add_penalty_data_to_instances(units_groups, penalties)
-    create_circumstances(queued_units, units_groups_values) if @units_records_queue
-
-    prepped_insts_grps =
-    prepare_instances(queued_units, units_groups_values)
-    queued_instances =
-    insert_instances(prepped_insts_grps.flatten)
-  end
-
-  def prepare_instances (queued_units, units_groups)
-    prepared_instances_groups =
-    queued_units
-    .map.with_index do |unit, i|
-      # (create_units already reverses queued_units)
-      # coincident index from source: units_groups_hash
-      units_groups[i]
-      .map do |inst|
-        Hash[
-          unit_id: unit.id,
-          start_time: inst[:start_time],
-          duration: TimeOperation.new(:-, inst[:end_time], inst[:start_time]).result,
-          # penalty: ( inst[:penalty] || false ),
-          created_at: Time.now,
-          updated_at: Time.now ] # *3
-      end
-    end
-  end #prepare_instances
-
-  def insert_instances(prepared_instances)
-    instances_changes = SQLOperations.sql_insert_all("instances", prepared_instances)
-
-    queued_instances =
-    Instance.order(id: :desc).limit(instances_changes).reverse
-  end
-
-  def create_circumstances(queued_units, units_groups_values)
-    new_units_groups = units_groups_values.clone
-
-    # delete unit group, if unit preexisted as retrieved into @units_records_queue;
-    # collect the new unit otherwise.
-    new_units_queue =
-    @units_records_queue
-    .map.with_index do |record, i|
-      if record.class == Unit
-        new_units_groups[i] = nil
-      else
-        queued_units[i] end
-    end.compact
-    @units_records_queue = nil
-
-    # store the specific profile (includes position), for this unit
-    prepared_circumstances = []
-    new_units_groups.compact
-    .each_with_index do |group, i|
-      group[0][:events]
-      .each do |evnt|
-        # shift events only here
-        prepared_circumstances +=
-        evnt.player_profiles
-        .map do |profile|
-          Hash[
-            unit_id: new_units_queue[i].id,
-            player_profile_id: profile.id,
-            created_at: Time.now,
-            updated_at: Time.now ]
-        end
-      end #each evnt
-    end #each group
-
-
-    SQLOperations.sql_insert_all("circumstances", prepared_circumstances)
-  end
-
-  def associate_events_to_instances(queued_instances, formed_instances)
-    # insert instances; get instances; ...
-    prepared_associations =
-    queued_instances.
-    map.with_index do |instance, i|
-      formed_instances[i].map do |event|
-        Hash[
-          instance_id: instance.id,
-          event_id: event.id ]
-      end
-    end.flatten
-
-    SQLOperations.sql_insert_all("events_instances", prepared_associations)
-  end
-
-  def associate_roster_to_units(queued_units)
-    puts "\n\n associate_roster_to_units \n\n"
-
-# performance: single query for units' rosters matching @roster instead?
-    queued_units_new_roster =
-    Unit.where(id: queued_units)
-    .preload(:rosters)
-    .reject do |unit|
-      unit.rosters.include? @roster end
-
-    prepared_rosters_units =
-    queued_units_new_roster.
-    map do |unit|
-      Hash[
-        roster_id: @roster.id,
-        unit_id: unit.id ]
-    end
-
-    SQLOperations.sql_insert_all("rosters_units", prepared_rosters_units) if prepared_rosters_units.any?
-  end
-
-  # ////////////////// prep methods ////////////////// #
+private
 
   # filter to get certain player types (see UNIT_HASH)
-  def get_roster_sample (player_types)
+  def get_roster_sample (player_types:, roster_incl_players: )
 
     roster_sample =
-    @roster.players
+    roster_incl_players.players
     .select do |player|
       player_types
       .include? (
@@ -320,17 +132,20 @@ module CreateUnitsAndInstances
   # 3. create INSTANCES via proc, whenever conditions meet the criteria [recursively called on the iterations]
   # 4. return the END TIME of the last created instance (TIME_MARK), for continuity b/n iterations
 
-      # live-update: 'patch' event arrays, by redoing or checking that the last-created instance includes all overlapping shifts
+  # *8- live update for shift events (NOT currently offered in API)
+
     p_chron
     .map do |period, events|
-      time_mark = "00:00"; queue_head = 0;
-      instances = []
+      # time_mark = "00:00";
+      time_mark = events.first.start_time; queue_head = 0;
+      instances = (captured_instances || [])
+      instances_proc =
+      Proc.new do |inst|
+        (instances.push inst if inst) || instances end
+
       while queue_head && events[queue_head]
         # puts "\nload next overlaps\n"
         load_next_overlaps(queue_head, events, time_mark)
-        instances_proc =
-        Proc.new do |inst|
-          (instances.push inst if inst) || instances end
 # byebug if @interrupt # view instances before next calls
         time_mark =
         call_overlap_test(
@@ -486,7 +301,6 @@ module CreateUnitsAndInstances
   end
 
   def group_by_players(instances_by_events_hashes)
-
     # {
       # [instances' player_id_nums] => [
         # { :events => [instance_by_events_1], :start_time => "00:00", :end_time => "00:01" }
@@ -500,6 +314,204 @@ module CreateUnitsAndInstances
         event.player_id_num end.sort
     end
   end #group_by_players
+
+
+ # ////////////////////  create_units_and_instances helpers /////////////#
+
+  def find_or_create_units (formed_units)
+    new_formed_units, units_records_queue = get_preexisting_units(formed_units)
+
+    # nils stand for new units [absent from records]
+    if units_records_queue.any? nil
+      units_queue =
+      insert_units(
+        new_formed_units,
+        (@units_records_queue = units_records_queue).clone )
+      units_queue
+    else units_records_queue end
+  end
+
+  def get_preexisting_units (formed_units)
+    new_formed_units = formed_units.clone
+    # nils act as placeholders for queued new units. swaps pre-existing units with their records from db.
+    puts "\n\n #get_preexisting_units #{formed_units.map(&:size)} \n\n"
+
+    units_records_queue =
+    formed_units
+    .map do |unit|
+      # bind_targets = []
+      # binds =
+      # unit.map.with_index do |value, index|
+      #   bind_targets.push("$#{index + 1}")
+      #   assemble_binds("player_id_num", value) end
+
+# performance: use the 'u_cir_pro' view for the joins?
+      unit_record =
+      Unit
+      .select(:id)
+      .joins(circumstances: [player_profile: [:player]])
+      .where(players: {player_id_num: unit })
+      .group(:id)
+      .having('COUNT(players.player_id_num) = ?', unit.size)[0]
+
+      # ApplicationRecord.connection.exec_query(
+      #   retrieve_unit_sql(bind_targets),
+      #   "SQL",
+      #   binds ).rows.first
+      if (unit_record)
+        new_formed_units
+        .delete_at(new_formed_units.index(unit)) end
+      unit_record
+    end #map
+
+    puts "\n\n get_preexisting_units done \n\n"
+
+    [new_formed_units, units_records_queue]
+  end
+
+  def insert_units(formed_units, records_queue)
+    inserted_units = []
+    prepared_units =
+    formed_units.
+    map do |unit|
+      Hash[
+        created_at: Time.now,
+        updated_at: Time.now ]
+    end
+    units_changes =
+    SQLOperations.sql_insert_all("units", prepared_units)
+
+    if units_changes > 0
+      inserted_units =
+      Unit.order(id: :desc).limit(units_changes)
+# performance:
+  # collect-then-insert rewrite—— just track the IDs [and persist safely in redis] before writing to DB?
+    end
+
+    # replaces queue nils with the freshly inserted units
+    inserted_units.reverse
+    .each do |record|
+      nil_i = records_queue.index(nil)
+      if nil_i
+        records_queue[nil_i] = record end
+      end if inserted_units.any?
+
+    records_queue
+  end
+
+  def create_instances_and_circumstances(queued_units, units_groups_values)
+    # penalty_data = get_special_teams_api_data()
+    # penalities = add_penalty_end_times(penalty_data)
+    # made_instances = add_penalty_data_to_instances(units_groups, penalties)
+    create_circumstances(queued_units, units_groups_values) if @units_records_queue
+
+    prepped_insts_grps =
+    prepare_instances(queued_units, units_groups_values)
+    queued_instances =
+    insert_instances(prepped_insts_grps.flatten)
+  end
+
+  def prepare_instances (queued_units, units_groups)
+    prepared_instances_groups =
+    queued_units
+    .map.with_index do |unit, i|
+      # (create_units already reverses queued_units)
+      # coincident index from source: units_groups_hash
+      units_groups[i]
+      .map do |inst|
+        Hash[
+          unit_id: unit.id,
+          start_time: inst[:start_time],
+          duration: TimeOperation.new(:-, inst[:end_time], inst[:start_time]).result,
+          # penalty: ( inst[:penalty] || false ),
+          created_at: Time.now,
+          updated_at: Time.now ] # *3
+      end
+    end
+  end #prepare_instances
+
+  def insert_instances(prepared_instances)
+    instances_changes = SQLOperations.sql_insert_all("instances", prepared_instances)
+
+    queued_instances =
+    Instance.order(id: :desc).limit(instances_changes).reverse
+  end
+
+  def create_circumstances(queued_units, units_groups_values)
+    new_units_groups = units_groups_values.clone
+
+    # delete unit group, if unit preexisted as retrieved into @units_records_queue;
+    # collect the new unit otherwise.
+    new_units_queue =
+    @units_records_queue
+    .map.with_index do |record, i|
+      if record.class == Unit
+        new_units_groups[i] = nil
+      else
+        queued_units[i] end
+    end.compact
+    @units_records_queue = nil
+
+    # store the specific profile (includes position), for this unit
+    prepared_circumstances = []
+    new_units_groups.compact
+    .each_with_index do |group, i|
+      group[0][:events]
+      .each do |evnt|
+        # shift events only here
+        prepared_circumstances +=
+        evnt.player_profiles
+        .map do |profile|
+          Hash[
+            unit_id: new_units_queue[i].id,
+            player_profile_id: profile.id,
+            created_at: Time.now,
+            updated_at: Time.now ]
+        end
+      end #each evnt
+    end #each group
+
+
+    SQLOperations.sql_insert_all("circumstances", prepared_circumstances)
+  end
+
+  def associate_events_to_instances(queued_instances, formed_instances)
+    # insert instances; get instances; ...
+    prepared_associations =
+    queued_instances.
+    map.with_index do |instance, i|
+      formed_instances[i].map do |event|
+        Hash[
+          instance_id: instance.id,
+          event_id: event.id ]
+      end
+    end.flatten
+
+    SQLOperations.sql_insert_all("events_instances", prepared_associations)
+  end
+
+  def associate_roster_to_units(queued_units, roster)
+    puts "\n\n associate_roster_to_units \n\n"
+
+# performance: single query for units' rosters matching roster instead?
+    queued_units_new_roster =
+    Unit.where(id: queued_units)
+    .preload(:rosters)
+    .reject do |unit|
+      unit.rosters.include? roster end
+
+    prepared_rosters_units =
+    queued_units_new_roster
+    .map do |unit|
+      Hash[
+        roster_id: roster.id,
+        unit_id: unit.id ]
+    end
+
+    SQLOperations.sql_insert_all("rosters_units", prepared_rosters_units) if prepared_rosters_units.any?
+  end
+
+
 
 
 # //////////////////// helpers //////////////////// #
@@ -584,6 +596,12 @@ end
 
 # *7- (refactor)
 # - put method in library file
+
+# *8- live-update: (NOT offered in API)
+# assuming API lists [shift] events only after they 'complete'—
+  # 'patch' event arrays, by redoing all prior instances which should include (overlap) new shift events
+# else—
+  # only need to patch [new events] into the last instance
 
 # ///////////// extra ///////////// #
 

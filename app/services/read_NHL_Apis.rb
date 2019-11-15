@@ -1,9 +1,9 @@
-# reload!; include ReadApisNHL; ReadApisNHL.create_teams_seasons
+# reload!; include ReadNHLApis; ReadNHLApiss.create_teams_seasons
 # ts = TeamSeason.new(season: 20182019, team: Team.first); ts.create_tallies;
 require 'sidekiq'
 require 'sidekiq-scheduler'
 
-module ReadApisNHL
+module ReadNHLApis
 
 $season = 20192020
 
@@ -19,16 +19,16 @@ include NHLTeamAPI
     end
 
     # create records for transpired schedules
-    # teams[i..n]
-    # .each do |team|
-    #   @team_season =
-    #   TeamSeason.new(season: @season, team: team)
-    #   @team_season.create_records_from_transpired_schedule
-    #     # method that queries API vs database (?)
-    #     # - latest game including team events...
-    #   @team_season.create_tallies # if updates, update tallies
-    #   # updates: new games; or events, in case of live updating
-    # end
+    teams[i..n]
+    .each do |team|
+      @team_season =
+      TeamSeason.new(season: @season, team: team)
+      @team_season.create_records_from_transpired_schedule
+        # method that queries API vs database (?)
+        # - latest game including team events...
+      @team_season.create_tallies # if updates, update tallies
+      # updates: new games; or events, in case of live updating
+    end
 
     # set workers for live-update during coming schedule dates
     teams[i..n]
@@ -66,8 +66,9 @@ include NHLTeamAPI
     end
 
     # two creation methods: one for transpired games and one to schedule worker/job for games to come
-  include ReadApisNHL
+  include CreateRecordsFromAPI
   include Utilities
+  include ReadNHLApis
 
     def create_records_from_transpired_schedule
       transpired_schedule_dates =
@@ -83,8 +84,9 @@ include NHLTeamAPI
 
       transpired_schedule_dates[ get_next_date_index(transpired_schedule_dates)..-1]
       .each do |date_hash|
-        create_records_per_game(date_hash) # sets @game for:
-        create_game() end
+        roster =
+        create_initial_game_records(date_hash) # sets @game for:
+        create_records_derived_from_events(roster) end
     end #create_records_from_transpired_schedule
 
     def set_workers_for_coming_schedule
@@ -104,90 +106,8 @@ include NHLTeamAPI
         # - then segment the game events creation methods, such that a worker scheduled after #create_records_per_game, may call these methods for each batch of events data
     end #set_workers_for_coming_schedule
 
-  include CreateUnitsAndInstances
-  include ProcessSpecialEvents
-    def create_records_per_game(date_hash)
-    # create a game for each schedule date
-      game_id =
-      date_hash["games"].first["gamePk"]
-
-      @game, teams_hash =
-      NHLGameAPI::Adapter
-      .new(game_id: game_id)
-      .create_game
-      # game API may deliver two teams' players
-
-      rosters = create_rosters(@game, teams_hash)
-      @roster =
-      rosters.find do |roster|
-        roster.team.eql?(@team) end
-
-    end #create_records_per_game
-
-    def create_events
-      inserted_events_array =
-      NHLGameEventsAPI::Adapter
-      .new(team: @team, game: @game )
-      .create_game_events_and_log_entries # *1
-
-      # byebug
-      if inserted_events_array
-        units_groups_hash = create_records_from_shifts(inserted_events_array)
-        create_units_and_instances(units_groups_hash)
-
-        process_special_events()
-      end
-    end
-
-            # option: create the main roster
-            # NHLRosterAPI::Adapter.new(team.team_id, season: team.season).fetch_roster
-    def create_rosters(game, teams_hash) #library method?
-      teams_data =
-      teams_hash
-      .map do |side, side_hash|
-        [ side_hash["team"]["id"],
-          side_hash ] end
-      .sort do |a,b|
-        a.first <=> b.first end
-
-      team_records =
-      Team.where(team_id: teams_data.transpose.first).order(team_id: :ASC)
-
-      teams_data
-      .map.with_index do |array, i|
-        CreateRoster::create_game_roster(
-          array.second, team_records[i], game ) end
-    end
-
-    def create_tallies
-      prepared_tallies =
-      Unit.joins(:rosters)
-      .where(rosters: {team_id: @team.id})
-      .group(:id)
-      .preload(:instances)
-      .preload(:tallies)
-      .map do |unit|
-        if unit.tallies.empty?
-          tally = unit.tallies.build
-          tally.tally_instances
-          Hash[
-            unit_id: unit.id,
-            assists: tally.assists,
-            plus_minus: tally.plus_minus,
-            goals: tally.goals,
-            points: tally.points,
-            '"TOI"': tally.TOI,
-            created_at: Time.now,
-            updated_at: Time.now
-            # season: @teamseason.season
-          ] end # if
-      end.compact #map
-      unless prepared_tallies.empty?
-        SQLOperations.sql_insert_all("tallies", prepared_tallies)
-      end
-    end #create_tallies
-
     def schedule_game_scheduler_jobs(coming_schedule_dates, ts_instance)
+      # 'cron' => '0 0 2 */3 0 0'
       Sidekiq.set_schedule('schedule_live_data',
         { 'every' => ['1h', first_in: '0s'], 'class' => 'ScheduleLiveData', 'queue' => 'schedule_live_data',
           'args' => { coming_schedule_dates: coming_schedule_dates, instance: ts_instance }
