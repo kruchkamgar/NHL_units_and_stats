@@ -24,7 +24,7 @@ class ScheduleLiveData
     next_three_dates
     .each do |date_hash|
       byebug
-      ReadApisNHL::TeamSeason.schedule_live_data_init(date_hash, inst_hash) end
+      ReadNHLApis::TeamSeason.schedule_live_data_init(date_hash, inst_hash) end
     # live_data = fetch(url_and_instance.first)
 
   end
