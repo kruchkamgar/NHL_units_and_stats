@@ -123,25 +123,29 @@ describe CreateUnitsAndInstances, :type => :service do
         (position == "Defenseman" || position == "Forward") end
       .map(&:player_id_num) }
     let(:period_hash) {
-      hash = Hash[
-        1 =>
-        Event
-        .where(event_type: 'shift', period: 1 )
-        .where(player_id_num: select_fwds_and_d).order(start_time: :asc).to_a
-        .sort_by! do |shft|
-          [shft.start_time, shft.end_time] end
-        # 2 => Event.where(event_type: 'shift' ).first(12)
+      hash =
+      Hash[
+        1 => Event
+              .where(event_type: 'shift', period: 1 )
+              .where(player_id_num:
+                select_fwds_and_d).order(start_time: :asc).to_a
+              .sort_by! do |shft|
+                [shft.start_time, shft.end_time] end
+              # 2 => Event.where(event_type: 'shift' ).first(12)
       ] }
+    let(:sample_start_time) {
+      Event.where(period: 1).all.sample[:end_time] }
 
     it 'forms 5-man instances', :overlaps do
+      puts "sample_start_time: #{sample_start_time}"
       expect(
-        CRUI.form_instances_by_events(period_hash) )
+        CRUI.send(:form_instances_by_events, period_hash) )
       .to a_collection_including(
         hash_including(
           :events => a_collection_including(a_kind_of(Event))
         ),
         an_object_satisfying { |event|
-          event[:start_time] == Event.where(period: 1).all.sample[:start_time] }
+          event[:start_time] == sample_start_time }
       )
     end
   end
