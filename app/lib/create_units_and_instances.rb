@@ -32,11 +32,11 @@ module CreateUnitsAndInstances
     .includes(:players)[0]
 
       # sample roster based on player types
-      roster_sample = get_roster_sample (
-        player_types: UNIT_HASH[5]
-        roster: roster_incl_players )
+      roster_sample = get_roster_sample(
+        player_types: UNIT_HASH[5],
+        roster_incl_players: roster_incl_players )
       # find the shifts matching the roster sample
-      shifts = get_shifts(roster_sample)
+      shifts = get_shifts(roster_sample, inserted_events)
       # sort shifts by start time, for each period
         # {[period1 event1, 2...], [p2 event1, 2, ...] ... }
       period_chronology = shifts_into_periods(shifts)
@@ -92,7 +92,7 @@ private
   # roster -< players -< player_profiles
   # game -< player_profiles
   # get the shifts for the roster
-  def get_shifts roster_sample
+  def get_shifts(roster_sample, inserted_events)
 # live updating:
 # use shifts >= timemark, or pass incremental shift events directly (w/ if statement)
 
@@ -138,7 +138,7 @@ private
     .map do |period, events|
       # time_mark = "00:00";
       time_mark = events.first.start_time; queue_head = 0;
-      instances = (captured_instances || [])
+      instances = []
       instances_proc =
       Proc.new do |inst|
         (instances.push inst if inst) || instances end
@@ -379,7 +379,7 @@ private
         updated_at: Time.now ]
     end
     units_changes =
-    SQLOperations.sql_insert_all("units", prepared_units)
+    SQLOperations.sql_insert_all("units", prepared_units).count
 
     if units_changes > 0
       inserted_units =
@@ -431,7 +431,7 @@ private
   end #prepare_instances
 
   def insert_instances(prepared_instances)
-    instances_changes = SQLOperations.sql_insert_all("instances", prepared_instances)
+    instances_changes = SQLOperations.sql_insert_all("instances", prepared_instances).count
 
     queued_instances =
     Instance.order(id: :desc).limit(instances_changes).reverse

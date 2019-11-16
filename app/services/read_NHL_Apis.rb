@@ -84,9 +84,11 @@ include NHLTeamAPI
 
       transpired_schedule_dates[ get_next_date_index(transpired_schedule_dates)..-1]
       .each do |date_hash|
-        roster =
-        create_initial_game_records(date_hash) # sets @game for:
-        create_records_derived_from_events(roster) end
+        roster, game =
+        create_initial_game_records(
+          date_hash, team: @team) # sets @game for:
+        create_records_derived_from_events(
+          roster: roster, team: @team, game: game) end
     end #create_records_from_transpired_schedule
 
     def set_workers_for_coming_schedule
@@ -99,11 +101,10 @@ include NHLTeamAPI
         Time.utc(
           *date_string_to_array(game_date)) end
 
+      instance = self.attributes; instance.delete("schedule_dates");
       # set worker to get schedule dates for the next 3 days, every...3 days
-      schedule_game_scheduler_jobs(coming_schedule_dates, self)  # can this accommodate recently completed and NHL-API-processed games?
-
-        # - call #create_records_per_game, at start of each scheduled game
-        # - then segment the game events creation methods, such that a worker scheduled after #create_records_per_game, may call these methods for each batch of events data
+        # worker then schedules other workers to handle each date
+      schedule_game_scheduler_jobs(coming_schedule_dates, instance)
     end #set_workers_for_coming_schedule
 
     def schedule_game_scheduler_jobs(coming_schedule_dates, ts_instance)

@@ -47,7 +47,8 @@ module NHLGameEventsAPI
           event["typeCode"] == 505 end
         inserted_goal_events =
         create_goal_events(goal_events)
-        couple_api_and_created_events(goal_events, inserted_goal_events)
+        couple_api_and_created_events(
+          goal_events, inserted_goal_events)
         create_goal_log_entries()
       end
 
@@ -76,7 +77,10 @@ module NHLGameEventsAPI
         ]
       end
       # insert events
-      events_changes = SQLOperations.sql_insert_all("events", made_events_array )
+      events_changes =
+      SQLOperations
+      .sql_insert_all("events", made_events_array )
+      .count
       # grab events
       if events_changes > 0
         inserted_events = Event.order(id: :desc).limit(events_changes) #*2
@@ -135,7 +139,7 @@ module NHLGameEventsAPI
 
       events_changes =
       SQLOperations.
-      sql_insert_all("events", made_events_array )
+      sql_insert_all("events", made_events_array ).count
       # just use value of Changes() and ORDER DESC LIMIT ...
 
       if events_changes > 0

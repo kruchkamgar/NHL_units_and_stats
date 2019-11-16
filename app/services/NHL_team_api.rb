@@ -29,7 +29,7 @@ module NHLTeamAPI
         created_at: Time.now, updated_at: Time.now ]
     end
     teams_changes =
-    SQLOperations.sql_insert_all("teams", prepared_teams )
+    SQLOperations.sql_insert_all("teams", prepared_teams ).count
     # grab teams
     if teams_changes > 0
       inserted_teams = Team.order(id: :desc).limit(teams_changes)

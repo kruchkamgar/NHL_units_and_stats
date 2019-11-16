@@ -4,30 +4,30 @@ module CreateRecordsFromAPI
 
   extend CreateUnitsAndInstances
   extend ProcessSpecialEvents
-  def create_initial_game_records(date_hash)
+  def create_initial_game_records(date_hash, team:)
   # create a game for each schedule date
     game_id =
     date_hash["games"].first["gamePk"]
 
-    @game, teams_hash =
+    game, teams_hash =
     NHLGameAPI::Adapter
     .new(game_id: game_id)
     .create_game
 
-    rosters = create_rosters(@game, teams_hash) # possible to include players
+    rosters = create_rosters(game, teams_hash) # possible to include players
 
-    return roster =
+    return roster, game =
     rosters.find do |roster|
-      roster.team.eql?(@team) end
+      roster.team.eql?(team) end, game
   end #create_records_per_game
 
-  def create_records_derived_from_events(roster)
+  def create_records_derived_from_events(roster:, team:, game:)
     inserted_events_array =
     NHLGameEventsAPI::Adapter
-    .new(team: @team, game: @game )
+    .new(team: team, game: game)
     .create_game_events_and_log_entries # *1
 
-    # byebug
+    # byebug “¬˚”.,å…πøˆ¨†¥¨ˆ®´  
     if inserted_events_array
       units_groups_hash =
       create_records_from_shifts(
