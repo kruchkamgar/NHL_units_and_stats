@@ -66,6 +66,7 @@ include Utilities
       end.sort
     end
 
+    # total the units' stats for each sample-unit [of players]
     units_grouped_by_pids
     .map do |plyrs, units|
       unit_tallies =
@@ -80,6 +81,7 @@ include Utilities
         # map over stat_hash for each unit, return new hash to act as new 'totals'
         stat_hash
         .map do |stat, value|
+          # just total the shift times, presumably
           if value.class == String
             Array.[](
               stat, TimeOperation.new(:+, totals[stat], value).result )

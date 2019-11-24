@@ -2,9 +2,8 @@
   # model implication: a special event should belong to two parent instances, after here processing game special events for each team that played in the game.
 
 module ProcessSpecialEvents
-  include Utilities
-  include ComposedQueries
 
+include Utilities
   def process_special_events
 
     get_special_events_data()
@@ -38,10 +37,11 @@ module ProcessSpecialEvents
   end
 # end #create_associations
 
+include ComposedQueries
   def get_special_events_data
 
     @game_instances =
-    instances_by_roster_and_game(
+    instances_by_roster_and_game( # via ComposedQueries
       @game.id,
       @roster.players.map(&:player_id_num) )
     .eager_load(:events)
