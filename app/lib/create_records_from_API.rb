@@ -16,9 +16,11 @@ module CreateRecordsFromAPI
 
     rosters = create_rosters(game, teams_hash) # possible to include players
 
-    return roster, game =
+    team_roster =
     rosters.find do |roster|
-      roster.team.eql?(team) end, game
+      roster.team.eql?(team) end
+
+    return [team_roster, game, (rosters - [team_roster]) ]
   end #create_records_per_game
 
   def create_records_derived_from_events(roster:, team:, game:)
@@ -81,14 +83,14 @@ private
     .sort do |a,b|
       a.first <=> b.first end
 
-    team_records =
+    team_objects =
     Team.where(team_id: teams_data.transpose.first).order(team_id: :ASC)
 
     rosters =
     teams_data
-    .map.with_index do |array, i|
+    .map.with_index do |team_hashes, i|
       CreateRoster::create_game_roster(
-        array.second, team_records[i], game ) end
+        team_hashes.second, team_objects[i], game ) end
   end
 
 end

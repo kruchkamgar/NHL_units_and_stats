@@ -48,11 +48,10 @@ include NHLTeamAPI
       @season, @team = season, team
       @schedule_dates = set_schedule_dates()
 
-      @start_time = nil; @end_time = nil; # store these in redis in case of server fail?
+      @start_time = nil
     end
 
     def start_time; @start_time end
-    def end_time; @end_time end
     def game; @game end
 
     def set_schedule_dates
@@ -84,7 +83,7 @@ include NHLTeamAPI
 
       transpired_schedule_dates[ get_next_date_index(transpired_schedule_dates)..-1]
       .each do |date_hash|
-        roster, game =
+        roster, game = 
         create_initial_game_records(
           date_hash, team: @team) # sets @game for:
         create_records_derived_from_events(
@@ -125,10 +124,10 @@ include NHLTeamAPI
             })
       end
 
-      def schedule_live_data_job(game_start_time, ts_instance)
+      def schedule_live_data_job(start_time, ts_instance)
         Sidekiq.set_schedule('live_data',
-          { 'every' => ['2m'], 'class' => 'LiveData',
-            'args' => [ game_start_time, ts_instance ]
+          { 'every' => ['10s'], 'class' => 'LiveData',
+            'args' => [ start_time, ts_instance ]
             })
       end
     end
