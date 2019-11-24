@@ -1,3 +1,5 @@
+
+# single source of truth? could instead use database to perform these calculations [on instances] and cache the result
 class Tally < ApplicationRecord
   belongs_to :unit
 # implement starting value of 0 for assists and goals and points
@@ -23,6 +25,8 @@ class Tally < ApplicationRecord
     self.points =
     self.goals + self.assists
   end
+
+private
 
   def map_reduce_and_total(attribute, operation = :+)
     total =
