@@ -20,7 +20,7 @@ RSpec.configure do |config|
 
 include DestroyDb
   config.before(:suite) do
-    destroy_all_db
+    # destroy_all_db
     API = Event::API
     UNIT_HASH = CreateUnitsAndInstances::UNIT_HASH
   end
@@ -53,6 +53,17 @@ include DestroyDb
   # inherited by the metadata hash of host groups and examples, rather than
   # triggering implicit auto-inclusion in groups with matching metadata.
   config.shared_context_metadata_behavior = :apply_to_host_groups
+
+  # RSpec::Sidekiq.configure do |config|
+  #   # Clears all job queues before each example
+  #   config.clear_all_enqueued_jobs = true # default => true
+  #
+  #   # Whether to use terminal colours when outputting messages
+  #   config.enable_terminal_colours = true # default => true
+  #
+  #   # Warn when jobs are not enqueued to Redis but to a job array
+  #   config.warn_when_jobs_not_processed_by_sidekiq = true # default => true
+  # end
 
 # The settings below are suggested to provide a good initial experience
 # with RSpec, but feel free to customize to your heart's content.
