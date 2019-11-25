@@ -17,7 +17,7 @@ describe 'live_data' do
     it "caches and fetches a diffPatch" do
       live_data = LiveData.new
       allow(live_data).to receive(:fetch_diff_patch).with(
-        a_kind_of(String), a_kind_of(String) )
+        a_kind_of(Integer), a_kind_of(String) )
       .and_return(
         method("time_stamp_#{@time_stamp}").call )
 

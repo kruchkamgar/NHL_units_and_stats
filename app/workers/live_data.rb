@@ -8,11 +8,12 @@ class LiveData
   def perform(instance)
 
     # check for game state -- finished?
-    inst = LiveDataState.new(instance).cache_element
+    inst = LiveDataState.new(instance)
+    inst.cache_element
     # inst["start_time"] = diff_patch["timeStamp"] # API offers current timeStamp
-    byebug
+
     diff_patch = fetch_diff_patch(
-      inst.game_id, inst.start_time )
+      inst[:game_id], inst[:start_time] )
       # inst["game"]["game_id"], inst["start_time"] )
 
     # diff_patch: while loop to find the next 'working' diffPatch JSON timeStamp
@@ -20,12 +21,12 @@ class LiveData
     while diff_patch.empty? && count_seconds <= 7
 
       Thread.new do sleep 1; exit(0) end # or just call a new instance of this job?
-      inst.start_time =
-      Utilities::TimeOperation.new(:+, inst.start_time, seconds: 1)
+      inst[:start_time] =
+      Utilities::TimeOperation.new(:+, inst[:start_time], seconds: 1)
 
       # begin rescue end?
       diff_patch = fetch_diff_patch(
-        inst.game_id, inst.start_time )
+        inst[:game_id], inst[:start_time] )
 
       count_seconds += 1
     end # while
