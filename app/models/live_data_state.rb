@@ -1,16 +1,17 @@
 
-class LiveDataState < ActiveRecord::Base
+class LiveDataState
+  attr_accessor :game_id, :time_stamp, :plays
 
   def initialize(args)
-    super
-    @game_id, @start_time = args[:game_id], args[:start_time]
+    @game_id, @time_stamp, @plays, @onIce = args[:game_id], args[:time_stamp], args[:plays]
   end
 
   def cache_element()
-    byebug
-    Rails.cache.fetch("#{@game_id}/#{@start_time}", expires_in: 12.hours) do
+
+    Rails.cache.fetch("#{@game_id}/#{@time_stamp}", expires_in: 12.hours) do
       # ex: do an API request [whose said request may fail to receive a response, at any given time]
-      self.attributes
+      byebug
+      self.as_json
     end
   end
 
