@@ -14,7 +14,8 @@ describe 'live_data' do
     Hash[
       time_stamp: "00:01",
       game_id: "123567",
-      plays: Array.new ] end
+      plays: Array.new,
+      onIce: Array.new ] end
 
   describe '#perform' do
 

@@ -36,33 +36,36 @@ class LiveData
     .each do |diff_hash|
       inst.plays
       .push(
-        # select the data whose "path" keys match regex for '/allPlays/', to capture plays
+        # use :path keys to capture plays
         diff_hash[:diff]
         .select do |patch|
           /allPlays/.match(patch[:path]) end
       )
+
+      # ... and to capture on ice players (shifts)
+      inst.onIce
+      .push(
+        diff_hash[:diff]
+        .select do |patch|
+          /onIce/.match(patch[:path]) ||
+          /onIcePlus/.match(patch[:path])
+        end
+      )
     end
 
-      # diff.select do |datum_hash|
-        # datum_hash["op"] == "add" end
-    # push the events (plays)
-
-    inst.onIce
-    .push(
-      diff_hash[:diff]
-      .select do |patch|
-        /allPlays/.match(patch[:path]) end
-      Hash[
-        "event_type": diff_patch[:result][:eventTypeId],
-        # "coordinates": ...,
-        player_id_num: diff_patch[:players].first[:player][:id], ] # player_id_num
-       )
+    byebug
 
     # :players.first[:playerType],
     # :players.first[:player][:fullName],
     # :players.first[:player][:id], # player_id_num
     # :about[:periodTime=>"16:16"],
     # :team
+
+    Hash[
+      "event_type": diff_patch[:result][:eventTypeId],
+      # "coordinates": ...,
+      player_id_num: diff_patch[:players].first[:player][:id], ] # player_id_num
+
 
   # capture shifts:
     # if :op => "remove" for /onIce/<integer>
