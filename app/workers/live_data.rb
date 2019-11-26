@@ -10,46 +10,99 @@ class LiveData
     # check for game state -- finished?
     inst = LiveDataState.new(instance)
     inst.cache_element
-    # inst["start_time"] = diff_patch["timeStamp"] # API offers current timeStamp
 
     diff_patch = fetch_diff_patch(
-      inst[:game_id], inst[:start_time] )
-      # inst["game"]["game_id"], inst["start_time"] )
+      inst.game_id, inst.time_stamp )
+      # inst["game"]["game_id"], inst["time_stamp"] )
 
     # diff_patch: while loop to find the next 'working' diffPatch JSON timeStamp
     count_seconds = 0
     while diff_patch.empty? && count_seconds <= 7
 
       Thread.new do sleep 1; exit(0) end # or just call a new instance of this job?
-      inst[:start_time] =
-      Utilities::TimeOperation.new(:+, inst[:start_time], seconds: 1)
+      inst.time_stamp =
+      Utilities::TimeOperation.new(:+, inst.time_stamp, seconds: 1)
 
       # begin rescue end?
       diff_patch = fetch_diff_patch(
-        inst[:game_id], inst[:start_time] )
+        inst.game_id, inst.time_stamp )
 
       count_seconds += 1
     end # while
 
-    # calculate the time difference
+  # capture plays:
+    # :result[:eventTypeId]
+    diff_patch
+    .each do |diff_hash|
+      inst.plays
+      .push(
+        # select the data whose "path" keys match regex for '/allPlays/', to capture plays
+        diff_hash[:diff]
+        .select do |patch|
+          /allPlays/.match(patch[:path]) end
+      )
+    end
+
+      # diff.select do |datum_hash|
+        # datum_hash["op"] == "add" end
+    # push the events (plays)
+
+    inst.onIce
+    .push(
+      diff_hash[:diff]
+      .select do |patch|
+        /allPlays/.match(patch[:path]) end
+      Hash[
+        "event_type": diff_patch[:result][:eventTypeId],
+        # "coordinates": ...,
+        player_id_num: diff_patch[:players].first[:player][:id], ] # player_id_num
+       )
+
+    # :players.first[:playerType],
+    # :players.first[:player][:fullName],
+    # :players.first[:player][:id], # player_id_num
+    # :about[:periodTime=>"16:16"],
+    # :team
+
+  # capture shifts:
+    # if :op => "remove" for /onIce/<integer>
+      # shift change happened
+    # else
+      # shift continues: update happened
+    # end
+
     byebug
+    # calculate the time difference
     # diff_patch["timeStamp"]
+
+    # {:op=>"replace",
+      # :path=>"/liveData/boxscore/teams/away/onIcePlus/4/shiftDuration",
+      # :value=>11},
 
     # shift time of replaced player:
     # subtract the shift duration of the replacement player from the time difference
 
 
-    # create new event data [after inst["start_time"]]
+    # create new event data [after inst["time_stamp"]]
+
 
     # send event data through the process_special_events' case/when statements to tally
       # - load rosters for the game from cache
       # - once per roster in game
 
+    # {:op=>"replace", :path=>"/metaData/timeStamp", :value=>"20191117_052923"}
+    inst.time_stamp = diff_patch.first[:diff].first[:value] # last array always holds timeStamp in first hash?
+
+    # if a 'replace' exists for an event prior to the time_stamp, must change / update db
+
     inst.cache_element
 
-    # LiveData.perform_in(5.seconds, inst["start_time"])  # (nix) problems with idempotence
+    # LiveData.perform_in(5.seconds, inst["time_stamp"])  # (nix) problems with idempotence
   end # perform
 
+# data model –
+  # use an event's time_stamp for ID, until evident the API may correct / change these.
+  # replacement of coordinates occurs - ex:
 private
 
   def fetch_diff_patch(game_id, time_stamp)
