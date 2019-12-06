@@ -20,7 +20,7 @@ module CreateUnitsAndInstances
     # 6 => ["Forward", "Defenseman", "Goalie"], #6-skater
   }
 
-  def create_records_from_shifts(inserted_events: , roster:) #(team, roster, game, units)
+  def form_units_from_shifts(inserted_events: , roster:) #(team, roster, game, units)
     # @team, @units_includes_events = team, units
     puts "\n\n#create_records_from_shifts\n\n"
 
@@ -48,7 +48,7 @@ module CreateUnitsAndInstances
   end #create_records_from_shifts
 
 
-  def create_units_and_instances(units_groups_hash, roster: )
+  def create_units_instances_etc(units_groups_hash, roster: )
     queued_units =
     find_or_create_units(units_groups_hash.keys)
 

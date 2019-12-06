@@ -32,11 +32,11 @@ module CreateRecordsFromAPI
     # byebug “¬˚”.,å…πøˆ¨†¥¨ˆ®´  
     if inserted_events_array
       units_groups_hash =
-      create_records_from_shifts(
+      form_units_from_shifts(
         inserted_events: inserted_events_array,
         roster: roster )
 
-      create_units_and_instances(units_groups_hash, roster: roster)
+      create_units_instances_etc(units_groups_hash, roster: roster)
 
       process_special_events()
     end
