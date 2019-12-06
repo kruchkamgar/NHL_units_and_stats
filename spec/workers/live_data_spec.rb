@@ -8,14 +8,15 @@ describe 'live_data' do
 
   before do
     @time_stamp = "20191117_052854"
+
+    LiveData.time_stamp = @time_stamp
     Rails.cache.clear
   end
   let(:instance) do
     Hash[
-      time_stamp: "00:01",
       game_id: "123567",
       plays: Array.new,
-      onIce: Array.new ] end
+      on_ice: Array.new ] end
 
   describe '#perform' do
 
