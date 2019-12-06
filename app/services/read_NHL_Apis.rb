@@ -83,7 +83,7 @@ include NHLTeamAPI
 
       transpired_schedule_dates[ get_next_date_index(transpired_schedule_dates)..-1]
       .each do |date_hash|
-        roster, game = 
+        roster, game =
         create_initial_game_records(
           date_hash, team: @team) # sets @game for:
         create_records_derived_from_events(
@@ -144,8 +144,8 @@ include NHLTeamAPI
     schedule_hash["dates"]
     .reject do |date|
       # "1" means preseason
-      date["games"].first["gamePk"].to_s.
-      slice(5) == "1" end
+      date["games"].first["gamePk"].to_s
+      .slice(5) == "1" end
   end
 
 include ComposedQueries
