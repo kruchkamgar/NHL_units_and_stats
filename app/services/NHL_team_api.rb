@@ -11,6 +11,8 @@ module NHLTeamAPI
   BASE_URL = 'https://statsapi.web.nhl.com/api/v1/teams/'
   SCHEDULE_URL = 'https://statsapi.web.nhl.com/api/v1/schedule'
 
+# use extend if no reason to use instance/state
+  # class << self; end;
   def create_all_teams_by_season
     create_teams
   end
