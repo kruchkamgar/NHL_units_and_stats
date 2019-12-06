@@ -1,9 +1,9 @@
 
 class LiveDataState
-  attr_accessor :game_id, :time_stamp, :plays, :onIce
+  attr_accessor :game_id, :time_stamp, :plays, :on_ice
 
   def initialize(args)
-    @game_id, @time_stamp, @plays, @onIce = args[:game_id], args[:time_stamp], args[:plays], args[:onIce]
+    @game_id, @time_stamp, @plays, @on_ice = args[:game_id], args[:time_stamp], args[:plays], args[:on_ice]
   end
 
   def cache_element()
