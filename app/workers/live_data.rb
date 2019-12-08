@@ -46,7 +46,7 @@ class LiveData
       )
       # ... and to capture on ice players (shifts)
 
-      inst.on_ice
+      inst.on_ice_diff
       .push(
         diff_hash[:diff]
         .select do |patch|
@@ -85,21 +85,38 @@ class LiveData
 
     byebug
 
-    on_ice_plus =
+    # hash: group home and away diffs respectively (onIce(Plus))
+    diffs_by_side =
     diff_hash[:diff]
-    .select do |patch|
-      /onIcePlus/.match(patch[:path]) end
-    on_ice =
-    diff_hash[:diff]
-    .select do |patch|
-      /onIce/.match(patch[:path]) end
+    .group_by do |patch|
+      /(?<=teams\/)[a-zA-Z]+[^\/](?=\/onIce)/.match(patch[:path]) end
 
-    on_ice_plus
+    # group onIce and onIcePlus respectively
+    diffs_grouped_side_type =
+    diffs_grouped_side
+    .map do |key, value|
+      Hash[ key:
+        value
+        .group_by do |hash|
+          /(?<=teams\/(away|home)\/)(onIce|onIcePlus)(?=[\/])/.match(hash.values[0])[2] end ]
+    end.to_h
+
+    # on_ice_plus_diff =
+    # diff_hash[:diff]
+    # .select do |patch|
+    #   /onIcePlus/.match(patch[:path]) end
+    # on_ice_diff =
+    # diff_hash[:diff]
+    # .select do |patch|
+    #   /onIce/.match(patch[:path]) end
+
+# do for each team/side
+    on_ice_plus_diff
     .each do |diff|
   # capture shifts:
     replace = diff[:op] == "replace"
       if replace ||
-        on_ice
+        on_ice_diff
         .find do |_diff|
           /\/\d/.match(_diff[:path]) ==
           /\/\d/.match(diff[:path]) &&
@@ -108,15 +125,21 @@ class LiveData
 
         if replace
           # check what type of diff update: stamina, shiftDuration, playerId, ...
+          # onIcePlus_id = grab the id number from :path
 
-          # case
-          # when playerId
-            # prior_player = find prior player
-          # when shiftDuration
-            # if prior_player
+          case /(?<=onIcePlus\/\d\/)[a-zA-Z]+[^\"]/.match(diff[:path]).first
+          when 'playerId'
+            # prior_player_event = find prior player event via onIcePlus_id
+              # remove prior_player_event from on_ice_plus
+              # inst.on_ice_plus.delete(prior_player_event)
+            # add new player_event to inst.on_ice_plus
+
+          when 'shiftDuration'
+            # if prior_player_event || find prior player event in diff_patch
               # then add time_stamp - shiftDuration to prior_player shift duration
             # else
           /(?<=shiftDuration.{3})[^}0-9]+(\d{2,3})/.match(on_ice[:path])
+          end
 
           # concluding 'shift segment's duration, for replaced player:
             # subtract the shift duration of the replacement player from the time difference
