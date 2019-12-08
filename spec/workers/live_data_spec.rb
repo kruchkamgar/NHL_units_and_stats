@@ -15,8 +15,9 @@ describe 'live_data' do
   let(:instance) do
     Hash[
       game_id: "123567",
+      on_ice_plus: Array.new, # add prior state here
       plays: Array.new,
-      on_ice: Array.new ] end
+      on_ice_diff: Array.new ] end
 
   describe '#perform' do
 
