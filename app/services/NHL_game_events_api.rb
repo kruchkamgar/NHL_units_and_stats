@@ -11,7 +11,8 @@ module NHLGameEventsAPI
 
     def initialize (team:, game:)
       @team = team
-      @game = Game.where(id: game).includes(:player_profiles)[0]
+      @game = Game.where(id: game).includes(:player_profiles)[0] # performance: include rosters: [:players] also
+
       # @roster = Roster.where(id: roster).includes(:players)[0]
     end
 
