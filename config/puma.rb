@@ -30,5 +30,13 @@ environment ENV.fetch("RAILS_ENV") { "development" }
 #
 # preload_app!
 
+  # start redis before each worker and clean up prior connection
+  # before_fork do
+  #   if defined?(ReadCache.redis) then ReadCache.redis.quit end
+  # end
+  # on_worker_boot do
+  #   if defined?(ReadCache.redis) then ReadCache.redis.client.reconnect end
+  # end
+
 # Allow puma to be restarted by `rails restart` command.
 plugin :tmp_restart
