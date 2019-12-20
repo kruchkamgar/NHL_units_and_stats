@@ -1,4 +1,5 @@
 
+# could just use file(s) in tmp folder, instead
 class LiveDataState
   attr_accessor :game_id, :time_stamp, :plays, :on_ice
 
