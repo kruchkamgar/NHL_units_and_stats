@@ -4,12 +4,21 @@ require 'sidekiq-scheduler'
 class LiveData
   include Sidekiq::Worker
 
+  mattr :time_stamps
   # *1
+  def time_stamps; @@time_stamps ||= {} end
+
   def perform(instance)
     # check for game state -- finished?
       # remove game_id key from @@time_stamps, if so
-    inst = instance.clone
     byebug
+
+    inst =
+    Rails.cache.read({
+      game_id: instance[:game_id],
+      time_stamp: @@time_stamps[:game_id] },
+      # content...
+    )
 
     diff_patch = fetch_diff_patch(
       inst[:game_id], inst[:time_stamps][-1] )
@@ -17,13 +26,14 @@ class LiveData
 
     # diff_patch: while loop to find the next 'working' diffPatch JSON timeStamp
     count_seconds = 0
+    latest_time_stamp = inst[:time_stamps][-1]
     while diff_patch.empty? && count_seconds <= 7
 
       Thread.new do sleep 1; exit(0) end # or just call a new instance of this job?
 
       # increment the last couple digits by 1
-      inst[:time_stamps][-1] =
-      Utilities::TimeOperation.new(:+, inst[:time_stamps][-1], seconds: 1)
+      latest_time_stamp =
+      Utilities::TimeOperation.new(:+, latest_time_stamp, seconds: 1)
 
       # begin rescue end?
       diff_patch = fetch_diff_patch(
@@ -202,9 +212,11 @@ class LiveData
       # - once per roster in game
 
     # {:op=>"replace", :path=>"/metaData/timeStamp", :value=>"20191117_052923"}
-    inst[:time_stamp] = diff_patch.first[:diff].first[:value] # last array always holds timeStamp in first hash?
+    inst[:time_stamps] << diff_patch.first[:diff].first[:value] # last array always holds timeStamp in first hash?
 
-    # if a 'replace' exists for an event prior to the time_stamp, must change / update db
+    #? if a 'replace' exists for an event prior to the time_stamp, must change / update db
+
+    @@time_stamps[inst[:game_id]] = inst[:time_stamp][-1]
 
     Rails.cache.write({
       game_id: instance[:game_id],
