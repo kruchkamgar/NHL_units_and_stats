@@ -9,8 +9,7 @@ describe 'live_data' do
   before do
     @time_stamp = "20191117_052854"
 
-    LiveData.time_stamp = @time_stamp
-    Rails.cache.clear
+    # Rails.cache.clear
   end
   let(:instance) do
     Hash[
