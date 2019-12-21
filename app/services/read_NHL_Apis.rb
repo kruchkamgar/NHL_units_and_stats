@@ -47,11 +47,8 @@ include NHLTeamAPI
     def initialize (season:, team:)
       @season, @team = season, team
       @schedule_dates = set_schedule_dates()
-
-      @start_time = nil
     end
 
-    def start_time; @start_time end
     def game; @game end
 
     def set_schedule_dates

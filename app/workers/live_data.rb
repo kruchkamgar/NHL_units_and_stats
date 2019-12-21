@@ -4,23 +4,15 @@ require 'sidekiq-scheduler'
 class LiveData
   include Sidekiq::Worker
 
-  mattr_writer :time_stamps
-
-  def time_stamps; @@time_stamps ||= {} end
-  # use file for more resilience--
-  # time_stamp_file = File.new(Rails.root / 'tmp' / "#{@game_id}" , "w" )
-
   # *1
   def perform(instance)
     # check for game state -- finished?
       # remove game_id key from @@time_stamps, if so
-    inst = LiveDataState.new(
-      instance.merge(time_stamp:
-        @@time_stamps[@game_id][-1]) ) # or find the latest cached time_stamp
-    inst.cache_element
+    inst = instance.clone
+    byebug
 
     diff_patch = fetch_diff_patch(
-      inst.game_id, inst.time_stamp )
+      inst[:game_id], inst[:time_stamps][-1] )
       # inst["game"]["game_id"], inst["time_stamp"] )
 
     # diff_patch: while loop to find the next 'working' diffPatch JSON timeStamp
@@ -28,21 +20,24 @@ class LiveData
     while diff_patch.empty? && count_seconds <= 7
 
       Thread.new do sleep 1; exit(0) end # or just call a new instance of this job?
-      inst.time_stamp =
-      Utilities::TimeOperation.new(:+, inst.time_stamp, seconds: 1)
+
+      # increment the last couple digits by 1
+      inst[:time_stamps][-1] =
+      Utilities::TimeOperation.new(:+, inst[:time_stamps][-1], seconds: 1)
 
       # begin rescue end?
       diff_patch = fetch_diff_patch(
-        inst.game_id, inst.time_stamp )
+        inst[:game_id], inst[:time_stamps][-1] )
 
       count_seconds += 1
     end # while
 
+    inst[:plays] = []
   # capture plays:
     # :result[:eventTypeId]
     diff_patch
     .each do |diff_hash|
-      inst.plays
+      inst[:plays]
       .push(
         # use :path keys to capture plays
         diff_hash[:diff]
@@ -51,20 +46,14 @@ class LiveData
       )
       # ... and to capture on ice players (shifts)
 
-      inst.on_ice_diff
+      inst[:on_ice_diff] = []
+      inst[:on_ice_diff]
       .push(
         diff_hash[:diff]
         .select do |patch|
           /onIce/.match(patch[:path])
         end
       )
-      # inst.on_ice[:on_icePlus]
-      # .push(
-      #   diff_hash[:diff]
-      #   .select do |patch|
-      #     /on_ice/.match(patch[:path]
-      #   end
-      # )
     end
 
     byebug
@@ -75,10 +64,10 @@ class LiveData
     # :about[:periodTime=>"16:16"],
     # :team
     formed_events =
-    inst.plays
+    inst[:plays]
     .map do |play|
       Hash[
-        game_id: inst.game_id,
+        game_id: inst[:game_id],
         event_type: play.first[:value][:result][:eventTypeId],
         start_time: play.first[:value][:about][:periodTime],
         period: play.first[:value][:about][:period],
@@ -92,7 +81,7 @@ class LiveData
 
     # hash: group home and away diffs respectively (onIce(Plus))
     diffs_grouped_side =
-    diff_hash[:diff]
+    inst[:on_ice_diff]
     .group_by do |patch|
       /(?<=teams\/)[a-zA-Z]+[^\/](?=\/onIce)/
       .match(patch[:path]) end
@@ -147,30 +136,36 @@ class LiveData
                 # prior_player_event = find prior player event via onIcePlus_id
                   # remove prior_player_event from on_ice_plus
                 prior_player_event =
-                inst.on_ice_plus[side]
+                inst[:on_ice_plus][side]
                 .delete_at(onIcePlus_id)
 
-                # add new player_event to inst.on_ice_plus
+                # add new player_event to inst[:on_ice_plus]
+                inst[:on_ice_plus][onIcePlus_id] =
+                Hash[
+                  player_id_num:
+                  /(?<=playerId.{3})[^}0-9]+(\d{7})/.match(on_ice[:path])[0] ]
 
               when 'shiftDuration'
-                # if prior_player_event || find prior player event in diff_patch
+                # if prior_player_event || find prior player event (another match) in diff_patch
                   # then add time_stamp - shiftDuration to prior_player shift duration
                 # else
+                elapsed_duration =
                 /(?<=shiftDuration.{3})[^}0-9]+(\d{2,3})/
-                .match(on_ice[:path])
+                .match(on_ice[:path])[0]
 
                 if prior_player_event
-                  # time_stamp - @@time_stamps[@game_id] -
+                  # elapsed_duration = inst[:time_stamps][-1] - elapsed_duration - inst[:time_stamps][-2]
+
+                  prior_player_event[:duration] = elapsed_duration
                   # create prior event
-                else # do nothing
+                else
+                  inst[:on_ice_plus][onIcePlus_id][:duration] = elapsed_duration
+                  inst[:on_ice_plus][onIcePlus_id][:start_time] = inst[:time_stamps][-1] - elapsed_duration
                 end
 
                 # for latest info:
                  # update prior_player_event
               end
-
-              # concluding 'shift segment's duration, for replaced player:
-                # subtract the shift duration of the replacement player from the time difference
 
               byebug
             else
@@ -194,7 +189,6 @@ class LiveData
 
     byebug
     # calculate the time difference
-    @@time_stamps[@game_id] << diff_patch["timeStamp"]
 
     # {:op=>"replace",
       # :path=>"/liveData/boxscore/teams/away/onIcePlus/4/shiftDuration",
@@ -208,11 +202,15 @@ class LiveData
       # - once per roster in game
 
     # {:op=>"replace", :path=>"/metaData/timeStamp", :value=>"20191117_052923"}
-    inst.time_stamp = diff_patch.first[:diff].first[:value] # last array always holds timeStamp in first hash?
+    inst[:time_stamp] = diff_patch.first[:diff].first[:value] # last array always holds timeStamp in first hash?
 
     # if a 'replace' exists for an event prior to the time_stamp, must change / update db
 
-    inst.cache_element
+    Rails.cache.write({
+      game_id: instance[:game_id],
+      time_stamp: instance[:time_stamp] },
+      # content...
+    )
 
     # LiveData.perform_in(5.seconds, inst["time_stamp"])  # (nix) problems with idempotence
   end # perform

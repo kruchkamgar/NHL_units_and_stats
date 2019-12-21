@@ -10,11 +10,23 @@ class LiveDataInit
       date_hash, ts_instance["team"] ) # sets @game, including its game_id
     # add the roster ids to ts_instance
 
-    # set initial time_stamp
-    LiveData.time_stamps[game_id.to_s] = [*ts_instance[:time_stamp]]
-    # check redis keys [by game_id] to see if game already scheduled for another team
-    ReadNHLApis::schedule_live_data_job( ts_instance ) unless scheduled
+    # check cache keys [by game_id and initial time_stamp] to see if game already scheduled for another team
+    scheduled = Rails.cache.read(
+      game_id: instance[:game_id],
+      time_stamp: nil,
+      home: nil,
+      away: nil
+    ) #time_stamp: yyyymmdd_hhmmss
+
+    unless scheduled
+      ts_instance.merge(time_stamps: [])
+      ReadNHLApis::schedule_live_data_job( ts_instance )
+    end
 
   end
 
 end
+
+
+# set initial time_stamp
+# LiveData.time_stamps[game_id.to_s] = [*ts_instance[:time_stamp]]
