@@ -3,25 +3,25 @@ require 'sidekiq-scheduler'
 
 class LiveData
   include Sidekiq::Worker
+  include Utilities
 
-  mattr :time_stamps
+  mattr_writer :time_stamps
   # *1
-  def time_stamps; @@time_stamps ||= {} end
+  class << self
+    def time_stamps; @@time_stamps ||= {} end
+  end
 
-  def perform(instance)
-    # check for game state -- finished?
-      # remove game_id key from @@time_stamps, if so
-    byebug
+  def perform(args)
 
     inst =
-    Rails.cache.read({
-      game_id: instance[:game_id],
-      time_stamp: @@time_stamps[:game_id] },
-      # content...
+    Rails.cache.read(
+      game_id: args[:game_id],
+      time_stamp: @@time_stamps[args[:game_id]]
     )
+    # byebug
 
     diff_patch = fetch_diff_patch(
-      inst[:game_id], inst[:time_stamps][-1] )
+      args[:game_id], inst[:time_stamps][-1] )
       # inst["game"]["game_id"], inst["time_stamp"] )
 
     # diff_patch: while loop to find the next 'working' diffPatch JSON timeStamp
@@ -42,6 +42,13 @@ class LiveData
       count_seconds += 1
     end # while
 
+    # check for game state -- finished?
+      # remove game_id key from @@time_stamps, if so
+
+    # push new time stamp
+    inst[:time_stamps] << diff_patch.first[:diff].first[:value] # does last array always holds timeStamp in first hash?
+    @@time_stamps[args[:game_id]] = inst[:time_stamps][-1]
+
     inst[:plays] = []
   # capture plays:
     # :result[:eventTypeId]
@@ -52,8 +59,11 @@ class LiveData
         # use :path keys to capture plays
         diff_hash[:diff]
         .select do |patch|
-          /allPlays/.match(patch[:path]) end
+          /allPlays/
+          .match(patch[:path])
+        end
       )
+      inst[:plays] = inst[:plays].flatten(1)
       # ... and to capture on ice players (shifts)
 
       inst[:on_ice_diff] = []
@@ -64,9 +74,8 @@ class LiveData
           /onIce/.match(patch[:path])
         end
       )
+      inst[:on_ice_diff] = inst[:on_ice_diff].flatten(1)
     end
-
-    byebug
 
     # :players.first[:playerType],
     # :players.first[:player][:fullName],
@@ -78,24 +87,26 @@ class LiveData
     .map do |play|
       Hash[
         game_id: inst[:game_id],
-        event_type: play.first[:value][:result][:eventTypeId],
-        start_time: play.first[:value][:about][:periodTime],
-        period: play.first[:value][:about][:period],
+        event_type:
+          play[:value][:result][:eventTypeId],
+        start_time: play[:value][:about][:periodTime],
+        period: play[:value][:about][:period],
         # "coordinates": ...,
-        player_id_num: play.first[:value][:players].first[:player][:id], ] # player_id_num
+        player_id_num:
+          play[:value][:players].first[:player][:id], ] # player_id_num
     end
 
     # make log entries
 
-    byebug
+    # byebug
 
     # hash: group home and away diffs respectively (onIce(Plus))
     diffs_grouped_side =
     inst[:on_ice_diff]
     .group_by do |patch|
       /(?<=teams\/)[a-zA-Z]+[^\/](?=\/onIce)/
-      .match(patch[:path]) end
-
+      .match(patch[:path])[0]
+    end
     # group onIce and onIcePlus respectively, within each of home and away diffs
     diffs_grouped_side_type =
     diffs_grouped_side
@@ -104,8 +115,8 @@ class LiveData
         value
         .group_by do |hash|
           /(?<=teams\/(?:away|home)\/)(onIce|onIcePlus)(?=[\/])/
-          .match(hash.values[0])[0] end ]
-    end.to_h
+          .match(hash[:path])[0] end ]
+    end
 
     # on_ice_plus_diff =
     # diff_hash[:diff]
@@ -115,90 +126,111 @@ class LiveData
     # diff_hash[:diff]
     # .select do |patch|
     #   /onIce/.match(patch[:path]) end
+  # byebug
 
   # capture for each team/side
     diffs_grouped_side_type
-    .each do |side, types|
-      types
-      .each do |type, diffs|
-        diffs
+    .each do |side_hash|
+      side_hash
+      .each do |side, diff_hash|
+        _side = side.to_sym
+        prior_player_events = [] # in case the shifts' diffs order out of sequence
+
+        diff_hash['onIcePlus']
         .each do |diff|
-      # capture shifts:
-        replace = diff[:op] == "replace"
-          if replace ||
-            on_ice_diff
-            .find do |_diff|
-              /\/\d/.match(_diff[:path]) ==
-              /\/\d/.match(diff[:path]) &&
-              _diff[:op] == "remove"
-            end
+          puts "\n#{diff}\n"
+        # .each do |type, diffs|
+          # diffs
+          # capture shifts:
+          replace = diff[:op] == "replace"
+            if replace ||
+              diffs_grouped_side[side]
+              .find do |_diff|
+                _diff[:op] == "remove" &&
+                /\/\d/.match(_diff[:path]) ==
+                /\/\d/.match(diff[:path])
+              end # look for removals in onIce
 
-            if replace
-              # check what type of diff update: stamina, shiftDuration, playerId, ...
-              onIcePlus_id =
-              /\/\d/
-              .match(shift[:path])[0]
+              if replace
+                onIcePlus_id =
+                /(?<=\/)\d/
+                .match(diff[:path])[0].to_i
 
-              case /(?<=onIcePlus\/\d\/)[a-zA-Z]+[^\"]/
-                .match(diff[:path]).first
-              # API diff will update either shiftDuration alone, or update it for an updated playerId
-              when 'playerId'
-                # prior_player_event = find prior player event via onIcePlus_id
+                # mutate game-state (inst[:on_ice_plus])——
+                case /(?<=onIcePlus\/\d\/)[a-zA-Z]+[^\"]/
+                  .match(diff[:path])[0]
+                # API diff will update either shiftDuration alone, or update it for an updated playerId
+                when 'playerId'
+                  puts "\n'——player Id——'\n\n"
+
                   # remove prior_player_event from on_ice_plus
-                prior_player_event =
-                inst[:on_ice_plus][side]
-                .delete_at(onIcePlus_id)
+                  prior_player_events[onIcePlus_id] =
+                  inst[:on_ice_plus][_side]
+                  .delete_at(onIcePlus_id)
 
-                # add new player_event to inst[:on_ice_plus]
-                inst[:on_ice_plus][onIcePlus_id] =
-                Hash[
-                  player_id_num:
-                  /(?<=playerId.{3})[^}0-9]+(\d{7})/.match(on_ice[:path])[0] ]
+                  # add new player_event to inst[:on_ice_plus]
+                  inst[:on_ice_plus][_side]
+                  .insert( onIcePlus_id,
+                    Hash[ player_id_num: diff[:value], duration: 0 ] )
 
-              when 'shiftDuration'
-                # if prior_player_event || find prior player event (another match) in diff_patch
-                  # then add time_stamp - shiftDuration to prior_player shift duration
-                # else
-                elapsed_duration =
-                /(?<=shiftDuration.{3})[^}0-9]+(\d{2,3})/
-                .match(on_ice[:path])[0]
+                  byebug
+                when 'shiftDuration'
+                  puts "\n\n'——shift duration——'\n\n"
+                  elapsed_duration = diff[:value]
 
-                if prior_player_event
-                  # elapsed_duration = inst[:time_stamps][-1] - elapsed_duration - inst[:time_stamps][-2]
+                      # if prior_player_event ||
+                      # [if diff_patch incl. 2 time_stamps] find prior player event (another match)
+                        # ppe_in_current_diff =
 
-                  prior_player_event[:duration] = elapsed_duration
-                  # create prior event
-                else
-                  inst[:on_ice_plus][onIcePlus_id][:duration] = elapsed_duration
-                  inst[:on_ice_plus][onIcePlus_id][:start_time] = inst[:time_stamps][-1] - elapsed_duration
+                  if prior_player_events[onIcePlus_id]
+                    puts "\n\n'––prior_player_event––'\n\n"
+                    byebug
+                    # add from new player start_time back to previous time stamp
+                    prior_player_event[:duration] +=
+                    (inst[:time_stamps][-1] - elapsed_duration) - inst[:time_stamps][-2]
+
+                        # create prior event
+                        # either continuing shift, or initial
+
+                    prior_player_events[onIcePlus_id] = nil
+                  else
+                    byebug unless inst[:on_ice_plus][_side][onIcePlus_id]
+
+                    inst[:on_ice_plus][_side][onIcePlus_id][:duration] += elapsed_duration
+
+                    inst[:on_ice_plus][_side][onIcePlus_id][:start_time] =
+                    # on initial: should equate to game start time
+                    TimeOperation.new(
+                      :-,
+                      { format: 'yyyymmdd_hhmmss',
+                        time: inst[:time_stamps][-1] },
+                      elapsed_duration ).result
+
+                    puts "'––else––'\n\n"
+                    byebug
+                  end
+
+                      # for latest info:
+                       # update prior_player_event
                 end
 
-                # for latest info:
-                 # update prior_player_event
-              end
+              else
+                puts "\n\n'––not replace––'\n\n"
+                byebug
+                # shift clearly over; can't do anything about it,
+                # until the replace shows the duration of the subsequent shift
+              end # if replace
 
-              byebug
+            # remove occurs for onIce--
             else
-              byebug
-              # shift clearly over; can't do anything about it,
-              # until the replace shows the duration of the subsequent shift
+            # shift continues: shift update happened in diff_patch
             end
-
-            # "remove" for /on_ice/<integer>
-              # case "remove"
-              #   verify that shift change happened
-              #     - find any matching "replace" statement for /<integer>
-              # end
-          else
-            # shift continues: update happened
-          end
-
-        end # .each diff
-      end # .each diffs
-    end # .each side
+        end if side == "home" # .each diff
+        # end # .each diffs
+      end # .each diff_hash
+    end # .each side_hash
 
     byebug
-    # calculate the time difference
 
     # {:op=>"replace",
       # :path=>"/liveData/boxscore/teams/away/onIcePlus/4/shiftDuration",
@@ -206,21 +238,17 @@ class LiveData
 
     # create new event data [after inst["time_stamp"]]
 
-
     # send event data through the process_special_events' case/when statements to tally
       # - load rosters for the game from cache
       # - once per roster in game
 
     # {:op=>"replace", :path=>"/metaData/timeStamp", :value=>"20191117_052923"}
-    inst[:time_stamps] << diff_patch.first[:diff].first[:value] # last array always holds timeStamp in first hash?
 
-    #? if a 'replace' exists for an event prior to the time_stamp, must change / update db
-
-    @@time_stamps[inst[:game_id]] = inst[:time_stamp][-1]
+    #?-contingency: if a 'replace' exists for an event prior to the time_stamp, must change / update db
 
     Rails.cache.write({
-      game_id: instance[:game_id],
-      time_stamp: instance[:time_stamp] },
+      game_id: args[:game_id],
+      time_stamp: inst[:time_stamp] },
       # content...
     )
 
