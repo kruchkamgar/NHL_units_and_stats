@@ -422,7 +422,7 @@ private
         Hash[
           unit_id: unit.id,
           start_time: inst[:start_time],
-          duration: TimeOperation.new(:-, inst[:end_time], inst[:start_time]).result,
+          duration: TimeOperation.new(:-, [ inst[:end_time], inst[:start_time] ]).result,
           # penalty: ( inst[:penalty] || false ),
           created_at: Time.now,
           updated_at: Time.now ] # *3

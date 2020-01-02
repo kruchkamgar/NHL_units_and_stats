@@ -70,7 +70,7 @@ include ComposedQueries
       cspg_instance =
       @game_instances.to_a
       .find do |instance|
-        instance_end_time = TimeOperation.new(:+, instance.start_time, instance.duration).result
+        instance_end_time = TimeOperation.new(:+, [ instance.start_time, instance.duration ]).result
 
         event.end_time > instance.start_time && event.end_time <= instance_end_time && instance.events.first.period == event.period
       end

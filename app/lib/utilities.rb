@@ -7,7 +7,7 @@ module Utilities
     attr_reader :result, :minutes, :seconds
 
     def initialize (
-      operator = nil, *times,
+      operator = nil, times,
       seconds: nil, minutes: nil )
 
       @times, @operator, @seconds, @minutes =
@@ -18,8 +18,9 @@ module Utilities
 
     def control_flow
       if @minutes || @seconds then
-        @seconds = translate(@seconds, @minutes)
-      else operate() end
+        @seconds = translate(@seconds, @minutes) else @seconds = 0 end
+      if @times
+        operate() end
     end
 
     def translate(seconds, minutes)
@@ -64,11 +65,11 @@ module Utilities
   end
 
   def to_seconds(times)
+    times = [times].flatten
     times
     .map do |time|
       # return time, if already in seconds
       # if time.class == Integer then next time end
-
       if time.count(":") == 2
         time_hash = time.match(/(?<hrs>\d+):(?<min>\d+):(?<sec>\d+)/)
       else
@@ -86,7 +87,7 @@ module Utilities
 
   # total the times array
   def inject_to_instance(times)
-    @seconds = times.inject { |result, time|
+    @seconds += times.inject { |result, time|
       result.send( @operator, time )
     }
     @minutes = @seconds/60.0

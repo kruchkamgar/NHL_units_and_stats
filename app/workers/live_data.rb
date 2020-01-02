@@ -173,7 +173,7 @@ class LiveData
                   .insert( onIcePlus_id,
                     Hash[ player_id_num: diff[:value], duration: 0 ] )
 
-                  byebug
+                  # byebug
                 when 'shiftDuration'
                   puts "\n\n'——shift duration——'\n\n"
                   elapsed_duration = diff[:value]
@@ -184,11 +184,23 @@ class LiveData
 
                   if prior_player_events[onIcePlus_id]
                     puts "\n\n'––prior_player_event––'\n\n"
-                    byebug
+                    # byebug
                     # add from new player start_time back to previous time stamp
-                    prior_player_event[:duration] +=
-                    (inst[:time_stamps][-1] - elapsed_duration) - inst[:time_stamps][-2]
 
+                    prior_shift_duration_increment =
+                    TimeOperation.new(:-, [
+                      { format: 'yyyymmdd_hhmmss',
+                        time: inst[:time_stamps][-1] },
+                      elapsed_duration,
+                      { format: 'yyyymmdd_hhmmss',
+                        time: inst[:time_stamps][-2] } ]
+                    ).result
+
+                    prior_player_events[onIcePlus_id][:duration] =
+                    TimeOperation.new(:+, [
+                      prior_shift_duration_increment,
+                      prior_player_events[onIcePlus_id][:duration] ]
+                    )
                         # create prior event
                         # either continuing shift, or initial
 
@@ -200,14 +212,14 @@ class LiveData
 
                     inst[:on_ice_plus][_side][onIcePlus_id][:start_time] =
                     # on initial: should equate to game start time
-                    TimeOperation.new(
-                      :-,
-                      { format: 'yyyymmdd_hhmmss',
+                    TimeOperation.new(:-,
+                      [ { format: 'yyyymmdd_hhmmss',
                         time: inst[:time_stamps][-1] },
-                      elapsed_duration ).result
+                        elapsed_duration ]
+                    ).result
 
                     puts "'––else––'\n\n"
-                    byebug
+                    # byebug
                   end
 
                       # for latest info:
@@ -225,12 +237,12 @@ class LiveData
             else
             # shift continues: shift update happened in diff_patch
             end
-        end if side == "home" # .each diff
+        end # .each diff
         # end # .each diffs
       end # .each diff_hash
     end # .each side_hash
 
-    byebug
+    # byebug
 
     # {:op=>"replace",
       # :path=>"/liveData/boxscore/teams/away/onIcePlus/4/shiftDuration",
@@ -249,7 +261,7 @@ class LiveData
     Rails.cache.write({
       game_id: args[:game_id],
       time_stamp: inst[:time_stamp] },
-      # content...
+      inst
     )
 
     # LiveData.perform_in(5.seconds, inst["time_stamp"])  # (nix) problems with idempotence

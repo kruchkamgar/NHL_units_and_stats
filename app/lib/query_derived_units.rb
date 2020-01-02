@@ -84,7 +84,7 @@ include Utilities
           # just total the shift times, presumably
           if value.class == String
             Array.[](
-              stat, TimeOperation.new(:+, totals[stat], value).result )
+              stat, TimeOperation.new(:+, [ totals[stat], value ]).result )
           else
             Array.[](
               stat, (value || 0) + (totals[stat] || 0) ) end
@@ -92,7 +92,7 @@ include Utilities
         .to_h #.map
       end #.inject
 
-      unit_tallies["TOI"] = TimeOperation.new(:+, "00:00", unit_tallies["TOI"]).seconds
+      unit_tallies["TOI"] = TimeOperation.new(:+, [ "00:00", unit_tallies["TOI"] ]).seconds
       [plyrs, unit_tallies]
     end #map units_grouped_by_pids
     .sort do |a, b|

@@ -43,7 +43,7 @@ include Utilities
     self.unit.instances
     .map(&:duration)
     .inject do |toi, inst_duration|
-      TimeOperation.new(:+, toi, inst_duration).result end
+      TimeOperation.new(:+, [ toi, inst_duration ]).result end
 
     self.write_attribute(:TOI, total)
   end
