@@ -60,10 +60,10 @@ module Utilities
 
   def format_to_time_notation
     s = @seconds
-    # if @seconds > 3600
-    formatted_time = "%02d:%02d:%02d" % [s / 3600 % 3600, s / 60 % 60, s % 60]
-    # else
-    #   "%02d:%02d" % [s / 60 % 60, s % 60]
+    if @seconds > 3600
+      formatted_time = "%02d:%02d:%02d" % [s / 3600 % 24, s / 60 % 60, s % 60]
+    else
+      "%02d:%02d" % [s / 60 % 60, s % 60]
       # Time.at(@seconds).strftime("%M:%S")
     end
   end
@@ -73,7 +73,7 @@ module Utilities
     case @special_format_hash[:format]
     when 'yyyymmdd_hhmmss', 'hhmmss'
       base = @special_format_hash[:time][/.+_/]
-      formatted_time = "%s%02d:%02d:%02d" % [base, s / 3600 % 3600, s / 60 % 60, s % 60]
+      formatted_time = "%s%02d:%02d:%02d" % [base, s / 3600 % 24, s / 60 % 60, s % 60]
       # else
       #   base = @special_format_hash[:time][/(?<=_\d{2}).+/]
       #   formatted_time = "%s%02d:%02d" % [base, s / 60 % 60, s % 60]
