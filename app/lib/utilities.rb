@@ -4,7 +4,7 @@ module Utilities
 
   class TimeOperation
     include Utilities # access to Utilities methods
-    attr_reader :result, :minutes, :seconds
+    attr_reader :minutes, :seconds
 
     def initialize (
       operator = nil, times,
@@ -36,6 +36,8 @@ module Utilities
       .select do |index|
         @times[index].class == Hash end
 
+      @special_format_hash = @times[special_formats_indices[0]]
+
       times_in_seconds =
       @times
       .map.with_index do |time, index|
@@ -47,8 +49,10 @@ module Utilities
       end.flatten
       # run the time operation, output to @minutes, @seconds ...
       inject_to_instance(times_in_seconds)
-      @result = format_to_time_notation()
     end
+
+  def result; format_to_time_notation() end
+  def original_format; special_format() end
 
   end # TimeOperation
 
@@ -56,11 +60,25 @@ module Utilities
 
   def format_to_time_notation
     s = @seconds
-    if @seconds > 3600
-      formatted_time = "%02d:%02d:%02d" % [s / 3600, s / 60 % 60, s % 60]
-    else
-      "%02d:%02d" % [s / 60 % 60, s % 60]
+    # if @seconds > 3600
+    formatted_time = "%02d:%02d:%02d" % [s / 3600 % 3600, s / 60 % 60, s % 60]
+    # else
+    #   "%02d:%02d" % [s / 60 % 60, s % 60]
       # Time.at(@seconds).strftime("%M:%S")
+    end
+  end
+
+  def special_format()
+    s = @seconds
+    case @special_format_hash[:format]
+    when 'yyyymmdd_hhmmss', 'hhmmss'
+      base = @special_format_hash[:time][/.+_/]
+      formatted_time = "%s%02d:%02d:%02d" % [base, s / 3600 % 3600, s / 60 % 60, s % 60]
+      # else
+      #   base = @special_format_hash[:time][/(?<=_\d{2}).+/]
+      #   formatted_time = "%s%02d:%02d" % [base, s / 60 % 60, s % 60]
+        # Time.at(@seconds).strftime("%M:%S")
+      end
     end
   end
 
@@ -101,11 +119,11 @@ module Utilities
     .map do |time|
       case time[:format]
       when "yyyymmdd_hhmmss", "hhmmss"
-        mmss =
-        /(\d{2})(\d{2})(?=$)/
+        hhmmss =
+        /(\d{2})(\d{2})(\d{2})(?=$)/
         .match(time[:time])
-        minutes, seconds = mmss[1].to_i, mmss[2].to_i
-        seconds += minutes * 60
+        hours, minutes, seconds = hhmmss[1].to_i, hhmmss[2].to_i, hhmmss[3].to_i
+        seconds += minutes * 60 + hours * 3600
       end
     end #map
   end

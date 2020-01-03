@@ -29,15 +29,18 @@ class LiveData
     latest_time_stamp = inst[:time_stamps][-1]
     while diff_patch.empty? && count_seconds <= 7
 
-      Thread.new do sleep 1; exit(0) end # or just call a new instance of this job?
+      Thread.new do sleep 1; exit(0) end
 
       # increment the last couple digits by 1
       latest_time_stamp =
-      Utilities::TimeOperation.new(:+, latest_time_stamp, seconds: 1)
+      Utilities::TimeOperation.new(:+,
+        { format: 'yyyymmdd_hhmmss',
+          time: latest_time_stamp },
+        seconds: 1).original_format
 
       # begin rescue end?
       diff_patch = fetch_diff_patch(
-        inst[:game_id], inst[:time_stamps][-1] )
+        inst[:game_id], latest_time_stamp )
 
       count_seconds += 1
     end # while
@@ -118,14 +121,6 @@ class LiveData
           .match(hash[:path])[0] end ]
     end
 
-    # on_ice_plus_diff =
-    # diff_hash[:diff]
-    # .select do |patch|
-    #   /onIcePlus/.match(patch[:path]) end
-    # on_ice_diff =
-    # diff_hash[:diff]
-    # .select do |patch|
-    #   /onIce/.match(patch[:path]) end
   # byebug
 
   # capture for each team/side
@@ -138,9 +133,7 @@ class LiveData
 
         diff_hash['onIcePlus']
         .each do |diff|
-          puts "\n#{diff}\n"
-        # .each do |type, diffs|
-          # diffs
+          # puts "\n#{diff}\n"
           # capture shifts:
           replace = diff[:op] == "replace"
             if replace ||
@@ -161,7 +154,7 @@ class LiveData
                   .match(diff[:path])[0]
                 # API diff will update either shiftDuration alone, or update it for an updated playerId
                 when 'playerId'
-                  puts "\n'——player Id——'\n\n"
+                  # puts "\n'——player Id——'\n\n"
 
                   # remove prior_player_event from on_ice_plus
                   prior_player_events[onIcePlus_id] =
@@ -175,7 +168,7 @@ class LiveData
 
                   # byebug
                 when 'shiftDuration'
-                  puts "\n\n'——shift duration——'\n\n"
+                  # puts "\n\n'——shift duration——'\n\n"
                   elapsed_duration = diff[:value]
 
                       # if prior_player_event ||
@@ -183,7 +176,7 @@ class LiveData
                         # ppe_in_current_diff =
 
                   if prior_player_events[onIcePlus_id]
-                    puts "\n\n'––prior_player_event––'\n\n"
+                    # puts "\n\n'––prior_player_event––'\n\n"
                     # byebug
                     # add from new player start_time back to previous time stamp
 
@@ -200,7 +193,7 @@ class LiveData
                     TimeOperation.new(:+, [
                       prior_shift_duration_increment,
                       prior_player_events[onIcePlus_id][:duration] ]
-                    )
+                    ).result
                         # create prior event
                         # either continuing shift, or initial
 
@@ -218,7 +211,7 @@ class LiveData
                         elapsed_duration ]
                     ).result
 
-                    puts "'––else––'\n\n"
+                    # puts "'––else––'\n\n"
                     # byebug
                   end
 
@@ -227,7 +220,7 @@ class LiveData
                 end
 
               else
-                puts "\n\n'––not replace––'\n\n"
+                # puts "\n\n'––not replace––'\n\n"
                 byebug
                 # shift clearly over; can't do anything about it,
                 # until the replace shows the duration of the subsequent shift

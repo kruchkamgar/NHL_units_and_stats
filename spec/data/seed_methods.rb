@@ -162,7 +162,7 @@ include SeedTeamHashes
       instance =
       Instance.find_or_create_by(
         duration: "01:00",
-        start_time: Utilities::TimeOperation.new(:-, event["startTime"], "00:30" ).result )
+        start_time: Utilities::TimeOperation.new(:-, [ event["startTime"], "00:30" ]).result )
 
       add_events_to_instance(instance)
     end
@@ -171,7 +171,7 @@ include SeedTeamHashes
   # //////////////// helper methods ///////////////// #
   def add_events_to_instance (instance)
     instance_end_time =
-    Utilities::TimeOperation.new(:+, instance.duration, instance.start_time).result
+    Utilities::TimeOperation.new(:+, [ instance.duration, instance.start_time ]).result
 
     concurrent_events =
     Event
