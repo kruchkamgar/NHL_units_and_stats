@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema.define(version: 2019_11_24_200005) do
+ActiveRecord::Schema.define(version: 2019_04_17_233642) do
 
   # These are extensions that must be enabled in order to support this database
   enable_extension "plpgsql"
@@ -86,11 +86,6 @@ ActiveRecord::Schema.define(version: 2019_11_24_200005) do
     t.integer "ppg", default: 0
     t.integer "shg", default: 0
     t.index ["unit_id"], name: "index_instances_on_unit_id"
-  end
-
-  create_table "live_data_states", force: :cascade do |t|
-    t.string "start_time"
-    t.integer "game_id"
   end
 
   create_table "log_entries", force: :cascade do |t|
