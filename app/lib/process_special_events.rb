@@ -1,31 +1,34 @@
-# process special events per game, for one side (@team)
+# process special events per game, for one side (team/roster)
+# - aggregates scores per statistic (ex: +1, -1) into a numerical metric, per instance
+
   # model implication: a special event should belong to two parent instances, after here processing game special events for each team that played in the game.
+
+# improvement: instances-events-log-entries in a single table [and count log-entry types per statistic; cache results for performance]
+# - "victor", "bested", instead of the tallies/ aggregates below
 
 module ProcessSpecialEvents
 
 include Utilities
   def process_special_events
-
     get_special_events_data()
+
+  # plus-minus: filter for events that impact score——
     # @special_events.reject do |event|
     #   event.event_type == "Shootout" end
-    @team_events =
-    @special_events - @opposing_events
+    @team_special_events =
+    @special_events - @opposing_special_events
     # team_sans_shg =
-    # @team_events.reject do |event|
+    # @team_special_events.reject do |event|
     #   event.event_type == "SHG" end
     opposing_sans_ppg =
-    @opposing_events.reject do |event|
+    @opposing_special_events.reject do |event|
       event.event_type == "PPG" end
-# end #process_special_events
 
-# def create_associations
     # logic: ppg do not count toward plus_minus
     opposing_inst_event_data = assoc_special_events_to_instances(opposing_sans_ppg).compact
     team_inst_event_data =
-    assoc_special_events_to_instances(@team_events).compact
+    assoc_special_events_to_instances(@team_special_events).compact
     # #compact removes nil(s) from missing instances
-
 
     # tally events' data to instances
     opposing_inst_event_data
@@ -53,7 +56,7 @@ include ComposedQueries
       "events.event_type = ? OR events.event_type = ?", 'Shootout', 'shift' )
     .eager_load(:log_entries)
 
-    @opposing_events =
+    @opposing_special_events =
     @special_events
     .reject do |event|
       @roster.players
