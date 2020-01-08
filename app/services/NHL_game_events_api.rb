@@ -1,5 +1,5 @@
 =begin
-Get the shifts events from API and call SynthesizeUnits functionality
+- creates events and log_entries for both teams, and special events (goals...), for only the first team
 -
 =end
 
@@ -16,14 +16,11 @@ module NHLGameEventsAPI
       # @roster = Roster.where(id: roster).includes(:players)[0]
     end
 
-    def create_game_events_and_log_entries(live_data = nil)
+    def create_game_events_and_log_entries
       # game already created via the opposing team
       game_record = Event.where(game_id: @game).any?
 
-        # for 'add new events' functionality: grab events w/ game id, and subtract from API events (for ex: live-updating)
-
-      if live_data then events = live_data else
-        events = fetch_data(get_shifts_url())["data"] end
+      events = fetch_data(get_shifts_url())["data"]
       byebug unless events.any?
       events_by_team =
       events
