@@ -36,7 +36,7 @@ module Utilities
       .select do |index|
         @times[index].class == Hash end
 
-      @special_format_hash = @times[special_formats_indices[0]]
+      @special_format_hash = @times[special_formats_indices[0]] if special_formats_indices.any?
 
       times_in_seconds =
       @times
@@ -45,7 +45,10 @@ module Utilities
           standardize_formats(time)
         elsif time.class == Integer
           time
-        else to_seconds(time) end
+        else
+          # merge into standardize_formats
+          date_string_to_string_array(time)
+        end
       end.flatten
       # run the time operation, output to @minutes, @seconds ...
       inject_to_instance(times_in_seconds)
@@ -78,28 +81,39 @@ module Utilities
       #   base = @special_format_hash[:time][/(?<=_\d{2}).+/]
       #   formatted_time = "%s%02d:%02d" % [base, s / 60 % 60, s % 60]
         # Time.at(@seconds).strftime("%M:%S")
-      end
+      # end
+    end # case
+  end
+
+  def string_array_to_seconds(string_array)
+    array = [string_array].flatten[0]
+    case array.size
+    when 0..6
+      hours, minutes, seconds = array[-3].to_i, array[-2].to_i, array[-1].to_i
+      seconds += minutes * 60 + hours * 3600
     end
   end
 
-  def to_seconds(times)
+  # merge into standardize_formats
+  def date_string_to_string_array(times)
     times = [times].flatten
     times
     .map do |time|
       # return time, if already in seconds
       # if time.class == Integer then next time end
       if time.count(":") == 2
-        time_hash = time.match(/(?<hrs>\d+):(?<min>\d+):(?<sec>\d+)/)
+        matches = time.match(/(?<hrs>\d+):(?<min>\d+):(?<sec>\d+)/)
       else
-        time_hash = time.match(/(?<min>\d+):(?<sec>\d+)/) end
+        matches = time.match(/(?<min>\d+):(?<sec>\d+)/) end
 
-      seconds =
-      time_hash[:sec].to_i +
-      time_hash[:min].to_i*60
+        string_array_to_seconds(matches)
+      # seconds =
+      # time_hash[:sec].to_i +
+      # time_hash[:min].to_i*60
 
-      if time_hash.to_a.size > 3
-        seconds += time_hash[:hrs].to_i*3600
-      else seconds end
+      # if time_hash.to_a.size > 3
+      #   seconds += time_hash[:hrs].to_i*3600
+      # else seconds end
     end # map
   end
 
@@ -115,6 +129,7 @@ module Utilities
 
   def standardize_formats(special_formats)
     times = [special_formats].flatten
+    matches =
     times
     .map do |time|
       case time[:format]
@@ -122,10 +137,9 @@ module Utilities
         hhmmss =
         /(\d{2})(\d{2})(\d{2})(?=$)/
         .match(time[:time])
-        hours, minutes, seconds = hhmmss[1].to_i, hhmmss[2].to_i, hhmmss[3].to_i
-        seconds += minutes * 60 + hours * 3600
       end
     end #map
+    string_array_to_seconds(matches)
   end
 
   def date_string_to_array(string)
