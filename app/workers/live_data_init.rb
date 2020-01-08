@@ -24,6 +24,7 @@ class LiveDataInit
         # { game_id: instance[:game_id],
         #   time_stamp: start_time},
         # { time_stamps: [start_time],
+          # period_time: [start_time]
           # on_ice_plus:
           # { home: Array.new(6) do Hash[duration: 0] end,
           #   away: Array.new(6) do Hash[duration: 0] end },
