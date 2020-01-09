@@ -71,6 +71,7 @@ module Utilities
     end
   end
 
+  # allow format parameter beyond this default, for multiple-type operations
   def special_format()
     s = @seconds
     case @special_format_hash[:format]
@@ -82,6 +83,9 @@ module Utilities
       #   formatted_time = "%s%02d:%02d" % [base, s / 60 % 60, s % 60]
         # Time.at(@seconds).strftime("%M:%S")
       # end
+    when "TZ"
+    when "NHL_time_stamp"
+      time_stamp_format = "%04d%02d%02d_%02d%02d%02d" % @special_format_hash[:time]
     end # case
   end
 
@@ -137,6 +141,8 @@ module Utilities
         hhmmss =
         /(\d{2})(\d{2})(\d{2})(?=$)/
         .match(time[:time])
+      when "TZ"
+        time[:time].scan(/\d+/)
       end
     end #map
     string_array_to_seconds(matches)
