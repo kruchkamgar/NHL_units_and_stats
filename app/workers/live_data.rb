@@ -52,13 +52,17 @@ class LiveData
     inst[:time_stamps] << diff_patch.first[:diff].first[:value] # does last array always holds timeStamp in first hash?
     @@time_stamps[args[:game_id]] = inst[:time_stamps][-1]
 
-    # track periodTime using STOP events to mark clock wind-down increments?
-    # - find "eventTypeId":"STOP"
-    # - find subsequent 'play'
-    # - find stoppages time [between time_stamps]
-      # - subtract the former from the latter, and
-      # - subtract sum from time stamp delta to find adjusted time
-      # - compare time_stamp with periodTime plus stoppages
+# track periodTime using STOP events to mark clock wind-down increments?
+# - find "eventTypeId":"STOP"
+# - find subsequent 'play'
+# - find stoppages time [between time_stamps]
+  # - subtract the former from the latter, and
+  # - subtract sum from time stamp delta to find adjusted time
+  # - compare time_stamp, with periodTime plus stoppages
+
+# if multiple time_stamps per diff––
+# - to appropriately calc stoppages, may process plays PER time_stamp
+  # - a solution: group plays by time_stamp
 
     inst[:plays] = []
     diff_patch
@@ -101,7 +105,7 @@ class LiveData
       # form log_entries, handle events' data
       case eventTypeId
       when "GOAL"
-        log_entries =
+        formed_log_entries =
         play["value"]["result"]["players"]
         .map do |player|
           case player["player"]["playerType"]
@@ -115,7 +119,7 @@ class LiveData
       when "MISSED_SHOT"
       when "SHOT"
       when "HIT"
-      when "FACEOFF", "STOP"
+      when "STOP", "FACEOFF"
         if eventTypeId == "FACEOFF" then type = 'start' end
         if eventTypeId == "STOP" then type = 'stop' end
         stoppages <<
@@ -127,9 +131,10 @@ class LiveData
 
       if stoppages.size.even?
         stoppage_durations <<
+        # stoppage types happen in order; event: start|stop not needed
         TimeOperation.new(:-,
-          [ { time: stoppages[-1], format: "TZ" },
-            { time: stoppages[-2], format: "TZ" } ]) end
+          [ { time: stoppages[-1][:time], format: "TZ" },
+            { time: stoppages[-2][:time], format: "TZ" } ]) end
 
       # merge each into log_entries hash
       Hash[
@@ -146,6 +151,9 @@ class LiveData
     end
 
   # //////// derive and create shift events //////// #
+
+    # match time_stamp to periodTime, by removing stoppage time
+    stoppage_time = stoppage_durations.reduce(:+)
 
     # hash: group home and away diffs respectively (onIce(Plus))
     diffs_grouped_side =
@@ -165,9 +173,6 @@ class LiveData
           .match(hash[:path])[0] end ]
     end
   # byebug
-
-  # match time_stamp to periodTime, by removing stoppage time
-  stoppage_time = stoppage_durations.reduce(:+)
 
   # capture shift events for each team/side
     diffs_grouped_side_type
@@ -226,7 +231,6 @@ class LiveData
                     # byebug
                     # add from new player start_time back to previous time stamp
 
-
                 #  verify: compare evenTimeOnIce with calculated time between time stamps
                 # - analytics sql query: sum durations for all shift events for the game adn player
 
@@ -235,7 +239,7 @@ class LiveData
                       { format: 'yyyymmdd_hhmmss',
                         time: inst[:time_stamps][-1] },
                       elapsed_duration,
-                        stoppage_time,
+                      stoppage_time,
                       { format: 'yyyymmdd_hhmmss',
                         time: inst[:time_stamps][-2] } ]
                     ).result
@@ -255,10 +259,11 @@ class LiveData
                     inst[:on_ice_plus][_side][onIcePlus_id][:duration] += elapsed_duration
 
                     inst[:on_ice_plus][_side][onIcePlus_id][:start_time] =
-                    on initial: should equate to game start time
+                    # on initial: should equate to game start time
                     TimeOperation.new(:-,
                       [ { format: 'yyyymmdd_hhmmss',
                         time: inst[:time_stamps][-1] },
+                        stoppage_time,
                         elapsed_duration ]
                     ).result
 
