@@ -36,13 +36,14 @@ module Utilities
       .select do |index|
         @times[index].class == Hash end
 
+      # use the first hash in arguments, for [and as the] #original_format
       @special_format_hash = @times[special_formats_indices[0]] if special_formats_indices.any?
 
       times_in_seconds =
       @times
       .map.with_index do |time, index|
         if special_formats_indices.include?(index)
-          standardize_formats(time)
+          std = standardize_formats(time)
         elsif time.class == Integer
           time
         else
@@ -90,7 +91,9 @@ module Utilities
   end
 
   def string_array_to_seconds(string_array)
-    array = [string_array].flatten[0]
+    # if string_array[0].class != Array
+    #   array = [string_array].flatten(1)[0] else array = string_array end
+    array = string_array[0]
     case array.size
     when 0..6
       hours, minutes, seconds = array[-3].to_i, array[-2].to_i, array[-1].to_i
@@ -101,6 +104,7 @@ module Utilities
   # merge into standardize_formats
   def date_string_to_string_array(times)
     times = [times].flatten
+    matches =
     times
     .map do |time|
       # return time, if already in seconds
@@ -109,16 +113,8 @@ module Utilities
         matches = time.match(/(?<hrs>\d+):(?<min>\d+):(?<sec>\d+)/)
       else
         matches = time.match(/(?<min>\d+):(?<sec>\d+)/) end
-
-        string_array_to_seconds(matches)
-      # seconds =
-      # time_hash[:sec].to_i +
-      # time_hash[:min].to_i*60
-
-      # if time_hash.to_a.size > 3
-      #   seconds += time_hash[:hrs].to_i*3600
-      # else seconds end
     end # map
+    string_array_to_seconds(matches)
   end
 
   # total the times array
@@ -131,18 +127,23 @@ module Utilities
 
   # ////////////// process special formats ////////////// #
 
+  # rename process_formats and roll-in default: #date_string_to_string_array
   def standardize_formats(special_formats)
     times = [special_formats].flatten
     matches =
     times
     .map do |time|
+      if time.class != Hash
+        # default time format
+      end
+
       case time[:format]
       when "yyyymmdd_hhmmss", "hhmmss"
         hhmmss =
         /(\d{2})(\d{2})(\d{2})(?=$)/
         .match(time[:time])
       when "TZ"
-        time[:time].scan(/\d+/)
+        scan = time[:time].scan(/\d+/)
       end
     end #map
     string_array_to_seconds(matches)
