@@ -181,6 +181,7 @@ class LiveData
       .each do |side, diff_hash|
         _side = side.to_sym
         prior_player_events = [] # in case the shifts' diffs order out of sequence
+        playerId_occurred = nil
 
         diff_hash['onIcePlus']
         .each do |diff|
@@ -206,6 +207,7 @@ class LiveData
                 # API diff: shiftDuration updates alone, or w/ playerId also
                 when 'playerId'
                   # puts "\n'——player Id——'\n\n"
+                  playerId_occurred = true
 
                   # remove prior_player_event from on_ice_plus
                   prior_player_events[onIcePlus_id] =
@@ -225,6 +227,19 @@ class LiveData
                       # if prior_player_event ||
                       # [if diff_patch incl. 2 time_stamps] find prior player event (another match)
                         # ppe_in_current_diff =
+
+                  if playerId_occurred
+                    inst[:on_ice_plus][_side][onIcePlus_id][:start_time] =
+                    # on initial: should equate to game start time
+                    TimeOperation.new(:-,
+                      [ { format: 'yyyymmdd_hhmmss',
+                          time: inst[:time_stamps][-1] },
+                        { format: "TZ",
+                          time: stoppage_time },
+                        elapsed_duration ]
+                    ).result
+                    playerId_occurred = nil
+                  end
 
                   if prior_player_events[onIcePlus_id]
                     # puts "\n\n'––prior_player_event––'\n\n"
@@ -256,18 +271,7 @@ class LiveData
 
                     prior_player_events[onIcePlus_id] = nil
                   else
-
                     inst[:on_ice_plus][_side][onIcePlus_id][:duration] += elapsed_duration
-
-                    inst[:on_ice_plus][_side][onIcePlus_id][:start_time] =
-                    # on initial: should equate to game start time
-                    TimeOperation.new(:-,
-                      [ { format: 'yyyymmdd_hhmmss',
-                          time: inst[:time_stamps][-1] },
-                        { format: "TZ",
-                          time: stoppage_time },
-                        elapsed_duration ]
-                    ).result
 
                     puts "'––else––'\n\n"
                     # byebug
