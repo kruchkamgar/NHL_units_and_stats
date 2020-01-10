@@ -99,16 +99,16 @@ class LiveData
     formed_events_and_log_entries = []
     inst[:plays]
     .each do |play|
-      eventTypeId = play["value"]["result"]["eventTypeId"]
-      periodTime = play["value"]["result"]["about"]["periodTime"]
+      eventTypeId = play[:value][:result][:eventTypeId]
+      periodTime = play[:value][:about][:periodTime]
 
       # form log_entries, handle events' data
       case eventTypeId
       when "GOAL"
         formed_log_entries =
-        play["value"]["result"]["players"]
+        play[:value][:result][:players]
         .map do |player|
-          case player["player"]["playerType"]
+          case player[:player][:playerType]
           when 'Scorer'
             action_type = "goal"
           when 'Assist'
@@ -123,8 +123,8 @@ class LiveData
         if eventTypeId == "FACEOFF" then type = 'start' end
         if eventTypeId == "STOP" then type = 'stop' end
         stoppages <<
-          Hash [
-            time: play["value"]["result"]["about"]["dateTime"],
+          Hash[
+            time: play[:value][:about][:dateTime],
             event: type ]
       when "PERIOD_END"
       end
@@ -138,14 +138,14 @@ class LiveData
 
       # merge each into log_entries hash
       Hash[
-        event: Hash [
+        event: Hash[
           game_id: inst[:game_id],
           event_type: eventTypeId,
           start_time: play[:value][:about][:periodTime],
           period: play[:value][:about][:period],
           # "coordinates": ...,
           player_id_num:
-            play[:value][:players].first[:player][:id], ], # player_id_num
+            play[:value][:players].first[:player][:id] ], # player_id_num
         log_entries: Hash[]
       ]
     end
@@ -153,7 +153,7 @@ class LiveData
   # //////// derive and create shift events //////// #
 
     # match time_stamp to periodTime, by removing stoppage time
-    stoppage_time = stoppage_durations.reduce(:+)
+    if stoppage_durations.reduce(:+).nil? then stoppage_time = "0" end
 
     # hash: group home and away diffs respectively (onIce(Plus))
     diffs_grouped_side =
@@ -203,7 +203,7 @@ class LiveData
                 # mutate game-state (inst[:on_ice_plus])——
                 case /(?<=onIcePlus\/\d\/)[a-zA-Z]+[^\"]/
                   .match(diff[:path])[0]
-                # API diff will update either shiftDuration alone, or update itself for an updated playerId
+                # API diff: shiftDuration updates alone, or w/ playerId also
                 when 'playerId'
                   # puts "\n'——player Id——'\n\n"
 
@@ -231,15 +231,16 @@ class LiveData
                     # byebug
                     # add from new player start_time back to previous time stamp
 
-                #  verify: compare evenTimeOnIce with calculated time between time stamps
-                # - analytics sql query: sum durations for all shift events for the game adn player
+                #  verify: compare [a player's] evenTimeOnIce with calculated time between time stamps
+                # - analytics sql query: sum durations for all shift events for the game and player
 
                     prior_shift_duration_increment =
                     TimeOperation.new(:-, [
                       { format: 'yyyymmdd_hhmmss',
                         time: inst[:time_stamps][-1] },
                       elapsed_duration,
-                      stoppage_time,
+                      { format: "TZ",
+                        time: stoppage_time },
                       { format: 'yyyymmdd_hhmmss',
                         time: inst[:time_stamps][-2] } ]
                     ).result
@@ -262,35 +263,30 @@ class LiveData
                     # on initial: should equate to game start time
                     TimeOperation.new(:-,
                       [ { format: 'yyyymmdd_hhmmss',
-                        time: inst[:time_stamps][-1] },
-                        stoppage_time,
+                          time: inst[:time_stamps][-1] },
+                        { format: "TZ",
+                          time: stoppage_time },
                         elapsed_duration ]
                     ).result
 
                     puts "'––else––'\n\n"
-                    byebug
+                    # byebug
                   end
-
                       # for latest info:
                       #  update prior_player_event
-
                 end # case onIcePlus...
-
               else
-                # puts "\n\n'––not replace––'\n\n"
+                # puts "\n\n'––remove; not replace––'\n\n"
                 byebug
                 # shift clearly over; can't do anything about it,
               end # if replace
-
             # "remove" occurs for "onIce"--
             else
             # shift continues: shift update happened in diff_patch
             end
         end # .each diff
-        # end # .each diffs
       end # .each diff_hash
     end # .each side_hash
-
 
     # make log entries for each play
     # - form instance from other players on ice concurrently in inst[:on_ice_plus]
