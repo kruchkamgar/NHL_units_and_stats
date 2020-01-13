@@ -40,7 +40,7 @@ class LiveData
 
       # begin rescue end?
       diff_patch = fetch_diff_patch(
-        inst[:game_id], latest_time_stamp )
+        args[:game_id], latest_time_stamp )
 
       count_seconds += 1
     end # while
@@ -63,6 +63,7 @@ class LiveData
 # if multiple time_stamps per diff––
 # - to appropriately calc stoppages, may process plays PER time_stamp
   # - a solution: group plays by time_stamp
+  # - (also affects shiftDuration, )
 
     inst[:plays] = []
     diff_patch
@@ -127,6 +128,10 @@ class LiveData
             time: play[:value][:about][:dateTime],
             event: type ]
       when "PERIOD_END"
+        period_end_time = play[:value][:about][:dateTime]
+      when "PERIOD_START"
+        period_end_time = play[:value][:about][:dateTime]
+        # set period
       end
 
       if stoppages.size.even?
@@ -134,7 +139,7 @@ class LiveData
         # stoppage types happen in order; event: start|stop not needed
         TimeOperation.new(:-,
           [ { time: stoppages[-1][:time], format: "TZ" },
-            { time: stoppages[-2][:time], format: "TZ" } ]) end
+            { time: stoppages[-2][:time], format: "TZ" } ]).result end
 
       # merge each into log_entries hash
       Hash[
@@ -224,18 +229,13 @@ class LiveData
                   # puts "\n\n'——shift duration——'\n\n"
                   elapsed_duration = diff[:value]
 
-                      # if prior_player_event ||
-                      # [if diff_patch incl. 2 time_stamps] find prior player event (another match)
-                        # ppe_in_current_diff =
-
                   if playerId_occurred
                     inst[:on_ice_plus][_side][onIcePlus_id][:start_time] =
                     # on initial: should equate to game start time
                     TimeOperation.new(:-,
                       [ { format: 'yyyymmdd_hhmmss',
                           time: inst[:time_stamps][-1] },
-                        { format: "TZ",
-                          time: stoppage_time },
+                        stoppage_time,
                         elapsed_duration ]
                     ).result
                     playerId_occurred = nil
@@ -254,8 +254,9 @@ class LiveData
                       { format: 'yyyymmdd_hhmmss',
                         time: inst[:time_stamps][-1] },
                       elapsed_duration,
-                      { format: "TZ",
-                        time: stoppage_time },
+                      # { format: "TZ",
+                      #   time: stoppage_time },
+                      stoppage_time,
                       { format: 'yyyymmdd_hhmmss',
                         time: inst[:time_stamps][-2] } ]
                     ).result
@@ -266,7 +267,24 @@ class LiveData
                       prior_player_events[onIcePlus_id][:duration] ]
                     ).result
 
-                        # create prior event
+                    prior_player_events[onIcePlus_id][:end_time] =
+                    TimeOperation.new(:+,
+                      [ prior_player_events[onIcePlus_id][:start_time],
+                        prior_player_events[onIcePlus_id][:duration] ])
+
+                        # create prior event [as it has finished]
+                        # Event.create({
+                          prior_player_events[onIcePlus_id].merge({
+                            event_type: 'shift',
+                            # end_time: ,
+                            shift_number: nil,
+                            period: ,
+                            game_id: args[:game_id],
+                            # player_id_num: ,
+                            created_at: Time.now,
+                            updated_at: Time.now
+                          })
+                        })
                         # either continuing shift, or initial
 
                     prior_player_events[onIcePlus_id] = nil
