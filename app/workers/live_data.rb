@@ -18,7 +18,8 @@ class LiveData
       game_id: args[:game_id],
       time_stamp: @@time_stamps[args[:game_id]]
     )
-    # byebug
+
+puts "\ncheck inst for game_id? shouldnt exist\n\n"; byebug
 
     diff_patch = fetch_diff_patch(
       args[:game_id], inst[:time_stamps][-1] )
@@ -95,18 +96,19 @@ class LiveData
   # //////// handle plays //////// #
 
     stoppages = []; stoppage_durations = []
-    period_time = nil
+    period_time = nil; period ||= 1
 
-    formed_events_and_log_entries = []
+    made_events_and_log_entries = []
     inst[:plays]
     .each do |play|
       eventTypeId = play[:value][:result][:eventTypeId]
       periodTime = play[:value][:about][:periodTime]
+      made_log_entries = nil
 
       # form log_entries, handle events' data
       case eventTypeId
       when "GOAL"
-        formed_log_entries =
+        made_log_entries =
         play[:value][:result][:players]
         .map do |player|
           case player[:player][:playerType]
@@ -115,7 +117,11 @@ class LiveData
           when 'Assist'
             action_type = "assist"
           end
-          Hash[ action_type: action_type ]
+
+          Hash[
+            action_type: action_type,
+            created_at: Time.now,
+            updated_at: Time.now ]
         end
       when "MISSED_SHOT"
       when "SHOT"
@@ -129,9 +135,10 @@ class LiveData
             event: type ]
       when "PERIOD_END"
         period_end_time = play[:value][:about][:dateTime]
+        period = play[:value][:about][:period]
       when "PERIOD_START"
         period_end_time = play[:value][:about][:dateTime]
-        # set period
+        # set period here instead?
       end
 
       if stoppages.size.even?
@@ -151,7 +158,7 @@ class LiveData
           # "coordinates": ...,
           player_id_num:
             play[:value][:players].first[:player][:id] ], # player_id_num
-        log_entries: Hash[]
+        log_entries: made_log_entries
       ]
     end
 
@@ -272,20 +279,24 @@ class LiveData
                       [ prior_player_events[onIcePlus_id][:start_time],
                         prior_player_events[onIcePlus_id][:duration] ])
 
-                        # create prior event [as it has finished]
-                        # Event.create({
-                          prior_player_events[onIcePlus_id].merge({
-                            event_type: 'shift',
-                            # end_time: ,
-                            shift_number: nil,
-                            period: ,
-                            game_id: args[:game_id],
-                            # player_id_num: ,
-                            created_at: Time.now,
-                            updated_at: Time.now
-                          })
-                        })
-                        # either continuing shift, or initial
+                    # create prior event [as it has finished]
+                    new_event =
+                    Event.find_or_create_by(
+                      prior_player_events[onIcePlus_id]
+                      .merge({
+                        event_type: 'shift',
+                        #start_Time: ,
+                        # end_time: ,
+                        shift_number: nil,
+                        period: period,
+                        game_id: args[:game_id],
+                        # player_id_num: ,
+                        created_at: Time.now,
+                        updated_at: Time.now
+                      }) )
+
+
+                    # either continuing shift, or initial
 
                     prior_player_events[onIcePlus_id] = nil
                   else

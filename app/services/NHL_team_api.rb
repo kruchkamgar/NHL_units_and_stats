@@ -28,14 +28,15 @@ module NHLTeamAPI
         team_id: info_hash["id"],
         name: info_hash["name"],
         season: @season,
-        created_at: Time.now, updated_at: Time.now ]
+        created_at: Time.now,
+        updated_at: Time.now ]
     end
     teams_changes =
     SQLOperations.sql_insert_all("teams", prepared_teams ).count
     # grab teams
     if teams_changes > 0
       inserted_teams = Team.order(id: :desc).limit(teams_changes)
-    end
+    end # performance: return prepared_teams as well?
   end
 
   class Adapter
@@ -48,12 +49,6 @@ module NHLTeamAPI
     end
 
     def find_or_create_team
-      # team =
-      # Team.find_or_create_by(
-      #   team_id: @team_id,
-      #   season: @season
-      # )
-
       @team.name =
       (@name = get_team_name["teams"][0]["name"]) unless @team.name
       @team.save

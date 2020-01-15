@@ -15,7 +15,7 @@ include NHLTeamAPI
 
     if teams.empty?
       # teams to which to associate opposing team rosters, per game
-      create_all_teams_by_season()
+      teams = create_all_teams_by_season()
     end
 
     # create records for transpired schedules
@@ -84,7 +84,7 @@ include NHLTeamAPI
         create_initial_game_records(
           date_hash, team: @team) # sets @game for:
         create_records_derived_from_events(
-          roster: roster, team: @team, game: game) end
+          roster: roster[:roster], team: @team, game: game) end
     end #create_records_from_transpired_schedule
 
     def set_workers_for_coming_schedule

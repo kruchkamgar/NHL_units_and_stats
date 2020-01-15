@@ -20,7 +20,8 @@ module NHLGameAPI
       teams_hash =
       fetch_data(get_game_url)["teams"]
       home_side =
-      teams_hash.select do |side, team_hash|
+      teams_hash
+      .select do |side, team_hash|
         side == "home" end
       home_side_name = home_side["home"]["team"]["name"]
 
@@ -29,8 +30,9 @@ module NHLGameAPI
           game.save
       else
         game =
-        Game.create(game_id: @game_id, home_side: home_side_name)
-      end
+        Game.create(
+          game_id: @game_id,
+          home_side: home_side_name ) end
       return [game, teams_hash]
     end
 

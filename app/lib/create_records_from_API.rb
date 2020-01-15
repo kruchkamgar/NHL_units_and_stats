@@ -4,7 +4,7 @@ module CreateRecordsFromAPI
 
   extend CreateUnitsAndInstances
   extend ProcessSpecialEvents
-  def create_initial_game_records(date_hash, team:)
+  def create_initial_game_records(date_hash, team:) # only needs team hash here––
   # create a game for each schedule date
     game_id =
     date_hash["games"].first["gamePk"]
@@ -14,11 +14,12 @@ module CreateRecordsFromAPI
     .new(game_id: game_id)
     .create_game
 
-    rosters = create_rosters(game, teams_hash) # possible to include players
+    rosters = create_rosters(game, teams_hash, team) # possible to include players
 
     team_roster =
     rosters.find do |roster|
-      roster.team.eql?(team) end
+      # roster[:roster].team.eql?(team) end
+      roster[:team] end # :team == true
 
     return [team_roster, game, (rosters - [team_roster]) ]
   end #create_records_per_game
@@ -29,7 +30,7 @@ module CreateRecordsFromAPI
     .new(team: team, game: game)
     .create_game_events_and_log_entries # *1
 
-    # byebug “¬˚”.,å…πøˆ¨†¥¨ˆ®´  
+    # byebug
     if inserted_events_array
       units_groups_hash =
       form_units_from_shifts(
@@ -74,23 +75,33 @@ module CreateRecordsFromAPI
 private
         # option: create the main roster
         # NHLRosterAPI::Adapter.new(team.team_id, season: team.season).fetch_roster
-  def create_rosters(game, teams_hash)
+  def create_rosters(game, teams_hash, team)
     teams_data =
     teams_hash
     .map do |side, side_hash|
       [ side_hash["team"]["id"],
-        side_hash ] end
+        side_hash,
+        side,
+        side["team"]["name"] == team.name ] end
     .sort do |a,b|
       a.first <=> b.first end
 
+    # find and pass appopriate Team object
     team_objects =
-    Team.where(team_id: teams_data.transpose.first).order(team_id: :ASC)
+    Team.where(
+# call it team_id_num?
+      team_id: teams_data.transpose.first)
+    .order(team_id: :ASC)
 
-    rosters =
+    created_rosters =
     teams_data
     .map.with_index do |team_hashes, i|
-      CreateRoster::create_game_roster(
-        team_hashes.second, team_objects[i], game ) end
+      Hash[
+        roster: CreateRoster::create_game_roster(
+          team_hashes.second, team_objects[i], game ),
+        side: team_hashes.third,
+        team: team_hashes.fourth ]
+    end
   end
 
 end
