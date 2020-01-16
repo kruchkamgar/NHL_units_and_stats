@@ -110,9 +110,8 @@ module NHLGameEventsAPI
           updated_at: Time.now
         ] #*3
       end
-      # insert events
+
       log_entries = SQLOperations.sql_insert_all("log_entries", new_log_entries_array )
-      # grab events
 
     end #create_game_events
 
@@ -156,8 +155,9 @@ module NHLGameEventsAPI
 
     def make_new_scorers_log_entries
       # retrieve event and player_profile records
-      made_scorers_data = @api_and_created_events_coupled.
-      map do |api_event, created_evt|
+      made_scorers_data =
+      @api_and_created_events_coupled
+      .map do |api_event, created_evt|
         # byebug
         records_hash = get_profile_by({
             player_id_num: api_event["playerId"]
@@ -166,8 +166,8 @@ module NHLGameEventsAPI
       end
 
       made_scorers_log_entries =
-      made_scorers_data.
-      map do |created_evt, records_hash|
+      made_scorers_data
+      .map do |created_evt, records_hash|
         Hash[
           event_id: created_evt.id,
           player_profile_id: records_hash[:profile].id,
@@ -180,8 +180,9 @@ module NHLGameEventsAPI
 
     def make_new_assisters_log_entries
 
-      coupled_have_assisters = @api_and_created_events_coupled.
-      select do |api_event, created_evt|
+      coupled_have_assisters =
+      @api_and_created_events_coupled
+      .select do |api_event, created_evt|
         api_event["eventDetails"]
       end
 
@@ -196,8 +197,8 @@ module NHLGameEventsAPI
         end # could use %w, per assister
         # retrieve player profile records
         assisters_data =
-        assisters.map do
-          |player|
+        assisters
+        .map do |player|
           if assisters.find_index(player) == 0
             action_type = "primary"
           else action_type = "secondary" end
@@ -218,7 +219,9 @@ module NHLGameEventsAPI
         .map do |assister|
           Hash[
             event_id: created_evt.id,
-            player_profile_id: (if assister[:records] then assister[:records][:profile].id else nil end),
+            player_profile_id: (
+              if assister[:records] then
+                 assister[:records][:profile].id else nil end),
             action_type: assister[:action_type],
             created_at: Time.now,
             updated_at: Time.now ]
