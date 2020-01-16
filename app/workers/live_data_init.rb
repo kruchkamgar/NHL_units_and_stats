@@ -11,7 +11,7 @@ class LiveDataInit
 
     home_roster =
     [ team_roster, opponent_roster ]
-    .find do |roster| roster[:side] == "home" end
+    .find do |roster| roster[:side] == "home" end # could just determine home side via the game.home_side field, and match to roster.team.name
 
     away_roster = [ team_roster, opponent_roster ] - home_roster
 

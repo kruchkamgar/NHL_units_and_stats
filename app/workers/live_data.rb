@@ -98,7 +98,7 @@ puts "\ncheck inst for game_id? shouldnt exist\n\n"; byebug
     stoppages = []; stoppage_durations = []
     period_time = nil; period ||= 1
 
-    made_events_and_log_entries = []
+    events_and_log_entries_data = []
     inst[:plays]
     .each do |play|
       eventTypeId = play[:value][:result][:eventTypeId]
@@ -108,10 +108,10 @@ puts "\ncheck inst for game_id? shouldnt exist\n\n"; byebug
       # form log_entries, handle events' data
       case eventTypeId
       when "GOAL"
-        made_log_entries =
+        log_entries_data =
         play[:value][:result][:players]
         .map do |player|
-          case player[:player][:playerType]
+          case player[:playerType]
           when 'Scorer'
             action_type = "goal"
           when 'Assist'
@@ -119,9 +119,12 @@ puts "\ncheck inst for game_id? shouldnt exist\n\n"; byebug
           end
 
           Hash[
-            action_type: action_type,
-            created_at: Time.now,
-            updated_at: Time.now ]
+            player_id: player["player"]["id"],
+            made_log_entry:
+              Hash[
+                action_type: action_type,
+                created_at: Time.now,
+                updated_at: Time.now ]]
         end
       when "MISSED_SHOT"
       when "SHOT"
@@ -149,17 +152,17 @@ puts "\ncheck inst for game_id? shouldnt exist\n\n"; byebug
             { time: stoppages[-2][:time], format: "TZ" } ]).result end
 
       # merge each into log_entries hash
-      Hash[
-        event: Hash[
-          game_id: inst[:game_id],
-          event_type: eventTypeId,
-          start_time: play[:value][:about][:periodTime],
-          period: play[:value][:about][:period],
-          # "coordinates": ...,
-          player_id_num:
-            play[:value][:players].first[:player][:id] ], # player_id_num
-        log_entries: made_log_entries
-      ]
+      events_and_log_entries_data <<
+        Hash[
+          event: Hash[
+            game_id: inst[:game_id],
+            event_type: eventTypeId,
+            start_time: play[:value][:about][:periodTime],
+            period: play[:value][:about][:period],
+            # "coordinates": ...,
+            player_id_num:
+              play[:value][:players].first[:player][:id] ], # player_id_num
+          log_entries: log_entries_data ]
     end
 
   # //////// derive and create shift events //////// #
@@ -200,6 +203,7 @@ puts "\ncheck inst for game_id? shouldnt exist\n\n"; byebug
           # puts "\n#{diff}\n"
           # capture shifts:
           replace = diff[:op] == "replace"
+# replace_or_add = diff[:op] == "replace" || "add"
             if replace ||
               diffs_grouped_side[side]
               .find do |_diff|
@@ -295,7 +299,6 @@ puts "\ncheck inst for game_id? shouldnt exist\n\n"; byebug
                         updated_at: Time.now
                       }) )
 
-
                     # either continuing shift, or initial
 
                     prior_player_events[onIcePlus_id] = nil
@@ -321,15 +324,19 @@ puts "\ncheck inst for game_id? shouldnt exist\n\n"; byebug
       end # .each diff_hash
     end # .each side_hash
 
-    # make log entries for each play
-    # - form instance from other players on ice concurrently in inst[:on_ice_plus]
+    events_and_log_entries_data
+    .each do |data|
+      make_events_and_log_entries(data) end
+
+    # form instance from other players on ice concurrently in inst[:on_ice_plus]
+    # - every time a player's shift ends, create an instance
+      # - 1. next start_time becomes the previous instance's end_time,
+        # - 1A. so long as no delay: the next start_time equals the previous instance end_time
+        # - 1B else create a new [likely short] instance
+      # - 2. upon 'remove' for onIcePlus, check for penalties, else wait for the next 'add' statement
     # - attach log entries to event and event to instance
 
     # byebug
-
-    # {:op=>"replace",
-      # :path=>"/liveData/boxscore/teams/away/onIcePlus/4/shiftDuration",
-      # :value=>11},
 
     # create new event data [after inst["time_stamp"]]
 
@@ -362,6 +369,13 @@ private
     diff_patch = fetch(url)
   end
 
+  def make_events_and_log_entries
+    # create event if not created
+
+    # make log entries
+    NHLGameEventsAPI::Adapter.new().get_profile_by
+  end
+
 end
 
 
@@ -387,25 +401,28 @@ end
       "result": {
         "eventCode":"VAN588","secondaryType":"Snap Shot","eventTypeId":"GOAL",
         "strength":
-          {"code":"EVEN","name":"Even"},"emptyNet":false,"description":"Brock Boeser (9) Snap Shot, assists: Elias Pettersson (17), Quinn Hughes (12)","event":"Goal"},
-        "players":[
-          {"seasonTotal":9,
-          "playerType":"Scorer",
-          "player":{
-            "link":"/api/v1/people/8478444","fullName":"Brock Boeser","id":8478444}},
-          {"seasonTotal":17,"playerType":"Assist","player":{"link":"/api/v1/people/8480012","fullName":"Elias Pettersson","id":8480012}},
-          {"seasonTotal":12,"playerType":"Assist","player":{"link":"/api/v1/people/8480800","fullName":"Quinn Hughes","id":8480800}},
-          {"playerType":"Goalie","player":{"link":"/api/v1/people/8477312","fullName":"Antoine Bibeau","id":8477312}
-        }],
-        "about": {
-          "eventIdx":282,
-          "dateTime":"2019-11-17T05:35:32Z",
-          "eventId":588,
-          "period":3,"periodType":"REGULAR","ordinalNum":"3rd","periodTime":"19:00","periodTimeRemaining":"01:00",
-          "goals":{"away":4,"home":4}
-        },
-          "coordinates":{"x":-86,"y":-8},
-          "team":{"name":"Vancouver Canucks","link":"/api/v1/teams/23","id":23,"triCode":"VAN"}
+          {"code":"EVEN","name":"Even"},
+          "emptyNet":false,
+          "description":"Brock Boeser (9) Snap Shot, assists: Elias Pettersson (17), Quinn Hughes (12)","event":"Goal"
+      },
+      "players":[
+        {"seasonTotal":9,
+        "playerType":"Scorer",
+        "player":{
+          "link":"/api/v1/people/8478444","fullName":"Brock Boeser","id":8478444}},
+        {"seasonTotal":17,"playerType":"Assist","player":{"link":"/api/v1/people/8480012","fullName":"Elias Pettersson","id":8480012}},
+        {"seasonTotal":12,"playerType":"Assist","player":{"link":"/api/v1/people/8480800","fullName":"Quinn Hughes","id":8480800}},
+        {"playerType":"Goalie","player":{"link":"/api/v1/people/8477312","fullName":"Antoine Bibeau","id":8477312}
+      }],
+      "about": {
+        "eventIdx":282,
+        "dateTime":"2019-11-17T05:35:32Z",
+        "eventId":588,
+        "period":3,"periodType":"REGULAR","ordinalNum":"3rd","periodTime":"19:00","periodTimeRemaining":"01:00",
+        "goals":{"away":4,"home":4}
+      },
+        "coordinates":{"x":-86,"y":-8},
+        "team":{"name":"Vancouver Canucks","link":"/api/v1/teams/23","id":23,"triCode":"VAN"}
     }
 }
 
