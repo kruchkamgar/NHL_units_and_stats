@@ -17,7 +17,7 @@ module ComposedQueries
         event_t[:id].eq(events_instances_t[:event_id]) ).join_sources )
     .where(
       event_t[:player_id_num].in(players_ids)
-      .and(event_type_eq)
+      .and(event_type_eq_shift)
       .and( event_t[:game_id].eq(game_record_id) ))
     .distinct
   end
@@ -37,14 +37,14 @@ module ComposedQueries
       .on( event_t[:id].eq(log_entry_t[:event_id])
       .and( event_t[:game_id].eq(game_t[:id]) ))
     .where( roster_t[:team_id].eq(team_id)
-      .and( event_type_eq ) )
+      .and( event_type_eq_shift ) )
     .order( game_t[:game_id].desc )
   end
 
   def evts_evt_typ_eq
     event_t
     .project( event_t[:event_type] )
-    .where( event_type_eq )
+    .where( event_type_eq_shift )
   end
 
   def games_w_rtrs(*columns)
@@ -84,7 +84,7 @@ module ComposedQueries
   def position_type_eq
     player_profile_t[:position_type].eq(position_type) if position_type end
 
-  def event_type_eq
+  def event_type_eq_shift
     event_t[:event_type].eq('shift') end
 
   def instance_id_eq
@@ -206,7 +206,7 @@ module ComposedQueries
       .on( player_t[:player_id_num].eq(event_t[:player_id_num]) )
     .join( player_profile_t)
       .on( player_profile_t[:player_id].eq(player_t[:id]) )
-    .where( event_type_eq
+    .where( event_type_eq_shift
       .and(position_type_eq) )
     .group( unit_t[:id], player_t[:player_id_num] )
 
@@ -227,7 +227,7 @@ module ComposedQueries
       .on( event_t[:id].eq(events_instances_t[:event_id]) )
     .where( events_instances_t[:instance_id]
       .in( instance_id_via_count_of_position_type )
-      .and(event_type_eq) )
+      .and(event_type_eq_shift) )
     .group( instance_t[:unit_id], events_instances_t[:instance_id] )
     .having( events_instances_t[:instance_id].count
       .send(*_rel_to_unit_size_mark) )
@@ -248,7 +248,7 @@ module ComposedQueries
             .in(pid_w_plrs_rtrs_w_plr_prfls()
                 .where(plr_rtrs_rtr_ids_for_team()
                        .and(position_type_eq) ))
-            .and(event_type_eq) )))
+            .and(event_type_eq_shift) )))
     .group( events_instances_t[:instance_id] )
     .having( Arel.star.count.send(*_rel_to_pos_type_mark) )
   end
