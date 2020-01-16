@@ -47,7 +47,7 @@ include ComposedQueries
     instances_by_roster_and_game( # via ComposedQueries
       @game.id,
       @roster.players.map(&:player_id_num) )
-    .eager_load(:events)
+    .eager_load(:events) # requires roster because query uses player_id_num, over player_profile ids
 
     @special_events = #*2
     Event
