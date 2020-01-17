@@ -205,15 +205,15 @@ puts "\ncheck inst for game_id? shouldnt exist\n\n"; byebug
           add = diff[:op] == "add"
 # replace_or_add = diff[:op] == "replace" || "add" || "remove"
             if replace ||
-              add ||
-              diffs_grouped_side[side]
-              .find do |_diff|
-                _diff[:op] == "remove" &&
-                /\/\d/.match(_diff[:path]) ==
-                /\/\d/.match(diff[:path])
-              end # look for removals in onIce
+              add # ||
+              # diffs_grouped_side[side]  # should find only within 'onIce'
+              # .find do |_diff|
+              #   _diff[:op] == "remove" &&
+              #   /\/\d/.match(_diff[:path]) ==
+              #   /\/\d/.match(diff[:path])
+              # end # look for removals in onIce
 
-              if replace
+              # if replace
                 onIcePlus_id =
                 /(?<=\/)\d/
                 .match(diff[:path])[0].to_i
