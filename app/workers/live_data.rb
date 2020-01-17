@@ -257,7 +257,7 @@ puts "\ncheck inst for game_id? shouldnt exist\n\n"; byebug
       end # .each diff_hash
     end # .each side_hash
 
-    made_events_and_log_entries =
+    created_events_and_made_log_entries =
     events_and_log_entries_data
     .map do |data|
       make_events_and_log_entries(data) end
@@ -304,8 +304,9 @@ private
   end
 
   def make_events_and_log_entries(data)
+    event = Event.create(data[:event])
     Hash[
-      event: data[:event],
+      event: event,
       # make log entries
       log_entries:
         data[:log_entries]
@@ -315,7 +316,9 @@ private
           .get_profile_by(player_id_num: entry_data[:player_id_num])
 
           entry_data[:made_log_entry]
-          .merge(profile: profile.id)
+          .merge(
+            event_id: event.id,
+            profile_id: profile.id )
         end ]
   end
 
