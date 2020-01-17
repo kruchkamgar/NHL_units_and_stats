@@ -108,6 +108,7 @@ puts "\ncheck inst for game_id? shouldnt exist\n\n"; byebug
       # form log_entries, handle events' data
       case eventTypeId
       when "GOAL"
+        count_assisters = 1
         log_entries_data =
         play[:value][:result][:players]
         .map do |player|
@@ -115,11 +116,14 @@ puts "\ncheck inst for game_id? shouldnt exist\n\n"; byebug
           when 'Scorer'
             action_type = "goal"
           when 'Assist'
-            action_type = "assist"
+            if count_assisters == 1
+              action_type = "primary"
+            else action_type = "secondary" end
+            count_assisters += 1
           end
 
           Hash[
-            player_id: player["player"]["id"],
+            player_id_num: player["player"]["id"],
             made_log_entry:
               Hash[
                 action_type: action_type,
@@ -253,8 +257,9 @@ puts "\ncheck inst for game_id? shouldnt exist\n\n"; byebug
       end # .each diff_hash
     end # .each side_hash
 
+    made_events_and_log_entries =
     events_and_log_entries_data
-    .each do |data|
+    .map do |data|
       make_events_and_log_entries(data) end
 
     # form instance from other players on ice concurrently in inst[:on_ice_plus]
@@ -298,11 +303,20 @@ private
     diff_patch = fetch(url)
   end
 
-  def make_events_and_log_entries
-    # create event if not created
+  def make_events_and_log_entries(data)
+    Hash[
+      event: data[:event],
+      # make log entries
+      log_entries:
+        data[:log_entries]
+        .map do |entry_data|
+          profile =
+          NHLGameEventsAPI::Adapter.new(game: inst[:game_id])
+          .get_profile_by(player_id_num: entry_data[:player_id_num])
 
-    # make log entries
-    NHLGameEventsAPI::Adapter.new().get_profile_by()
+          entry_data[:made_log_entry]
+          .merge(profile: profile.id)
+        end ]
   end
 
   def process_path(path, playerId_occurred, prior_player_events)

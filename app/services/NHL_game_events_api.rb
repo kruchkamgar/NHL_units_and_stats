@@ -9,7 +9,7 @@ module NHLGameEventsAPI
   class Adapter
     include NHLGameEventsAPI
 
-    def initialize (team:, game:)
+    def initialize (team: nil, game:)
       @team = team
       @game = Game.where(id: game).includes(:player_profiles)[0] # performance: include rosters: [:players] also
 
