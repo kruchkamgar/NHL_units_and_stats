@@ -24,13 +24,17 @@ class LiveDataInit
     ) #time_stamp: yyyymmdd_hhmmss
 
     unless scheduled
+      url = ReadNHLApis::live_game_data_url("", "" )
+      start_patch = fetch(url)
+
       LiveData.time_stamps
 
       # Rails.cache.write(
         # { game_id: instance[:game_id],
         #   time_stamp: start_time},
-        # { time_stamps: [start_time],
-          # period_time: [start_time]
+        # { time_stamps: [],
+          # period_time: "00:00",
+          # period: 1,
           # on_ice_plus:
           # { home: Array.new(6) do Hash[duration: 0] end,
           #   away: Array.new(6) do Hash[duration: 0] end },

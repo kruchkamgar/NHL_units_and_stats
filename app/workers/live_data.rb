@@ -96,7 +96,7 @@ puts "\ncheck inst for game_id? shouldnt exist\n\n"; byebug
   # //////// handle plays //////// #
 
     stoppages = []; stoppage_durations = []
-    period_time = nil; period ||= 1
+    period_time = nil;
 
     events_and_log_entries_data = []
     inst[:plays]
@@ -129,19 +129,18 @@ puts "\ncheck inst for game_id? shouldnt exist\n\n"; byebug
       when "MISSED_SHOT"
       when "SHOT"
       when "HIT"
-      when "STOP", "FACEOFF"
+      when "STOP", "FACEOFF", "PENALTY"
         if eventTypeId == "FACEOFF" then type = 'start' end
-        if eventTypeId == "STOP" then type = 'stop' end
+        if eventTypeId == "STOP" || "PENALTY" then type = 'stop' end
         stoppages <<
           Hash[
             time: play[:value][:about][:dateTime],
             event: type ]
       when "PERIOD_END"
         period_end_time = play[:value][:about][:dateTime]
-        period = play[:value][:about][:period]
       when "PERIOD_START"
         period_end_time = play[:value][:about][:dateTime]
-        # set period here instead?
+        inst[:period] = play[:value][:about][:period]
       end
 
       if stoppages.size.even?
@@ -203,8 +202,10 @@ puts "\ncheck inst for game_id? shouldnt exist\n\n"; byebug
           # puts "\n#{diff}\n"
           # capture shifts:
           replace = diff[:op] == "replace"
-# replace_or_add = diff[:op] == "replace" || "add"
+          add = diff[:op] == "add"
+# replace_or_add = diff[:op] == "replace" || "add" || "remove"
             if replace ||
+              add ||
               diffs_grouped_side[side]
               .find do |_diff|
                 _diff[:op] == "remove" &&
@@ -217,100 +218,21 @@ puts "\ncheck inst for game_id? shouldnt exist\n\n"; byebug
                 /(?<=\/)\d/
                 .match(diff[:path])[0].to_i
 
+                replace_path =
+                /(?<=onIcePlus\/\d\/)[a-zA-Z]+[^\"]/
+                .match(diff[:path])
+                add_path =
+                [ value[:shiftDuration],
+                  value[:playerId] ]
+
                 # mutate game-state (inst[:on_ice_plus])——
-                case /(?<=onIcePlus\/\d\/)[a-zA-Z]+[^\"]/
-                  .match(diff[:path])[0]
-                # API diff: shiftDuration updates alone, or w/ playerId also
-                when 'playerId'
-                  # puts "\n'——player Id——'\n\n"
-                  playerId_occurred = true
+                if replace_path
+                   process_path(replace_path[0])
+                else add_path
+                  .each do |path|
+                    process_path(path, playerId_occurred) end
+                end
 
-                  # remove prior_player_event from on_ice_plus
-                  prior_player_events[onIcePlus_id] =
-                  inst[:on_ice_plus][_side]
-                  .delete_at(onIcePlus_id)
-
-                  # add new player_event to inst[:on_ice_plus]
-                  inst[:on_ice_plus][_side]
-                  .insert( onIcePlus_id,
-                    Hash[ player_id_num: diff[:value], duration: 0 ] )
-
-                # adjust time_stamp using stoppage_time
-                when 'shiftDuration'
-                  # puts "\n\n'——shift duration——'\n\n"
-                  elapsed_duration = diff[:value]
-
-                  if playerId_occurred
-                    inst[:on_ice_plus][_side][onIcePlus_id][:start_time] =
-                    # on initial: should equate to game start time
-                    TimeOperation.new(:-,
-                      [ { format: 'yyyymmdd_hhmmss',
-                          time: inst[:time_stamps][-1] },
-                        stoppage_time,
-                        elapsed_duration ]
-                    ).result
-                    playerId_occurred = nil
-                  end
-
-                  if prior_player_events[onIcePlus_id]
-                    # puts "\n\n'––prior_player_event––'\n\n"
-                    # byebug
-                    # add from new player start_time back to previous time stamp
-
-                #  verify: compare [a player's] evenTimeOnIce with calculated time between time stamps
-                # - analytics sql query: sum durations for all shift events for the game and player
-
-                    prior_shift_duration_increment =
-                    TimeOperation.new(:-, [
-                      { format: 'yyyymmdd_hhmmss',
-                        time: inst[:time_stamps][-1] },
-                      elapsed_duration,
-                      # { format: "TZ",
-                      #   time: stoppage_time },
-                      stoppage_time,
-                      { format: 'yyyymmdd_hhmmss',
-                        time: inst[:time_stamps][-2] } ]
-                    ).result
-
-                    prior_player_events[onIcePlus_id][:duration] =
-                    TimeOperation.new(:+, [
-                      prior_shift_duration_increment,
-                      prior_player_events[onIcePlus_id][:duration] ]
-                    ).result
-
-                    prior_player_events[onIcePlus_id][:end_time] =
-                    TimeOperation.new(:+,
-                      [ prior_player_events[onIcePlus_id][:start_time],
-                        prior_player_events[onIcePlus_id][:duration] ])
-
-                    # create prior event [as it has finished]
-                    new_event =
-                    Event.find_or_create_by(
-                      prior_player_events[onIcePlus_id]
-                      .merge({
-                        event_type: 'shift',
-                        #start_Time: ,
-                        # end_time: ,
-                        shift_number: nil,
-                        period: period,
-                        game_id: args[:game_id],
-                        # player_id_num: ,
-                        created_at: Time.now,
-                        updated_at: Time.now
-                      }) )
-
-                    # either continuing shift, or initial
-
-                    prior_player_events[onIcePlus_id] = nil
-                  else
-                    inst[:on_ice_plus][_side][onIcePlus_id][:duration] += elapsed_duration
-
-                    puts "'––else––'\n\n"
-                    # byebug
-                  end
-                      # for latest info:
-                      #  update prior_player_event
-                end # case onIcePlus...
               else
                 # puts "\n\n'––remove; not replace––'\n\n"
                 byebug
@@ -373,8 +295,103 @@ private
     # create event if not created
 
     # make log entries
-    NHLGameEventsAPI::Adapter.new().get_profile_by
+    NHLGameEventsAPI::Adapter.new().get_profile_by()
   end
+
+  def process_path(path, playerId_occurred)
+    case path
+    # API diff: shiftDuration updates alone, or w/ playerId also
+    when 'playerId'
+      # puts "\n'——player Id——'\n\n"
+      playerId_occurred = true
+
+      # remove prior_player_event from on_ice_plus
+      prior_player_events[onIcePlus_id] =
+      inst[:on_ice_plus][_side]
+      .delete_at(onIcePlus_id)
+
+      # add new player_event to inst[:on_ice_plus]
+      inst[:on_ice_plus][_side]
+      .insert( onIcePlus_id,
+        Hash[ player_id_num: diff[:value], duration: 0 ] )
+
+    # adjust time_stamp using stoppage_time
+    when 'shiftDuration'
+      # puts "\n\n'——shift duration——'\n\n"
+      elapsed_duration = diff[:value]
+
+      if playerId_occurred
+        inst[:on_ice_plus][_side][onIcePlus_id][:start_time] =
+        # on initial: should equate to game start time
+        TimeOperation.new(:-,
+          [ { format: 'yyyymmdd_hhmmss',
+              time: inst[:time_stamps][-1] },
+            stoppage_time,
+            elapsed_duration ]
+        ).result
+        playerId_occurred = nil
+      end
+
+      if prior_player_events[onIcePlus_id]
+        # puts "\n\n'––prior_player_event––'\n\n"
+        # byebug
+        # add from new player start_time back to previous time stamp
+
+    #  verify: compare [a player's] evenTimeOnIce with calculated time between time stamps
+    # - analytics sql query: sum durations for all shift events for the game and player
+
+        prior_shift_duration_increment =
+        TimeOperation.new(:-, [
+          { format: 'yyyymmdd_hhmmss',
+            time: inst[:time_stamps][-1] },
+          elapsed_duration,
+          # { format: "TZ",
+          #   time: stoppage_time },
+          stoppage_time,
+          { format: 'yyyymmdd_hhmmss',
+            time: inst[:time_stamps][-2] } ]
+        ).result
+
+        prior_player_events[onIcePlus_id][:duration] =
+        TimeOperation.new(:+, [
+          prior_shift_duration_increment,
+          prior_player_events[onIcePlus_id][:duration] ]
+        ).result
+
+        prior_player_events[onIcePlus_id][:end_time] =
+        TimeOperation.new(:+,
+          [ prior_player_events[onIcePlus_id][:start_time],
+            prior_player_events[onIcePlus_id][:duration] ])
+
+        # create prior event [as it has finished]
+        new_event =
+        Event.find_or_create_by(
+          prior_player_events[onIcePlus_id]
+          .merge({
+            event_type: 'shift',
+            #start_Time: ,
+            # end_time: ,
+            shift_number: nil,
+            period: inst[:period],
+            game_id: args[:game_id],
+            # player_id_num: ,
+            created_at: Time.now,
+            updated_at: Time.now
+          }) )
+
+        # either continuing shift, or initial
+
+        prior_player_events[onIcePlus_id] = nil
+      else
+        inst[:on_ice_plus][_side][onIcePlus_id][:duration] += elapsed_duration
+
+        puts "'––else––'\n\n"
+        # byebug
+      end
+          # for latest info:
+          #  update prior_player_event
+    end # case onIcePlus...
+  end #process_path
 
 end
 
