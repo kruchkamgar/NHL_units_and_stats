@@ -130,7 +130,10 @@ puts "\ncheck inst for game_id? shouldnt exist\n\n"; byebug
       when "SHOT"
       when "HIT"
       when "STOP", "FACEOFF", "PENALTY"
-        if eventTypeId == "FACEOFF" then type = 'start' end
+        if eventTypeId == "FACEOFF" then
+          type = 'start'
+          # form log_entries here
+        end
         if eventTypeId == "STOP" || "PENALTY" then type = 'stop' end
         stoppages <<
           Hash[
@@ -156,8 +159,8 @@ puts "\ncheck inst for game_id? shouldnt exist\n\n"; byebug
           event: Hash[
             game_id: inst[:game_id],
             event_type: eventTypeId,
-            start_time: play[:value][:about][:periodTime],
-            period: play[:value][:about][:period],
+            start_time: periodTime,
+            period: inst[:period], # play[:value][:about][:period]
             # "coordinates": ...,
             player_id_num:
               play[:value][:players].first[:player][:id] ], # player_id_num
@@ -206,12 +209,13 @@ puts "\ncheck inst for game_id? shouldnt exist\n\n"; byebug
 # replace_or_add = diff[:op] == "replace" || "add" || "remove"
             if replace ||
               add # ||
-              # diffs_grouped_side[side]  # should find only within 'onIce'
+              # # problem: look for removals in 'onIce', rather
+              # diffs_grouped_side[side]
               # .find do |_diff|
               #   _diff[:op] == "remove" &&
               #   /\/\d/.match(_diff[:path]) ==
               #   /\/\d/.match(diff[:path])
-              # end # look for removals in onIce
+              # end # should find only within 'onIce'
 
               # if replace
                 onIcePlus_id =
@@ -222,15 +226,18 @@ puts "\ncheck inst for game_id? shouldnt exist\n\n"; byebug
                 /(?<=onIcePlus\/\d\/)[a-zA-Z]+[^\"]/
                 .match(diff[:path])
                 add_path =
-                [ value[:shiftDuration],
-                  value[:playerId] ]
+                Hash[
+                  shiftDuration: value[:shiftDuration],
+                  playerId: value[:playerId] ]
 
                 # mutate game-state (inst[:on_ice_plus])——
                 if replace_path
-                   process_path(replace_path[0])
+                   process_path(
+                     replace_path[0], playerId_occurred, prior_player_events)
                 else add_path
                   .each do |path|
-                    process_path(path, playerId_occurred) end
+                    process_path(
+                      path.keys[0].to_s, playerId_occurred, prior_player_events) end
                 end
 
               else
@@ -298,7 +305,7 @@ private
     NHLGameEventsAPI::Adapter.new().get_profile_by()
   end
 
-  def process_path(path, playerId_occurred)
+  def process_path(path, playerId_occurred, prior_player_events)
     case path
     # API diff: shiftDuration updates alone, or w/ playerId also
     when 'playerId'
