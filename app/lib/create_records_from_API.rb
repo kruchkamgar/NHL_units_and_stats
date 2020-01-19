@@ -14,14 +14,9 @@ module CreateRecordsFromAPI
     .new(game_id: game_id)
     .create_game
 
-    rosters = create_rosters(game, teams_hash, team) # possible to include players
+    team_roster, opposing_roster = create_rosters(game, teams_hash, team) # possible to include players
 
-    team_roster =
-    rosters.find do |roster|
-      # roster[:roster].team.eql?(team) end
-      roster[:team] end # :team == true
-
-    return [team_roster, game, (rosters - [team_roster]) ]
+    return [team_roster, game, opposing_roster ]
   end #create_records_per_game
 
   def create_records_derived_from_events(roster:, team:, game:)
@@ -82,6 +77,7 @@ private
       [ side_hash["team"]["id"],
         side_hash,
         side,
+        side["team"]["name"]
         side["team"]["name"] == team.name ] end
     .sort do |a,b|
       a.first <=> b.first end
@@ -100,8 +96,13 @@ private
         roster: CreateRoster::create_game_roster(
           team_hashes.second, team_objects[i], game ),
         side: team_hashes.third,
-        team: team_hashes.fourth ]
+        team_name: team_hashes.fourth
+        team: team_hashes.fifth ]
     end
+
+    team_roster = created_rosters.find do |roster| roster[:team] end
+    opponent_roster = created_rosters.find do |roster| !roster[:team] end
+    return [ team_roster, opponent_roster ]
   end
 
 end
