@@ -316,6 +316,15 @@ puts "\ncheck inst for game_id? shouldnt exist\n\n"; byebug
     end # if new_instance_data[:penalty]
 
     # form instance from other players on ice concurrently in inst[:on_ice_plus]
+    # all listed events algo––
+    # - find the next start or end time
+      # - register all of them, and sort; combining duplicates
+      # - create an instance for each one:
+        # - either scan for all shifts [within queue] whose start_times happen before, and end_times after the marking time
+        # - OR add all the next overlapping shifts (inclusive of start_time) to the queue
+      # - remove shift, if an end time
+
+    # event-driven algo––
     # - every time a player's shift ends OR a new player's shift starts after a penalty, create an instance
       # either 'diff[:op] == "add" or "replace" > 'playerId'
       # OR "remove" + penalty in 'plays'
@@ -327,8 +336,10 @@ puts "\ncheck inst for game_id? shouldnt exist\n\n"; byebug
 
       # - 2. upon 'remove' for onIcePlus, check for penalties, else wait for the next 'add' statement
         # - use the penalty time to mark shift's end
+        # - create instance
       # - 2alt. find penalties to mark the shift ends for 'remove' operations in diff
         # - find the indexed slot for the 'remove' operation [using penalty data?]
+
     # - attach log entries to event and event to instance
 
     # byebug
