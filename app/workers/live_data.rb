@@ -97,6 +97,9 @@ puts "\ncheck inst for game_id? shouldnt exist\n\n"; byebug
 
     stoppages = []; stoppage_durations = []
     period_time = nil;
+    new_instance_data = {}
+    # maintain queue of completed shift events [between time diffs?]
+    queued_player_events = inst[:queued_player_events] # in case the shifts' diffs order out of sequence
 
     events_and_log_entries_data = []
     inst[:plays]
@@ -143,6 +146,8 @@ puts "\ncheck inst for game_id? shouldnt exist\n\n"; byebug
           Hash[
             time: play[:value][:about][:dateTime],
             event: type ]
+
+        if eventTypeId == "PENALTY" then new_instance_data[:penalty] = true end
       when "PERIOD_END"
         period_end_time = play[:value][:about][:dateTime]
       when "PERIOD_START"
@@ -201,7 +206,6 @@ puts "\ncheck inst for game_id? shouldnt exist\n\n"; byebug
       side_hash
       .each do |side, diff_hash|
         _side = side.to_sym
-        prior_player_events = [] # in case the shifts' diffs order out of sequence
         playerId_occurred = nil
 
         diff_hash['onIcePlus']
@@ -211,48 +215,52 @@ puts "\ncheck inst for game_id? shouldnt exist\n\n"; byebug
           replace = diff[:op] == "replace"
           add = diff[:op] == "add"
 # replace_or_add = diff[:op] == "replace" || "add" || "remove"
-            if replace ||
-              add # ||
-              # # problem: look for removals in 'onIce', rather
-              # diffs_grouped_side[side]
-              # .find do |_diff|
-              #   _diff[:op] == "remove" &&
-              #   /\/\d/.match(_diff[:path]) ==
-              #   /\/\d/.match(diff[:path])
-              # end # should find only within 'onIce'
+          if replace || add # ||
+            # # problem: look for removals in 'onIce', rather
+            # diffs_grouped_side[side]
+            # .find do |_diff|
+            #   _diff[:op] == "remove" &&
+            #   /\/\d/.match(_diff[:path]) ==
+            #   /\/\d/.match(diff[:path])
+            # end # should find only within 'onIce'
 
-              # if replace
-                onIcePlus_id =
-                /(?<=\/)\d/
-                .match(diff[:path])[0].to_i
+            # if replace
+              onIcePlus_id =
+              /(?<=\/)\d/
+              .match(diff[:path])[0].to_i
 
-                replace_path =
-                /(?<=onIcePlus\/\d\/)[a-zA-Z]+[^\"]/
-                .match(diff[:path])
-                add_path =
-                Hash[
-                  shiftDuration: value[:shiftDuration],
-                  playerId: value[:playerId] ]
+              replace_path =
+              /(?<=onIcePlus\/\d\/)[a-zA-Z]+[^\"]/
+              .match(diff[:path]) if replace
+              add_path =
+              Hash[
+                shiftDuration: diff[:value][:shiftDuration],
+                playerId: diff[:value][:playerId] ] if add
 
-                # mutate game-state (inst[:on_ice_plus])——
-                if replace_path
-                   process_path(
-                     replace_path[0], playerId_occurred, prior_player_events)
-                else add_path
-                  .each do |path|
-                    process_path(
-                      path.keys[0].to_s, playerId_occurred, prior_player_events) end
-                end
+              # # track new instance formation
+              # if ( replace_path && replace_path[0] == 'playerId' ) || add
+              #   new_instance_data[_side] = true end
 
-              else
-                # puts "\n\n'––remove; not replace––'\n\n"
-                byebug
-                # shift clearly over; can't do anything about it,
-              end # if replace
-            # "remove" occurs for "onIce"--
-            else
-            # shift continues: shift update happened in diff_patch
-            end
+
+              # mutate game-state (inst[:on_ice_plus])——
+              if replace_path
+                 process_path(
+                   replace_path[0], playerId_occurred, queued_player_events)
+              else add_path
+                .each do |path|
+                  process_path(
+                    path.keys[0].to_s, playerId_occurred, queued_player_events) end
+              end # if replace_path
+
+            # else
+              # puts "\n\n'––remove; not replace––'\n\n"
+              # byebug
+              # shift clearly over; can't do anything about it,
+            # end # if replace
+          # "remove" occurs for "onIcePlus"--
+          else
+          # shift continues: shift update happened in diff_patch
+          end # if replace || add
         end # .each diff
       end # .each diff_hash
     end # .each side_hash
@@ -260,14 +268,67 @@ puts "\ncheck inst for game_id? shouldnt exist\n\n"; byebug
     created_events_and_made_log_entries =
     events_and_log_entries_data
     .map do |data|
-      make_events_and_log_entries(data) end
+      create_events_and_make_log_entries(data) end
+
+  # trigger end of shift, on penalty + removal
+    # set end_time shifts for players who took penalties
+    if new_instance_data[:penalty]
+      on_ice_plus =
+      diffs_grouped_side_type
+      .find do |side_hash| side_hash[side.to_sym]['onIcePlus'] end
+
+        # if penalty
+        # - find the side
+        # - (can happen in .each diff flow):
+          # - in the 'playerId' flow? (for new shift, rather than duration-update)
+            # - find the related removal diff[:op] (by player_id_num)
+            # - edit the queued_player_events
+      inst[:plays]
+      .each do |play|
+        if play[:value][:result][:eventTypeId] == "PENALTY"
+
+          team_name = play[:team][:name]
+          _side =
+          [ home_roster, away_roster ]
+          .find do |roster|
+            roster[:team] == team_name end
+          .send(:[], :side).to_sym
+
+          # for each penalty, find the onIcePlus player —removed— who took the penalty
+          player_id_num = play[:value][:result][:players][:player][:id]
+          removal =
+          on_ice_plus
+          .select do |diff|
+            onIcePlus_id = onIcePlus_id_(diff[:path])
+
+            diff[:op] == "remove" &&
+            player_id_num == inst[:on_ice_plus][_side][onIcePlus_id][:player_id_num]
+          end
+
+          queued_player_events[_side][onIcePlus_id] =
+          inst[:on_ice_plus][_side]
+          .delete_at(onIcePlus_id)
+          # use penalty time to edit the end_time of player
+          queued_player_events[_side][onIcePlus_id][:end_time] = play[:value][:about][:periodTime]
+        end # if
+      end # .each inst[:plays]
+      # removals without penalty take the next adds [hopefully at a corresponding slot]
+    end # if new_instance_data[:penalty]
 
     # form instance from other players on ice concurrently in inst[:on_ice_plus]
-    # - every time a player's shift ends, create an instance
+    # - every time a player's shift ends OR a new player's shift starts after a penalty, create an instance
+      # either 'diff[:op] == "add" or "replace" > 'playerId'
+      # OR "remove" + penalty in 'plays'
+      # > add means new player [after penalty?] or following a remove (delayed replace)
       # - 1. next start_time becomes the previous instance's end_time,
+
         # - 1A. so long as no delay: the next start_time equals the previous instance end_time
         # - 1B else create a new [likely short] instance
+
       # - 2. upon 'remove' for onIcePlus, check for penalties, else wait for the next 'add' statement
+        # - use the penalty time to mark shift's end
+      # - 2alt. find penalties to mark the shift ends for 'remove' operations in diff
+        # - find the indexed slot for the 'remove' operation [using penalty data?]
     # - attach log entries to event and event to instance
 
     # byebug
@@ -296,6 +357,11 @@ puts "\ncheck inst for game_id? shouldnt exist\n\n"; byebug
   # replacement of coordinates occurs - ex:
 private
 
+  def onIcePlus_id_(path)
+    onIcePlus_id =
+    /(?<=\/)\d/
+    .match(path)[0].to_i end
+
   def fetch_diff_patch(game_id, time_stamp)
     url =
     ReadNHLApis::live_game_data_url(
@@ -303,7 +369,7 @@ private
     diff_patch = fetch(url)
   end
 
-  def make_events_and_log_entries(data)
+  def create_events_and_make_log_entries(data)
     event = Event.create(data[:event])
     Hash[
       event: event,
@@ -322,15 +388,15 @@ private
         end ]
   end
 
-  def process_path(path, playerId_occurred, prior_player_events)
+  def process_path(path, playerId_occurred, queued_player_events, _side)
     case path
     # API diff: shiftDuration updates alone, or w/ playerId also
     when 'playerId'
       # puts "\n'——player Id——'\n\n"
       playerId_occurred = true
 
-      # remove prior_player_event from on_ice_plus
-      prior_player_events[onIcePlus_id] =
+      # remove queued_player_event from on_ice_plus
+      queued_player_events[onIcePlus_id] =
       inst[:on_ice_plus][_side]
       .delete_at(onIcePlus_id)
 
@@ -356,8 +422,8 @@ private
         playerId_occurred = nil
       end
 
-      if prior_player_events[onIcePlus_id]
-        # puts "\n\n'––prior_player_event––'\n\n"
+      if queued_player_events[onIcePlus_id]
+        # puts "\n\n'––queued_player_event––'\n\n"
         # byebug
         # add from new player start_time back to previous time stamp
 
@@ -376,21 +442,21 @@ private
             time: inst[:time_stamps][-2] } ]
         ).result
 
-        prior_player_events[onIcePlus_id][:duration] =
+        queued_player_events[onIcePlus_id][:duration] =
         TimeOperation.new(:+, [
           prior_shift_duration_increment,
-          prior_player_events[onIcePlus_id][:duration] ]
+          queued_player_events[onIcePlus_id][:duration] ]
         ).result
 
-        prior_player_events[onIcePlus_id][:end_time] =
+        queued_player_events[onIcePlus_id][:end_time] =
         TimeOperation.new(:+,
-          [ prior_player_events[onIcePlus_id][:start_time],
-            prior_player_events[onIcePlus_id][:duration] ])
+          [ queued_player_events[onIcePlus_id][:start_time],
+            queued_player_events[onIcePlus_id][:duration] ])
 
         # create prior event [as it has finished]
         new_event =
         Event.find_or_create_by(
-          prior_player_events[onIcePlus_id]
+          queued_player_events[onIcePlus_id]
           .merge({
             event_type: 'shift',
             #start_Time: ,
@@ -405,7 +471,7 @@ private
 
         # either continuing shift, or initial
 
-        prior_player_events[onIcePlus_id] = nil
+        queued_player_events[onIcePlus_id] = nil
       else
         inst[:on_ice_plus][_side][onIcePlus_id][:duration] += elapsed_duration
 
@@ -413,13 +479,11 @@ private
         # byebug
       end
           # for latest info:
-          #  update prior_player_event
+          #  update queued_player_event
     end # case onIcePlus...
   end #process_path
 
 end
-
-
 
 # "intermissionInfo" : {
 #     "intermissionTimeRemaining" : 848,
@@ -435,37 +499,6 @@ end
     #     })
 
 =begin (example GOAL play)
-
-{"op":"add","path":"/liveData/plays/allPlays/282",
-  "value":
-    {
-      "result": {
-        "eventCode":"VAN588","secondaryType":"Snap Shot","eventTypeId":"GOAL",
-        "strength":
-          {"code":"EVEN","name":"Even"},
-          "emptyNet":false,
-          "description":"Brock Boeser (9) Snap Shot, assists: Elias Pettersson (17), Quinn Hughes (12)","event":"Goal"
-      },
-      "players":[
-        {"seasonTotal":9,
-        "playerType":"Scorer",
-        "player":{
-          "link":"/api/v1/people/8478444","fullName":"Brock Boeser","id":8478444}},
-        {"seasonTotal":17,"playerType":"Assist","player":{"link":"/api/v1/people/8480012","fullName":"Elias Pettersson","id":8480012}},
-        {"seasonTotal":12,"playerType":"Assist","player":{"link":"/api/v1/people/8480800","fullName":"Quinn Hughes","id":8480800}},
-        {"playerType":"Goalie","player":{"link":"/api/v1/people/8477312","fullName":"Antoine Bibeau","id":8477312}
-      }],
-      "about": {
-        "eventIdx":282,
-        "dateTime":"2019-11-17T05:35:32Z",
-        "eventId":588,
-        "period":3,"periodType":"REGULAR","ordinalNum":"3rd","periodTime":"19:00","periodTimeRemaining":"01:00",
-        "goals":{"away":4,"home":4}
-      },
-        "coordinates":{"x":-86,"y":-8},
-        "team":{"name":"Vancouver Canucks","link":"/api/v1/teams/23","id":23,"triCode":"VAN"}
-    }
-}
 
 =end
 
