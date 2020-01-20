@@ -280,49 +280,6 @@ puts "\ncheck inst for game_id? shouldnt exist\n\n"; byebug
 
   # trigger end of shift, on penalty + removal
     # set end_time shifts for players who took penalties
-    if new_instance_data[:penalty]
-      on_ice_plus =
-      diffs_grouped_side_type
-      .find do |side_hash| side_hash[side.to_sym]['onIcePlus'] end
-
-        # if penalty
-        # - find the side
-        # - (can happen in .each diff flow):
-          # - in the 'playerId' flow? (for new shift, rather than duration-update)
-            # - find the related removal diff[:op] (by player_id_num)
-            # - edit the queued_shifts
-      inst[:plays]
-      .each do |play|
-        if play[:value][:result][:eventTypeId] == "PENALTY"
-
-          # find the side
-          team_name = play[:team][:name]
-          _side =
-          [ home_roster, away_roster ]
-          .find do |roster|
-            roster[:team] == team_name end
-          .send(:[], :side).to_sym
-
-          # for each penalty, find the onIcePlus player —removed— who took the penalty (the first player takes the penalty)
-          player_id_num = play[:value][:result][:players].first[:player][:id]
-          removal =
-          on_ice_plus
-          .find do |diff|
-            onIcePlus_id = onIcePlus_id_(diff[:path])
-
-            diff[:op] == "remove" &&
-            player_id_num == inst[:on_ice_plus][_side][onIcePlus_id][:player_id_num]
-          end
-
-          queued_shifts[_side][onIcePlus_id] =
-          inst[:on_ice_plus][_side]
-          .delete_at(onIcePlus_id)
-          # use penalty time to edit the end_time of player
-          queued_shifts[_side][onIcePlus_id][:end_time] = play[:value][:about][:periodTime]
-        end # if
-      end # .each inst[:plays]
-      # removals without penalty take the next adds [hopefully at a corresponding slot]
-    end # if new_instance_data[:penalty]
 
     # form instance from other players on ice concurrently in inst[:on_ice_plus]
 
