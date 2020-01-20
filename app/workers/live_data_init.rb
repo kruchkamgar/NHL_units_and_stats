@@ -36,9 +36,9 @@ class LiveDataInit
           # period_time: "00:00",
           # period: 1,
           # on_ice_plus:
-          # { home: Array.new(6) do Hash[duration: 0] end,
-          #   away: Array.new(6) do Hash[duration: 0] end },
-          # queued_player_events: { home:[], away:[] },
+          # { home: Array.new(6) do Hash[] end,
+          #   away: Array.new(6) do Hash[] end },
+          # queued_shifts: { home:[], away:[] },
           # home_roster: home_roster[:roster],
         #   away_roster: away_roster[:roster] }
       # ) # cache the initial time_stamp--(game start time)
