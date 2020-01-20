@@ -206,47 +206,48 @@ puts "\ncheck inst for game_id? shouldnt exist\n\n"; byebug
       side_hash
       .each do |side, diff_hash|
         _side = side.to_sym
-        playerId_occurred = nil
+        # new_player_bool = nil
+        bools =
+        Hash[
+          :new_player_bool = nil
+          :end_shift_bool = nil ]
 
         diff_hash['onIcePlus']
         .each do |diff|
           # puts "\n#{diff}\n"
           # capture shifts:
           case diff[:op]
-          when "replace", "add" # || *2-
+          when "replace", "add", "remove" # || *2-
 
-              onIcePlus_id =
-              /(?<=\/)\d/
-              .match(diff[:path])[0].to_i
+            onIcePlus_id =
+            /(?<=\/)\d/
+            .match(diff[:path])[0].to_i
 
-              replace_path =
-              /(?<=onIcePlus\/\d\/)[a-zA-Z]+[^\"]/
-              .match(diff[:path]) if diff[:op] == 'replace'
+            replace_path =
+            /(?<=onIcePlus\/\d\/)[a-zA-Z]+[^\"]/
+            .match(diff[:path]) if diff[:op] == 'replace'
 
-              add_path =
-              [
-                Hash[
-                  key: 'playerId',
-                  value: diff[:value][:playerId] ]
-                Hash[
-                  key: 'shiftDuration',
-                  value: diff[:value][:shiftDuration] ],
-              ] if diff[:op] == 'add'
+            add_path =
+            [
+              Hash[
+                key: 'playerId',
+                value: diff[:value][:playerId] ]
+              Hash[
+                key: 'shiftDuration',
+                value: diff[:value][:shiftDuration] ],
+            ] if diff[:op] == 'add'
 
-              # mutate game-state (inst[:on_ice_plus])——
-              if replace_path
-                 process_path(
-                   diff, replace_path[0], playerId_occurred, queued_shifts, _side, onIcePlus_id)
-              else
-                add_path
-                .each do |path|
-                  process_path(
-                    path, path[:key], playerId_occurred, queued_shifts, _side, onIcePlus_id) end
-              end # if replace_path
+            # mutate game-state (inst[:on_ice_plus])——
+            if replace_path
+               process_path(
+                 diff, replace_path[0], bools, queued_shifts, _side, onIcePlus_id)
+            elsif add_path
+              add_path
+              .each do |path|
+                process_path(
+                  path, path[:key], bools, queued_shifts, _side, onIcePlus_id) end
 
-          when "remove"
-            if new_instance_data[:penalties]
-
+            elsif new_instance_data[:penalties] && diff[:op] == "remove"
               penalty_for_matched_diff =
               inst[:plays]
               .find do |play|
@@ -254,11 +255,20 @@ puts "\ncheck inst for game_id? shouldnt exist\n\n"; byebug
                 inst[:on_ice_plus][_side][onIcePlus_id][:player_id_num]
               end #find
 
-              
+              if penalty_for_matched_diff
+                process_path(
+                  diff, diff[:op], nil, queued_shifts, _side, onIcePlus_id
+                )
 
-            end
+                bools[:end_shift_bool] = true
+                process_path(
+                  penalty_for_matched_diff, 'end_time', bools, queued_shifts, _side, onIcePlus_id
+                )
+
+            end # conditionals
+
           # shift continues: shift update happened in diff_patch
-          end # if replace || add
+          end # case
         end # .each diff
       end # .each diff_hash
     end # .each side_hash
@@ -315,6 +325,7 @@ puts "\ncheck inst for game_id? shouldnt exist\n\n"; byebug
     end # if new_instance_data[:penalty]
 
     # form instance from other players on ice concurrently in inst[:on_ice_plus]
+
     # all listed events algo––
     # - find the next start or end time
       # - register all of them, and sort; combining duplicates
@@ -398,30 +409,34 @@ private
         end ]
   end
 
-  def process_path(diff, path, playerId_occurred, queued_shifts, _side, onIcePlus_id)
+  def process_path(diff, path, bools, queued_shifts, _side, onIcePlus_id)
     # hash arguments?  _[:path], ... _[:onIcePlus_id]
 
     # API diff: 'shiftDuration' lists after 'playerId', but updates alone
     case path
-    when 'playerId'
+    when 'playerId', 'remove'
       # puts "\n'——player Id——'\n\n"
-      playerId_occurred = true
-
       # remove queued_shift from on_ice_plus
       queued_shifts[onIcePlus_id] =
       inst[:on_ice_plus][_side]
       .delete_at(onIcePlus_id)
 
-      # add new player_event to inst[:on_ice_plus]
-      inst[:on_ice_plus][_side]
-      .insert( onIcePlus_id,
-        Hash[ player_id_num: diff[:value], duration: 0 ] )
+      # prepare for 'shiftDuration'
+      if path == 'playerId'
+        new_player_bool = true # return this
+        # add new player_event to inst[:on_ice_plus]
+        inst[:on_ice_plus][_side]
+        .insert( onIcePlus_id,
+          Hash[ player_id_num: diff[:value], duration: 0 ] )
+      elsif
+        path == 'remove' then end_shift_bool = true end
 
-    when 'shiftDuration'
+    when 'shiftDuration', 'end_time'
+      # new_player_bool alternative: look up if playerId in diff
       # puts "\n\n'——shift duration——'\n\n"
       elapsed_duration = diff[:value]
 
-      if playerId_occurred # new shift
+      if bools[:new_player_bool] # new shift
         inst[:on_ice_plus][_side][onIcePlus_id][:start_time] =
         # on initial: should equate to game start time
         TimeOperation.new(:-,
@@ -430,44 +445,52 @@ private
             stoppage_time,
             elapsed_duration ]
         ).result
-        playerId_occurred = nil
+        bools[:new_player_bool] = nil # return this
       else
-        inst[:on_ice_plus][_side][onIcePlus_id][:duration] = elapsed_duration
+        inst[:on_ice_plus][_side][onIcePlus_id][:duration] = elapsed_duration # assumes API durations update, rather than increment
       end
 
       # - calc duration and derive end_time;
       # - create shift event
-      if playerId_occurred && !queued_shifts[onIcePlus_id].empty?
+      if bools[:new_player_bool] || path == 'end_time' &&
+        !queued_shifts[onIcePlus_id].empty?
         # puts "\n\n'––queued_shift_event––'\n\n"; byebug
 
   #  verify: compare [a player's] evenTimeOnIce with calculated time between time stamps
   # - analytics sql query: sum durations for all shift events for the game and player
 
-        # calc increment as: time_stamp minus new player elapsed shift duration
-        prior_shift_duration_increment =
-        TimeOperation.new(:-, [
-          { format: 'yyyymmdd_hhmmss',
-            time: inst[:time_stamps][-1] },
-          elapsed_duration,
-          # { format: "TZ",
-          #   time: stoppage_time },
-          stoppage_time,
-          { format: 'yyyymmdd_hhmmss',
-            time: inst[:time_stamps][-2] } ]
-        ).result
+        if bools[:new_player_bool]
+          # calc increment as: time_stamp minus new player elapsed shift duration
+          prior_shift_duration_increment =
+          TimeOperation.new(:-, [
+            { format: 'yyyymmdd_hhmmss',
+              time: inst[:time_stamps][-1] },
+            elapsed_duration,
+            # { format: "TZ",
+            #   time: stoppage_time },
+            stoppage_time,
+            { format: 'yyyymmdd_hhmmss',
+              time: inst[:time_stamps][-2] } ]
+          ).result
 
-        # increment the duration
-        queued_shifts[onIcePlus_id][:duration] =
-        TimeOperation.new(:+, [
-          prior_shift_duration_increment,
-          queued_shifts[onIcePlus_id][:duration] ]
-        ).result
+          # increment the duration
+          queued_shifts[onIcePlus_id][:duration] =
+          TimeOperation.new(:+, [
+            prior_shift_duration_increment,
+            queued_shifts[onIcePlus_id][:duration] ]
+          ).result
 
-        # calc end_time
-        queued_shifts[onIcePlus_id][:end_time] =
-        TimeOperation.new(:+,
-          [ queued_shifts[onIcePlus_id][:start_time],
-            queued_shifts[onIcePlus_id][:duration] ])
+          # calc end_time
+          queued_shifts[onIcePlus_id][:end_time] =
+          TimeOperation.new(:+,
+            [ queued_shifts[onIcePlus_id][:start_time],
+              queued_shifts[onIcePlus_id][:duration] ])
+
+        elsif path == 'end_time'
+          # set end time from penalty API data (diff)
+          queued_shifts[onIcePlus_id][:end_time] =
+          diff[:about][:periodTime]
+        end
 
         # create event from queued shift [as it has finished]
         queued_shift_events <<
@@ -488,9 +511,10 @@ private
 
         # either continuing shift, or initial
 
-        queued_shifts[onIcePlus_id] = nil
+        queued_shifts[onIcePlus_id] = nil; end_shift_bool = nil;
       else
-        inst[:on_ice_plus][_side][onIcePlus_id][:duration] += elapsed_duration
+        # set initial duration
+        inst[:on_ice_plus][_side][onIcePlus_id][:duration] = elapsed_duration
 
         puts "'––else––'\n\n"
         # byebug
