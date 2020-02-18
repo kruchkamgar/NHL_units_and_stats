@@ -2,7 +2,7 @@ import UnitsDisplay from '../ui/UnitsDisplay'
 import { connect } from 'react-redux'
 import { units, clearUnits, team_units } from '../../actions'
 
-const mapStateToProps = (state, props) =>
+const mapStateToProps = (state) =>
   ({
     units: state.allUnits.units,
     fetching: state.allUnits.fetching
