@@ -209,8 +209,8 @@ puts "\ncheck inst for game_id? shouldnt exist\n\n"; byebug
         # new_player_bool = nil
         bools =
         Hash[
-          :new_player_bool = nil
-          :end_shift_bool = nil ]
+          :new_player = nil
+          :end_shift = nil ]
 
         diff_hash['onIcePlus']
         .each do |diff|
@@ -246,7 +246,7 @@ puts "\ncheck inst for game_id? shouldnt exist\n\n"; byebug
               .each do |path|
                 process_path(
                   path, path[:key], bools, queued_shifts, _side, onIcePlus_id) end
-
+            # end of shift (penalized player)
             elsif new_instance_data[:penalties] && diff[:op] == "remove"
               penalty_for_matched_diff =
               inst[:plays]
@@ -260,7 +260,7 @@ puts "\ncheck inst for game_id? shouldnt exist\n\n"; byebug
                   diff, diff[:op], nil, queued_shifts, _side, onIcePlus_id
                 )
 
-                bools[:end_shift_bool] = true
+                # bools[:end_shift] = true
                 process_path(
                   penalty_for_matched_diff, 'end_time', bools, queued_shifts, _side, onIcePlus_id
                 )
@@ -380,20 +380,20 @@ private
 
       # prepare for 'shiftDuration'
       if path == 'playerId'
-        new_player_bool = true # return this
+        bools[:new_player] = true # return this
         # add new player_event to inst[:on_ice_plus]
         inst[:on_ice_plus][_side]
         .insert( onIcePlus_id,
           Hash[ player_id_num: diff[:value], duration: 0 ] )
       elsif
-        path == 'remove' then end_shift_bool = true end
+        path == 'remove' then bools[:end_shift] = true end
 
     when 'shiftDuration', 'end_time'
       # new_player_bool alternative: look up if playerId in diff
       # puts "\n\n'——shift duration——'\n\n"
       elapsed_duration = diff[:value]
 
-      if bools[:new_player_bool] # new shift
+      if bools[:new_player] # new shift
         inst[:on_ice_plus][_side][onIcePlus_id][:start_time] =
         # on initial: should equate to game start time
         TimeOperation.new(:-,
@@ -402,21 +402,21 @@ private
             stoppage_time,
             elapsed_duration ]
         ).result
-        bools[:new_player_bool] = nil # return this
+        bools[:new_player] = nil # return this
       else
         inst[:on_ice_plus][_side][onIcePlus_id][:duration] = elapsed_duration # assumes API durations update, rather than increment
       end
 
       # - calc duration and derive end_time;
       # - create shift event
-      if bools[:new_player_bool] || path == 'end_time' &&
+      if bools[:new_player] || path == 'end_time' &&
         !queued_shifts[onIcePlus_id].empty?
         # puts "\n\n'––queued_shift_event––'\n\n"; byebug
 
   #  verify: compare [a player's] evenTimeOnIce with calculated time between time stamps
   # - analytics sql query: sum durations for all shift events for the game and player
 
-        if bools[:new_player_bool]
+        if bools[:new_player]
           # calc increment as: time_stamp minus new player elapsed shift duration
           prior_shift_duration_increment =
           TimeOperation.new(:-, [
@@ -468,7 +468,7 @@ private
 
         # either continuing shift, or initial
 
-        queued_shifts[onIcePlus_id] = nil; end_shift_bool = nil;
+        queued_shifts[onIcePlus_id] = nil; bools[:end_shift] = nil;
       else
         # set initial duration
         inst[:on_ice_plus][_side][onIcePlus_id][:duration] = elapsed_duration
