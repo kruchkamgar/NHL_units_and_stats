@@ -39,12 +39,18 @@ puts "\ncheck inst for game_id? shouldnt exist\n\n"; byebug
           time: latest_time_stamp },
         seconds: 1).original_format
 
-      # begin rescue end?
+      # begin rescue?
       diff_patch = fetch_diff_patch(
         args[:game_id], latest_time_stamp )
 
       count_seconds += 1
     end # while
+
+  # if diff_patch.empty?
+  # handle no content
+  # - populate players currently on ice
+  # - skip adding instances
+  # end
 
     # check for game state -- finished?
       # remove game_id key from @@time_stamps, if so
@@ -256,6 +262,7 @@ puts "\ncheck inst for game_id? shouldnt exist\n\n"; byebug
               end #find
 
               if penalty_for_matched_diff
+                # bools = (return a value?)
                 process_path(
                   diff, diff[:op], nil, queued_shifts, _side, onIcePlus_id
                 )
@@ -264,7 +271,7 @@ puts "\ncheck inst for game_id? shouldnt exist\n\n"; byebug
                 process_path(
                   penalty_for_matched_diff, 'end_time', bools, queued_shifts, _side, onIcePlus_id
                 )
-
+              # event algo, case 2: create instance
             end # conditionals
 
           # shift continues: shift update happened in diff_patch
@@ -291,21 +298,21 @@ puts "\ncheck inst for game_id? shouldnt exist\n\n"; byebug
         # - OR add all the next overlapping shifts (inclusive of start_time) to the queue
       # - remove shift, if an end time
 
+    queued_shift_events = [] # create instance from queued events
     # event-driven algo––
-    # - every time a player's shift ends OR a new player's shift starts after a penalty, create an instance
-      # either 'diff[:op] == "add" or "replace" > 'playerId'
-      # OR "remove" + penalty in 'plays'
+    # - every time a player's shift ends *OR* a new player's shift starts after a penalty, create an instance
+    # 1. either 'diff[:op] == "add" or "replace" > 'playerId'
       # > add means new player [after penalty?] or following a remove (delayed replace)
-      # - 1. next start_time becomes the previous instance's end_time,
+      # - next start_time becomes the previous instance's end_time,
 
-        # - 1A. so long as no delay: the next start_time equals the previous instance end_time
-        # - 1B else create a new [likely short] instance
-
-      # - 2. upon 'remove' for onIcePlus, check for penalties, else wait for the next 'add' statement
-        # - use the penalty time to mark shift's end
-        # - create instance
-      # - 2alt. find penalties to mark the shift ends for 'remove' operations in diff
-        # - find the indexed slot for the 'remove' operation [using penalty data?]
+        # 1A. so long as no delay: the next start_time equals the previous instance end_time
+        # 1B else create a new [likely short] instance
+    # 2. OR "remove" + penalty in 'plays'
+      # - upon 'remove' for onIcePlus, check for penalties, else wait for the next 'add' statement
+        # use the penalty time to mark shift's end
+        # create instance
+    # 2alt. find penalties to mark the shift ends for 'remove' operations in diff
+      # - find the indexed slot for the 'remove' operation [using penalty data?]
 
     # - attach log entries to event and event to instance
 
