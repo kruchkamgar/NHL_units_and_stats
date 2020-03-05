@@ -22,6 +22,7 @@ const handleError = error => {
 	) }
 
 const store = storeFactory(initialState)
+// calls saveState every time store changes
 store.subscribe(saveState)
 
 window.React = React

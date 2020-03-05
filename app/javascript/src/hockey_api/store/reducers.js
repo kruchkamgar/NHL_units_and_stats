@@ -20,15 +20,12 @@ export const errors = (state=[], action) => {
 export const fetching = (state=false, action) => {
 
   switch(action.type) {
-
     case C.CANCEL_FETCHING :
       return false
-
-		case C.FETCH_UNITS :
+		case C.FETCHING :
 			return true
-
-		case C.STORE_UNITS :
-			return true
+		case C.END_FETCHING :
+			return false
 
     default:
       return state
@@ -38,13 +35,10 @@ export const fetching = (state=false, action) => {
 export const units = (state=[], action) => {
 
   switch(action.type) {
-
     case C.CLEAR_UNITS :
       return []
-
     case C.STORE_UNITS :
       return action.payload
-
     default :
       return state
   }
@@ -56,5 +50,9 @@ export default combineReducers({
 	allUnits: combineReducers({
 		fetching,
 		units
-	})
+	}),
+  standings: combineReducers({
+    fetching,
+    standings
+  })
 })

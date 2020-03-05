@@ -20,8 +20,9 @@ const mapDispatchToProps = dispatch =>
         clearUnits() )
     },
     loadTeamUnits(team_number) {
-      dispatch(
-        team_units(team_number) )
+      if (!state.standings.fetching){
+        dispatch(
+          team_units(team_number) ) }
     }
   })
 
