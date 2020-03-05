@@ -1,17 +1,19 @@
 
 module Standings
 
-  def latest_game_dates(latest=20)
+  def latest_game_dates(latest=20, end_date=(Time.now.strftime "%Y-%m-%d"))
     # query the NHL schedule for last 20 games
     # find the last n games for each team:
     # - https://statsapi.web.nhl.com/api/v1/schedule?startDate=2019-02-10&endDate=2020-01-01
 
     # push to array within hash of team.
     # compare record update to previous game, and add hash marking w/l/ot for current game in array
+    cached = Rails.cache.read(end_date)
+    return cached if cached
 
     records = Hash[]
 
-    get_schedule_data()['dates']
+    get_schedule_data(end_date)['dates']
     .each do |date|
       date['games']
       .each do |game|
@@ -50,16 +52,16 @@ module Standings
       end #each
     end #map
 
+    Rails.cache.write(end_date, records, expires_in: 24.hours)
     return records
   end
 
-  def get_schedule_data
-    JSON.parse( RestClient.get(schedule_url()) )
+  def get_schedule_data(end_date)
+    JSON.parse( RestClient.get(schedule_url(end_date: end_date)) )
   end
 
   def schedule_url(
-    start_date= "2019-10-01", end_date= (Time.now.strftime "%Y-%m-%d") )
-
+    start_date: "2019-10-01", end_date: end_date )
     "https://statsapi.web.nhl.com/api/v1/schedule?startDate=#{start_date}&endDate=#{end_date}"
   end
 
