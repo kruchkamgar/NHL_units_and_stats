@@ -58,7 +58,7 @@ export const clearUnits = () =>
 // }
 export const team_units = (team_number) => dispatch => { // *1
     //stores fetching reducer as true
-    dispatch({ type: C.FETCH_UNITS })
+    dispatch({ type: C.FETCHING })
 
     fetch(`/units/${team_number}`)
       .then(response => response.json())
