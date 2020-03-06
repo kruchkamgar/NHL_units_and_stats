@@ -5,31 +5,49 @@ module Standings
   # LOSSES_POINTS = 0
   # OT_POINTS = 1
 
-  def weighted_standings(end_date=(Time.now.strftime "%Y-%m-%d"))
+  def weighted_standings(count_latest=20, end_date=(Time.now.strftime "%Y-%m-%d"))
     game_results = latest_game_results(end_date)
     recency_multiplier = 2
 
     weighted_standings =
     game_results
     .map do |name, games|
-      if games.count < 20
-        return [ name, reduce_results(games[-1]) ]
+      if games.count < count_latest
+        [ name, reduce_results(games[-1]) ]
       else
-        latest = 20
-        points_last_20 = calc_points_last_(games, latest)
-        points_prior = reduce_results(games[-1]) - points_last_20
+        count_prior = (games.count - count_latest)
 
-        recency_weight = latest/games.count * recency_multiplier
+        adjusted_count_latest = count_latest * recency_multiplier
+        adjusted_count_prior =
+        count_prior - (adjusted_count_latest - count_latest)
+
+        # expanded_games = latest * recency_multiplier - latest
+        #
+        # # contract points_prior commensurate with change in game-representation proportions --commensurate with contraction in game_count_prior's proportion of total games
+        # contraction_weight =
+        # (game_count_prior - expanded_games)/game_count_prior
+
+        points_latest = calc_points_last_(games, count_latest)
+        points_prior = reduce_results(games[-1]) - points_latest
+
+        points_latest_percentage =
+        points_latest/(count_latest * WINS_POINTS).to_f
+        points_prior_percentage =
+        points_prior/(count_prior * WINS_POINTS).to_f
 
         power_score =
-        recency_weight * points_last_20 +
-        (1 - recency_weight) * points_prior
+        points_prior_percentage * adjusted_count_prior +
+        points_latest_percentage * adjusted_count_latest
+        # recency_multiplier * points_last_ +
+        # points_prior * contraction_weight
 
-        return [ name, power_score ]
+        power_score_to_points = power_score * WINS_POINTS.to_f
+
+        [ name, power_score_to_points.round(1) ]
       end
     end
     .sort do |a, b|
-      a[1] <=> b[1] end
+      b[1] <=> a[1] end
 
   end
 
@@ -38,27 +56,29 @@ module Standings
 
     latest_n_record =
     Hash[
-      wins: game_results[-1]['wins'] - games_results[bound]['wins'],
-      losses: game_results[-1]['losses'] - games_results[bound]['losses'],
-      ot: game_results[-1]['ot'] - games_results[bound]['ot']
+      wins: games_results[-1]['wins'] - games_results[bound]['wins'],
+      losses: games_results[-1]['losses'] - games_results[bound]['losses'],
+      ot: games_results[-1]['ot'] - games_results[bound]['ot']
     ]
 
     reduce_results(latest_n_record)
   end
 
   def reduce_results(record)
+    points =
     record
-    .reduce do |total, results_by_type|
-      case results_by_type.keys[0]
-      when :wins
-        total += results_by_type[:wins] * WINS_POINTS
-      when :losses
+    .inject(0) do |total, results_by_type|
+      case results_by_type[0]
+      when :wins, "wins"
+        total +
+        (results_by_type[1] * WINS_POINTS)
+      when :losses, "losses"
         total
-      when :ot
-        total += results_by_type[:ot]
+      when :ot, "ot"
+        total + results_by_type[1]
+      else total
       end
     end
-
   end #reduce_results
 
   def latest_game_results(end_date)
