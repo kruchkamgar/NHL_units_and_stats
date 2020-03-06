@@ -5,9 +5,8 @@ module Standings
   # LOSSES_POINTS = 0
   # OT_POINTS = 1
 
-  def weighted_standings(count_latest=20, end_date=(Time.now.strftime "%Y-%m-%d"))
+  def weighted_standings(count_latest=20, recency_multiplier=2, end_date=(Time.now.strftime "%Y-%m-%d"))
     game_results = latest_game_results(end_date)
-    recency_multiplier = 2
 
     weighted_standings =
     game_results
