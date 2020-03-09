@@ -1,9 +1,12 @@
 class TeamsController < ApplicationController
+include Standings
+
   def index
-  #   teams = Team.last(5)
-  #
-  #   render json: teams.to_json
-  # end
+    # teams = Team.last(5)
+    #
+    # render json: teams.to_json
+    render json: weighted_standings().to_json
+  end
 
   def show
     # team_id = team_params[:id]
