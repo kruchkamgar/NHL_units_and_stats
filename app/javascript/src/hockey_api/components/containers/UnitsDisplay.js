@@ -9,7 +9,7 @@ const mapStateToProps = (state) =>
     // filter: props.params.filter,
   })
 
-const mapDispatchToProps = dispatch =>
+const mapDispatchToProps = (dispatch) =>
   ({
     loadUnits() {
         dispatch(
@@ -20,12 +20,10 @@ const mapDispatchToProps = dispatch =>
         clearUnits() )
     },
     loadTeamUnits(team_number) {
-      if (!state.standings.fetching){
+      if (!store.getState().allUnits.fetching){
         dispatch(
           team_units(team_number) ) }
     }
   })
-
-
 
 export default connect(mapStateToProps, mapDispatchToProps)(UnitsDisplay)

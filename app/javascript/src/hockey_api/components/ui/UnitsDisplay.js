@@ -22,9 +22,9 @@ function UnitsDisplay({
     renderPlusMinus(data_prepped);
   });
 
-  var unitsData = units.map( prepData.getUnitData );
+  const unitsData = units.map( prepData.getUnitData );
 
-  var data_prepped = unitsData.slice(0);
+  const data_prepped = unitsData.slice(0);
   data_prepped.forEach(prepData.applyFractionArray);
 
   // var unitsWrapperRef;
@@ -58,7 +58,7 @@ function UnitsDisplay({
   } //UnitsDisplay
 
   UnitsDisplay.propTypes = {
-
+    units: PropTypes.array.isRequired
   }
 
   export default UnitsDisplay

@@ -11,6 +11,8 @@ export const errors = (state=[], action) => {
     	]
     case C.CLEAR_ERROR :
       return state.filter((message, i) => i !== action.payload)
+    case C.CLEAR_ERRORS :
+      return []
   	default:
   		return state
   }
@@ -20,8 +22,6 @@ export const errors = (state=[], action) => {
 export const fetching = (state=false, action) => {
 
   switch(action.type) {
-    case C.CANCEL_FETCHING :
-      return false
 		case C.FETCHING :
 			return true
 		case C.END_FETCHING :
@@ -43,6 +43,18 @@ export const units = (state=[], action) => {
       return state
   }
 
+}
+
+export const standings = (state=[], action) => {
+
+  switch(action.type) {
+    case C.CLEAR_STANDINGS :
+      return []
+    case C.STORE_STANDINGS :
+      return action.payload
+    default :
+      return state
+  }
 }
 
 export default combineReducers({

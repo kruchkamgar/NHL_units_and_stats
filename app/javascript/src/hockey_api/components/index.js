@@ -2,7 +2,7 @@ import Menu from './ui/Menu'
 import ShowErrors from './containers/ShowErrors'
 import { Route } from 'react-router-dom'
 import UnitsDisplay from './containers/UnitsDisplay'
-import TeamStandings from './ui/TeamStandings'
+import StandingsDisplay from './containers/StandingsDisplay'
 import '../stylesheets/index.scss'
 
 export const App = () =>
@@ -14,7 +14,7 @@ const FirstLevel = () => (
     <div className="wrapper">
       { /*<ShowErrors /> */ }
       <Route path='/units' component={UnitsDisplay}/>
-      <Route path='/teams' component={TeamStandings}/>
+      <Route path='/latest' component={StandingsDisplay}/>
       <Route path='/' component={Menu}/>
     </div>
 )
