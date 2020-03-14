@@ -36,7 +36,7 @@ module Standings
           points_latest_n =
           tally_results( games[tail] ) -
           tally_results( games[head] )
-          # results within ranged array of games
+          # results within array of ranged–(by count) games
           Array.new([
             points_latest_n,
             queue_mark - index,
