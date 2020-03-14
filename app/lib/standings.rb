@@ -63,7 +63,7 @@ module Standings
         results_range_data
         .map.with_index do |results_range, index|
           points_latest, count_prior, games = results_range
-          
+
           head = -(count_latest + index)
           # increase (decrease) the 'share' represented by latest games by a multiplier
           adjusted_count_latest =
@@ -97,6 +97,7 @@ module Standings
             games[head][:date] ]
         end
 
+        byebug
         Hash[ name, power_scores_over_range ]
       end #if
     end #map weighted_standings
