@@ -22,7 +22,6 @@ module Standings
       else effective_range = queue_mark end
 
       # if games.count < count_latest
-      results_range = nil
       if effective_range < 1
         Hash[
           name: name,
