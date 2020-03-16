@@ -4,66 +4,119 @@ module Standings
   WINS_POINTS = 2
   # LOSSES_POINTS = 0
   # OT_POINTS = 1
+  DATE_NOW = Time.now.strftime "%Y-%m-%d"
 
-  def weighted_standings(count_latest=20, recency_multiplier=2, end_date=(Time.now.strftime "%Y-%m-%d"))
-    game_results = latest_game_results(end_date)
+  def weighted_standings(
+    count_latest=20, range=1,
+    recency_multiplier=2,
+    end_date=DATE_NOW )
 
-    weighted_standings =
-    game_results
+    game_results_by_team = latest_game_results(end_date)
+
+    latest_points_and_count_by_team_over_range =
+    game_results_by_team
     .map do |name, games|
-      if games.count < count_latest
-        [ name, reduce_results(games[-1]) ]
+      queue_mark = games.count - count_latest
+      # put a floor on the effective_range
+      if queue_mark > range then effective_range = range
+      else effective_range = queue_mark end
+
+      # if games.count < count_latest
+      if effective_range < 1
+        Hash[
+          name: name,
+          points_and_count: tally_results(games[-1]) ]
       else
-        count_prior = (games.count - count_latest)
-
-        adjusted_count_latest = count_latest * recency_multiplier
-        adjusted_count_prior =
-        count_prior - (adjusted_count_latest - count_latest)
-
-        # expanded_games = latest * recency_multiplier - latest
-        #
-        # # contract points_prior commensurate with change in game-representation proportions --commensurate with contraction in game_count_prior's proportion of total games
-        # contraction_weight =
-        # (game_count_prior - expanded_games)/game_count_prior
-
-        points_latest = calc_points_last_(games, count_latest)
-        points_prior = reduce_results(games[-1]) - points_latest
-
-        points_latest_percentage =
-        points_latest/(count_latest * WINS_POINTS).to_f
-        points_prior_percentage =
-        points_prior/(count_prior * WINS_POINTS).to_f
-
-        power_score =
-        points_prior_percentage * adjusted_count_prior +
-        points_latest_percentage * adjusted_count_latest
-        # recency_multiplier * points_last_ +
-        # points_prior * contraction_weight
-
-        power_score_to_points = power_score * WINS_POINTS.to_f
-
-        [ name, power_score_to_points.round(1) ]
+        results_range_data =
+        Array.new(effective_range)
+        .map.with_index do |slot, index|
+          head = -(count_latest+index)
+          tail = -(1+index)
+          points_latest_n =
+          tally_results( games[tail] ) -
+          tally_results( games[head] )
+          # results within array of ranged–(by count) games
+          Array.new([
+            points_latest_n,
+            queue_mark - index,
+            games ])
+        end # results_range
+        Hash[
+          name: name,
+          points_and_count: results_range_data ]
       end
-    end
-    .sort do |a, b|
-      b[1] <=> a[1] end
+    end #map latest_points_and_count_by_team_over_range
 
+# logic: take game results over count of latest + range
+    weighted_standings_over_range =
+    latest_points_and_count_by_team_over_range
+    .map do |team_hash|
+      results_range_data = team_hash[:points_and_count]
+      name = team_hash[:name]
+
+      if results_range_data.class != Array
+        [ name, points_latest ]
+      else
+        # map through range of games
+        power_scores_over_range =
+        results_range_data
+        .map.with_index do |results_range, index|
+          points_latest, count_prior, games = results_range
+
+          head = -(count_latest + index)
+          # increase (decrease) the 'share' represented by latest games by a multiplier
+          adjusted_count_latest =
+          count_latest * recency_multiplier
+
+          count_prior_delta =
+          adjusted_count_latest - count_latest
+          adjusted_count_prior =
+          count_prior - count_prior_delta
+
+          # head_result = head_results_last_(games, count_latest)
+
+          # points_latest = tally_results(tally_latest)
+          points_prior = tally_results(games[-1]) - points_latest
+
+          points_latest_percentage =
+          points_latest/(count_latest * WINS_POINTS).to_f
+          points_prior_percentage =
+          points_prior/(count_prior * WINS_POINTS).to_f
+
+          power_score =
+          points_prior_percentage * adjusted_count_prior +
+          points_latest_percentage * adjusted_count_latest
+          # recency_multiplier * points_last_ +
+          # points_prior * contraction_weight
+
+          power_score_to_points = power_score * WINS_POINTS.to_f
+
+          [ power_score_to_points.round(1),
+            points_latest_percentage, points_prior_percentage,
+            games[head][:date] ]
+        end
+
+        byebug
+        Hash[ name, power_scores_over_range ]
+      end #if
+    end #map weighted_standings_over_range
+    .sort_by do |team_hash|
+      (team_hash.values[0])[0].first end.reverse
   end
 
-  def calc_points_last_(games_results, last)
-    bound = -(last+1)
+  # def head_results_last_(games_results, last=0)
+  #   bound = -(last+1)
+  #   # count of each type
+  #   latest_n_records =
+  #   Hash[
+  #     wins: games_results[-1]['wins'] - games_results[bound]['wins'],
+  #     losses: games_results[-1]['losses'] - games_results[bound]['losses'],
+  #     ot: games_results[-1]['ot'] - games_results[bound]['ot']
+  #   ]
+  # end
 
-    latest_n_record =
-    Hash[
-      wins: games_results[-1]['wins'] - games_results[bound]['wins'],
-      losses: games_results[-1]['losses'] - games_results[bound]['losses'],
-      ot: games_results[-1]['ot'] - games_results[bound]['ot']
-    ]
-
-    reduce_results(latest_n_record)
-  end
-
-  def reduce_results(record)
+  # convert record to points
+  def tally_results(record)
     points =
     record
     .inject(0) do |total, results_by_type|
@@ -71,14 +124,14 @@ module Standings
       when :wins, "wins"
         total +
         (results_by_type[1] * WINS_POINTS)
-      when :losses, "losses"
-        total
+      # when :losses, "losses"
+      #   total
       when :ot, "ot"
         total + results_by_type[1]
       else total
       end
     end
-  end #reduce_results
+  end #tally_results
 
   def latest_game_results(end_date)
     # query the NHL schedule for last 20 games
@@ -91,6 +144,7 @@ module Standings
     return cached if cached
 
     records = Hash[]
+    games = Hash[]
 
     # add a result for each teams' games, within records (by team)
     get_schedule_data(end_date)['dates']
@@ -102,9 +156,10 @@ module Standings
         home = game['teams']['home']['team']['name']
         records[away] ||= []; records[home] ||= []
 
-
         record_away = game['teams']['away']['leagueRecord']
+        .merge(date: date['date'])
         record_home = game['teams']['home']['leagueRecord']
+        .merge(date: date['date'])
         # add games to array for team games
         records[away] << record_away; records[home] << record_home
 
@@ -138,7 +193,9 @@ module Standings
   end
 
   def get_schedule_data(end_date)
-    JSON.parse( RestClient.get(schedule_url(end_date: end_date)) )
+    Rails.cache.fetch(end_date, expires_in: 24.hours) do
+      JSON.parse( RestClient.get(schedule_url(end_date: end_date)) )
+    end
   end
 
   def schedule_url(
