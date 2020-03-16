@@ -5,7 +5,9 @@ include Standings
     # teams = Team.last(5)
     #
     # render json: teams.to_json
-    render json: weighted_standings().to_json
+    render json: Hash[
+      power_scores: weighted_standings(),
+      schedule: get_schedule_data() ]
   end
 
   def show
