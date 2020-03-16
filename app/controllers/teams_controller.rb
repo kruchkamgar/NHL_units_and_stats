@@ -7,7 +7,7 @@ include Standings
     # render json: teams.to_json
     render json: Hash[
       power_scores: weighted_standings(),
-      schedule: get_schedule_data() ]
+      schedule: get_schedule_data() ].to_json
   end
 
   def show
