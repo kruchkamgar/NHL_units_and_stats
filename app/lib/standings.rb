@@ -48,7 +48,7 @@ module Standings
     end #map latest_points_and_count_by_team_over_range
 
 # logic: take game results over count of latest + range
-    weighted_standings =
+    weighted_standings_over_range =
     latest_points_and_count_by_team_over_range
     .map do |team_hash|
       results_range_data = team_hash[:points_and_count]
@@ -99,12 +99,9 @@ module Standings
         byebug
         Hash[ name, power_scores_over_range ]
       end #if
-    end #map weighted_standings
+    end #map weighted_standings_over_range
     .sort_by do |team_hash|
       (team_hash.values[0])[0].first end.reverse
-
-
-
   end
 
   # def head_results_last_(games_results, last=0)
