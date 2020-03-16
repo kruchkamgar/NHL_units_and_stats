@@ -193,7 +193,9 @@ module Standings
   end
 
   def get_schedule_data(end_date)
-    JSON.parse( RestClient.get(schedule_url(end_date: end_date)) )
+    Rails.cache.fetch(end_date, expires_in: 24.hours) do
+      JSON.parse( RestClient.get(schedule_url(end_date: end_date)) )
+    end
   end
 
   def schedule_url(
