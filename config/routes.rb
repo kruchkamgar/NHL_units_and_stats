@@ -13,4 +13,13 @@ Rails.application.routes.draw do
 
   get '/units/utility_json' => 'units#utility_json'
 
+  get '/teams' => 'teams#index'
+  get '/teams/:range', to: 'teams#show'
+
+
+  # sidekiq dashboard – localhost:3000/sidekiq
+  require 'sidekiq/web'
+  mount Sidekiq::Web => '/sidekiq'
+
+  match '*path', to: 'units#index', via: :all
 end
