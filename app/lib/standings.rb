@@ -35,7 +35,7 @@ module Standings
         results_range_data =
         Array.new(effective_range)
         .map.with_index do |slot, index|
-          head = -(count_latest+index)
+          head = -(count_latest+index+1)
           tail = -(1+index)
           points_latest_n =
           tally_results( games[tail] ) -
@@ -68,7 +68,8 @@ module Standings
         .map.with_index do |results_range, index|
           points_latest, count_prior, games = results_range
 
-          head = -(count_latest + index)
+          head = -(count_latest + index + 1)
+          tail = -(1+index)
           # increase (decrease) the 'share' represented by latest games by a multiplier
           adjusted_count_latest =
           count_latest * recency_multiplier
@@ -100,7 +101,7 @@ module Standings
             powerScore: power_score_to_points.round(1),
             pointsPercentageLatest: points_latest_percentage,
             pointsPercentagePrior: points_prior_percentage,
-            asOfDate: games[head][:date] ]
+            asOfDate: games[tail][:date] ]
         end
 
         # byebug
