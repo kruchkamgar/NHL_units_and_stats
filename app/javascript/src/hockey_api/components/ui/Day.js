@@ -18,15 +18,16 @@ const Day = ({
     const teams = {}
     Object.keys(game.teams)
     .forEach( key => {
+      const keyTeam = game.teams[key]
       teams[key] = {}
-      teams[key].score = game.teams[key].score
+      teams[key].score = keyTeam.score
       // - match the game teams with powerScore teams
       if(scores){
         Object.assign(
           teams[key],
-          {powerScores:
-            scores.find( score =>{
-              teams[key].team.name === score.name }) }
+          {powerScore:
+            scores.find( score =>
+              keyTeam.team.name === score.name ) }
         ) }
     })
     // result of game (scores)

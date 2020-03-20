@@ -16,7 +16,7 @@ const PowerScoresDisplay = ({
 
   const today = new Date();
 
-  const [timeMark, setTimeMark] = useState( new Date("2020-03-05") );
+  const [timeMark, setTimeMark] = useState( new Date("2020-03-17") );
   // days based on schedule
   // - function to collect games from schedule matching the date
 
@@ -26,26 +26,27 @@ const PowerScoresDisplay = ({
   });
   let direction = 0;
 
-  let powerScoresByDate = []
+  const [powerScoresByDate, setPowerScoresByDate] = useState([]);
 
 useEffect( ()=> {
   if(!(dates === undefined)){
+    // find the latest powerScores using the timeMark
+    setPowerScoresByDate(
+      Object.keys(dates)
+      .map( key => {
+        return powerScores
+        .map( team =>{
+          return {
+            name: team.name,
+            scores: team.scores
+              .find( score => score.asOfDate <= dates[key] ) }
+        }) })
+    )
+
     setGames( prevGames=>{
       return gamesByDates(prevGames, dates, schedule, direction)
     });
-
-    // find the latest powerScores using the timeMark
-    powerScoresByDate =
-    Object.keys(dates)
-    .map( key => {
-      powerScores
-      .map( team =>{
-        return team.scores
-          .find( score =>{
-            Number(new Date(score.asOfDate) <= Number(dates[key]) )}
-          )
-    }) })
-  }
+  } //if
 }, [dates])
 
 useEffect( ()=> {
