@@ -10,20 +10,15 @@ import { clearErrors } from '../actions';
 	let result
 	console.groupCollapsed(`dispatching action => ${action.type}`)
 
-	console.log(action.type)
 	result = next(action)
 
-	let { errors, allUnits } = store.getState()
+	let { errors } = store.getState()
 	console.log(`
-
-		units: ${allUnits.units.length}
-		fetching units: ${allUnits.fetching}
-		errors (units): ${errors.length}, ${errors}
-
+		errors: ${errors.length}, ${errors}
 	`)
 	console.groupEnd()
 
-  if (errors.length !== 0) { 
+  if (errors.length !== 0) {
     store.dispatch(clearErrors()) }
 
 	return result;
@@ -38,3 +33,7 @@ export default (initialState={}) => {
 			consoleMessages)
 		)
 }
+
+
+// 	units: ${allUnits.units.length}
+// 	fetching units: ${allUnits.fetching}

@@ -16,16 +16,31 @@ export const clearError = index =>
 export const clearErrors = () =>
     ({ type: C.CLEAR_ERRORS })
 
-export const standings = () => dispatch => {
+
+const scheduleDates = (schedule) => {
+  return schedule.dates
+  .map( date=> date.date )
+}
+
+export const scheduleAndPowerScores = () => dispatch => {
   dispatch({ type: C.FETCHING })
 
-  fetch('/teams')
+  fetch('/teams/5')
   .then(response => response.json() )
-  .then(standings_ => {
+  .then(scheduleAndPowerScores => {
     dispatch({
-      type: C.STORE_STANDINGS,
-      payload: standings_
+      type: C.STORE_POWERSCORES,
+      payload: scheduleAndPowerScores.powerScores
     })
+    dispatch({
+      type: C.STORE_SCHEDULE,
+      payload: scheduleAndPowerScores.schedule
+    })
+    dispatch({
+      type: C.STORE_SCHEDULE_DATES,
+      payload: scheduleDates(scheduleAndPowerScores.schedule)
+    })
+
     dispatch({ type: C.END_FETCHING })
   })
   .catch(error => {
@@ -42,11 +57,11 @@ export const clearUnits = () =>
     type: C.CLEAR_UNITS
   })
 
-export const team_units = (team_number) => dispatch => { // *1
+export const teamUnits = (teamNumber) => dispatch => { // *1
     //stores fetching reducer as true
     dispatch({ type: C.FETCHING })
 
-    fetch(`/units/${team_number}`)
+    fetch(`/units/${teamNumber}`)
       .then(response => response.json())
       .then(units => {
           dispatch({

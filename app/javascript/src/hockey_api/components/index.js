@@ -1,8 +1,8 @@
 import Menu from './ui/Menu'
 import ShowErrors from './containers/ShowErrors'
-import { Route } from 'react-router-dom'
+import { Switch, Route, Redirect } from 'react-router-dom'
 import UnitsDisplay from './containers/UnitsDisplay'
-import StandingsDisplay from './containers/StandingsDisplay'
+import PowerScoresDisplay from './containers/PowerScoresDisplay'
 import '../stylesheets/index.scss'
 
 export const App = () =>
@@ -13,9 +13,13 @@ export const App = () =>
 const FirstLevel = () => (
     <div className="wrapper">
       { /*<ShowErrors /> */ }
-      <Route path='/units' component={UnitsDisplay}/>
-      <Route path='/latest' component={StandingsDisplay}/>
-      <Route path='/' component={Menu}/>
+      <Switch>
+        <Route path='/units' component={UnitsDisplay}/>
+        <Route path='/latest' component={PowerScoresDisplay}/>
+        <Route exact path='/'>
+          <Redirect to="/latest" /></Route>
+      </Switch>
+      <Route path='/teams' component={Menu}/>
     </div>
 )
 

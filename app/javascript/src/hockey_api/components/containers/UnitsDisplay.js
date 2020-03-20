@@ -1,6 +1,6 @@
 import UnitsDisplay from '../ui/UnitsDisplay'
 import { connect } from 'react-redux'
-import { units, clearUnits, team_units } from '../../actions'
+import { clearUnits, teamUnits } from '../../actions'
 
 const mapStateToProps = (state) =>
   ({
@@ -11,18 +11,14 @@ const mapStateToProps = (state) =>
 
 const mapDispatchToProps = (dispatch) =>
   ({
-    loadUnits() {
-        dispatch(
-          units() )
-    },
     clearUnits() {
       dispatch(
         clearUnits() )
     },
-    loadTeamUnits(team_number) {
+    loadTeamUnits(teamNumber) {
       if (!store.getState().allUnits.fetching){
         dispatch(
-          team_units(team_number) ) }
+          teamUnits(teamNumber) ) }
     }
   })
 

@@ -45,12 +45,36 @@ export const units = (state=[], action) => {
 
 }
 
-export const standings = (state=[], action) => {
+export const powerScores = (state=[], action) => {
 
   switch(action.type) {
-    case C.CLEAR_STANDINGS :
+    case C.CLEAR_POWERSCORES :
       return []
-    case C.STORE_STANDINGS :
+    case C.STORE_POWERSCORES :
+      return action.payload
+    default :
+      return state
+  }
+}
+
+export const schedule = (state=[], action) => {
+
+  switch(action.type) {
+    case C.CLEAR_SCHEDULE :
+      return []
+    case C.STORE_SCHEDULE :
+      return action.payload
+    default :
+      return state
+  }
+}
+
+export const scheduleDates = (state=[], action) => {
+
+  switch(action.type) {
+    case C.CLEAR_SCHEDULE_DATES :
+      return []
+    case C.STORE_SCHEDULE_DATES :
       return action.payload
     default :
       return state
@@ -63,8 +87,10 @@ export default combineReducers({
 		fetching,
 		units
 	}),
-  standings: combineReducers({
+  powerScores: combineReducers({
     fetching,
-    standings
+    powerScores,
+    schedule,
+    scheduleDates
   })
 })
