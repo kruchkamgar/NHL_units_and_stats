@@ -1,10 +1,12 @@
 
 
 
-const GameRow = () => {
+const GameRow = ({teams}) => {
 
   return(
-    <div></div>
+    <tr>
+      <td><div></div></td>
+    </tr>
   )
 }
 

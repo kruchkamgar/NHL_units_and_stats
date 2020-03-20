@@ -11,22 +11,35 @@ const Day = ({
 // - calculate combined power
 // - calc performance jump
 
-  const gameRows = <tr><td>gameRows</td></tr>;
-  // games
-  // .map( game =>{
-  //   // game.teams.map ==> row || new game component
-  //   // result of game (scores)
-  //   // - function to determine the winner
-  //   // - game table data functions (pass winner/loser)
-  //   // - match the game teams with powerScore teams
-  //   teams
-  //   .map( team => {
-  //     powerScoresDay.find( scores=>{
-  //       team.name === scores.name })
-  //   })
-  //
-  //   return <GameRow teams={teams} />
-  // })
+  const gameRows =
+  games
+  .map( (game, index) =>{
+
+    const teams = {}
+    Object.keys(game.teams)
+    .forEach( key => {
+      teams[key] = {}
+      teams[key].score = game.teams[key].score
+      // - match the game teams with powerScore teams
+      if(scores){
+        Object.assign(
+          teams[key],
+          {powerScores:
+            scores.find( score =>{
+              teams[key].team.name === score.name }) }
+        ) }
+    })
+    // result of game (scores)
+    // - function to determine the winner
+    if (teams.away > teams.home) {
+      Object.assign(teams.away, {result: "winner"}); }
+    else if (teams.home > teams.away) {
+      Object.assign(teams.home, {result: "winner"}); }
+
+    return <GameRow key={index} teams={teams}/>
+  }) // map
+
+    // - game table data functions (pass winner/loser)
 
   // const powerScoresRows =
   //   powerScoresDay

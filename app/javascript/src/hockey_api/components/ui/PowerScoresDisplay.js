@@ -11,6 +11,7 @@ const PowerScoresDisplay = ({
   fetching = false
 }) => {
 
+  // could put condition in action creator
   if(!fetching && (powerScores.length === 0 || schedule.length === 0) ) getScheduleAndPowerScores();
 
   const today = new Date();
@@ -19,52 +20,41 @@ const PowerScoresDisplay = ({
   // days based on schedule
   // - function to collect games from schedule matching the date
 
-//   if (direction === -1) {
-//     newDay =
-//     gameDates(schedule, addDays(timeMark, -2) )
-//     newGames = {
-//       previous: newDay,
-//       day: games.previous,
-//       subsequent: games.day }
-//   }
-//   else if (direction === 1) {
-//     newDay =
-//     gameDates(schedule, addDays(timeMark, 2) )
-//     newGames = {
-//       previous: newDay,
-//       day: games.previous,
-//       subsequent: games.day }
-//   }
-// }
   const [dates, setDates] = useState();
   const [games, setGames] = useState({
     previous: [], day:[], subsequent:[]
   });
   let direction = 0;
 
+  let powerScoresByDate = []
+
 useEffect( ()=> {
   if(!(dates === undefined)){
     setGames( prevGames=>{
       return gamesByDates(prevGames, dates, schedule, direction)
     });
+
+    // find the latest powerScores using the timeMark
+    powerScoresByDate =
+    Object.keys(dates)
+    .map( key => {
+      powerScores
+      .map( team =>{
+        return team.scores
+          .find( score =>{
+            Number(new Date(score.asOfDate) <= Number(dates[key]) )}
+          )
+      })
+    })
   }
 }, [dates])
 
 useEffect( ()=> {
   if(scheduleDates.length > 0){
     const gameDs = gameDates(scheduleDates, timeMark, direction)
-
     setDates( gameDs );
   }
 }, [timeMark, scheduleDates]); // useEffect
-
-
-// find the latest powerScores using the timeMark
-const powerScoresDay = powerScores
-.map( team =>{
-  team.scores
-  .find( date =>{ date.asOfDate <= timeMark })
-} )
 
   // setGames( gamesByDate(schedule, timeMark) );
 
@@ -91,14 +81,14 @@ const powerScoresDay = powerScores
     setGames( gamesByDate(newGames) );
   }
 
-  const previousDay = <Day games={games.previous} scores={false}/>;
-  const nextDay = <Day games={games.subsequent} scores={false}/>;
+  const previousDay = <Day games={games[0]} scores={false}/>;
+  const nextDay = <Day games={games[2]} scores={false}/>;
   //
 
   return (
     <React.Fragment>
       <div className="queued">{previousDay}</div>
-      <Day games={games.day} scores={powerScoresDay}/>
+      <Day games={games[1]} scores={powerScoresByDate[1]}/>
       <div className="queued">{nextDay}</div>
     </React.Fragment>
   )
