@@ -7,11 +7,16 @@ module Standings
   DATE_NOW = Time.now.strftime "%Y-%m-%d"
 
   def weighted_standings(
-    count_latest=20, range=1,
+    range=1, count_latest=20,
     recency_multiplier=2,
     end_date=DATE_NOW )
 
     game_results_by_team = latest_game_results(end_date)
+
+# logic alternative: create a hash by date, by iterating over the schedule
+# - for each date in schedule, find the teams playing games
+# - calculate / pop the latest powerScore in the range (which implicitly corresponds to the date)
+  # - (contingency: powerScore from qual number of games)-- find the min number of games played, and put a corresponding lower bounds on sample for calculation of prior_points
 
     latest_points_and_count_by_team_over_range =
     game_results_by_team
@@ -91,29 +96,23 @@ module Standings
 
           power_score_to_points = power_score * WINS_POINTS.to_f
 
-          [ power_score_to_points.round(1),
-            points_latest_percentage, points_prior_percentage,
-            games[head][:date] ]
+          Hash[
+            powerScore: power_score_to_points.round(1),
+            pointsPercentageLatest: points_latest_percentage,
+            pointsPercentagePrior: points_prior_percentage,
+            asOfDate: games[head][:date] ]
         end
 
-        byebug
-        Hash[ name, power_scores_over_range ]
+        # byebug
+        Hash[
+          name: name,
+          scores: power_scores_over_range ]
       end #if
     end #map weighted_standings_over_range
     .sort_by do |team_hash|
-      (team_hash.values[0])[0].first end.reverse
+      team_hash[:scores]
+      .first[:powerScore] end.reverse
   end
-
-  # def head_results_last_(games_results, last=0)
-  #   bound = -(last+1)
-  #   # count of each type
-  #   latest_n_records =
-  #   Hash[
-  #     wins: games_results[-1]['wins'] - games_results[bound]['wins'],
-  #     losses: games_results[-1]['losses'] - games_results[bound]['losses'],
-  #     ot: games_results[-1]['ot'] - games_results[bound]['ot']
-  #   ]
-  # end
 
   # convert record to points
   def tally_results(record)
@@ -192,9 +191,15 @@ module Standings
     return records
   end
 
+  # def schedule_by_date(end_date)
+  #   get_schedule_data(end_date)
+  #   # .map do
+  # end
+
   def get_schedule_data(end_date)
-    Rails.cache.fetch(end_date, expires_in: 24.hours) do
-      JSON.parse( RestClient.get(schedule_url(end_date: end_date)) )
+    Rails.cache.fetch("schedule/#{end_date}", expires_in: 24.hours) do
+      JSON.parse(
+        RestClient.get( schedule_url(end_date: end_date) ))
     end
   end
 
