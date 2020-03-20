@@ -31,9 +31,9 @@ const Day = ({
     })
     // result of game (scores)
     // - function to determine the winner
-    if (teams.away > teams.home) {
+    if (teams.away.score > teams.home.score) {
       Object.assign(teams.away, {result: "winner"}); }
-    else if (teams.home > teams.away) {
+    else if (teams.away.score < teams.home.score) {
       Object.assign(teams.home, {result: "winner"}); }
 
     return <GameRow key={index} teams={teams}/>

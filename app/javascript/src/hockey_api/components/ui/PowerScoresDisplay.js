@@ -16,7 +16,7 @@ const PowerScoresDisplay = ({
 
   const today = new Date();
 
-  const [timeMark, setTimeMark] = useState( new Date("2020-03-17") );
+  const [timeMark, setTimeMark] = useState( new Date("2020-03-05") );
   // days based on schedule
   // - function to collect games from schedule matching the date
 
@@ -44,8 +44,7 @@ useEffect( ()=> {
           .find( score =>{
             Number(new Date(score.asOfDate) <= Number(dates[key]) )}
           )
-      })
-    })
+    }) })
   }
 }, [dates])
 
