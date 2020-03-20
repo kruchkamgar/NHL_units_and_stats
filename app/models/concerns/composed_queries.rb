@@ -1,5 +1,5 @@
 module ComposedQueries
-  include TestComposedQueries
+  # include TestComposedQueries
 
   def set_inst_variables
     @team_id = 4
