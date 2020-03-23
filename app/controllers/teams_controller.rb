@@ -1,3 +1,5 @@
+require 'byebug'
+
 class TeamsController < ApplicationController
 include Standings
 
@@ -7,22 +9,23 @@ include Standings
     # render json: teams.to_json
   end
 
-  def show
-    # team_id = team_params[:id]
-    #
-    # team = team.find(team_id)
-    # render json: team.to_json
+  def powerScores
     range = games_params[:range].to_i
+    if games_params[:date]
+      date = games_params[:date]
+    else
+      date = Standings::DATE_NOW end
 
     render json: Hash[
-      powerScores: weighted_standings(range),
-      schedule: get_schedule_data(Standings::DATE_NOW) ]
+      powerScores: weighted_standings(
+        range, date),
+      schedule: get_schedule_data(date) ]
   end
 
 private
 
   def games_params
-    params.permit(:range)
+    params.permit(:range, :date)
   end
 
 end
