@@ -1,7 +1,7 @@
 import Day from './Day';
 import { useState, useEffect } from 'react';
 
-import { gameDates, gamesByDates, addDays } from 'src/hockey_api/lib/dates';
+import { gameDates, gamesByDates, addDays, dateString } from 'src/hockey_api/lib/dates';
 
 const PowerScoresDisplay = ({
   powerScores = [],
@@ -11,22 +11,28 @@ const PowerScoresDisplay = ({
   fetching = false
 }) => {
 
+  const today = dateString(new Date());
+  const [timeMark, setTimeMark] = useState("2020-03-04");
   // could put condition in action creator
-  if(!fetching && (powerScores.length === 0 || schedule.length === 0) ) getScheduleAndPowerScores();
-
-  const today = new Date();
-
-  const [timeMark, setTimeMark] = useState( new Date("2020-03-17") );
-  // days based on schedule
-  // - function to collect games from schedule matching the date
+  if(!fetching && (
+    powerScores.length === 0 || schedule.length === 0 ||
+    direction == 1) ) getScheduleAndPowerScores(timeMark);
 
   const [dates, setDates] = useState();
+
+  let direction = 0;
   const [games, setGames] = useState({
     previous: [], day:[], subsequent:[]
   });
-  let direction = 0;
-
   const [powerScoresByDate, setPowerScoresByDate] = useState([]);
+
+useEffect( ()=> {
+  if(scheduleDates.length > 0){
+    // days based on schedule
+    setDates(
+      gameDates(scheduleDates, timeMark, direction) );
+  }
+}, [timeMark, scheduleDates]); // useEffect
 
 useEffect( ()=> {
   if(!(dates === undefined)){
@@ -43,18 +49,12 @@ useEffect( ()=> {
         }) })
     )
 
+    // - function to collect games from schedule matching the date
     setGames( prevGames=>{
       return gamesByDates(prevGames, dates, schedule, direction)
     });
   } //if
 }, [dates])
-
-useEffect( ()=> {
-  if(scheduleDates.length > 0){
-    const gameDs = gameDates(scheduleDates, timeMark, direction)
-    setDates( gameDs );
-  }
-}, [timeMark, scheduleDates]); // useEffect
 
   // setGames( gamesByDate(schedule, timeMark) );
 

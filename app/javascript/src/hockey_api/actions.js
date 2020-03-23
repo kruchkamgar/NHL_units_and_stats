@@ -19,13 +19,13 @@ export const clearErrors = () =>
 
 const scheduleDates = (schedule) => {
   return schedule.dates
-  .map( date=> date.date )
+    .map( date=> date.date )
 }
 
-export const scheduleAndPowerScores = () => dispatch => {
+export const scheduleAndPowerScores = (date) => dispatch => {
   dispatch({ type: C.FETCHING })
 
-  fetch('/teams/5')
+  fetch(`/power_scores?range=5&date=${date}`)
   .then(response => response.json() )
   .then(scheduleAndPowerScores => {
     dispatch({

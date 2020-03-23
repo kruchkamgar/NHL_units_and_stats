@@ -42,11 +42,6 @@ const Day = ({
 
     // - game table data functions (pass winner/loser)
 
-  // const powerScoresRows =
-  //   powerScoresDay
-  //   .map( (powerScore, index) => {
-  //     return <PowerScoreRow key={index} powerScore={powerScore}/>
-  //   })
 
   return (
     <div className="powerScores chart">

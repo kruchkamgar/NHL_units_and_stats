@@ -3,26 +3,29 @@ import { numDigits } from 'src/hockey_api/lib/utilities';
 export const gamesByDates = (prevGames, dates, schedule, direction) => {
   let newGames = prevGames
   if (direction === -1) {
+    // logic to call gamesByDates, after dates object changes (shifts)
     newGames.unshift(
       schedule
       .filter( _date =>{
-        Number(new Date(_date.date)) === Number(dates.previous)
+        Number(new Date(_date.date)) === Number(new Date(dates.previous))
       }).games )
     newGames.pop()
   } else if (direction === 1){
     newGames.push(
       schedule
       .filter( _date =>{
-        Number(new Date(_date.date)) === Number(dates.subsequent)
+        Number(new Date(_date.date)) === Number(new Date(dates.subsequent))
       }).games )
     newGames.shift()
   } else {
     newGames =
     ['previous', 'day', 'subsequent']
     .map( day =>{
-      return schedule.dates
+      const correspondingDate =
+      schedule.dates
         .find( _date =>
-          _date.date === dates[day] ).games
+          _date.date === dates[day] )
+      if( !(correspondingDate === undefined)) return correspondingDate.games
     })
   }
 
@@ -33,7 +36,7 @@ export const gameDates = (scheduleDates, date) => {
   const dateIndex =
   scheduleDates
     .findIndex( _date => {
-      return Number(new Date(_date)) === Number(date) });
+      return _date === date });
 
   return {
     previous: scheduleDates[dateIndex-1],
