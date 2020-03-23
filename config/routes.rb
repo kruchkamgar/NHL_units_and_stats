@@ -14,7 +14,8 @@ Rails.application.routes.draw do
   get '/units/utility_json' => 'units#utility_json'
 
   get '/teams' => 'teams#index'
-  get '/teams/:range', to: 'teams#show'
+  get '/teams/:id', to: 'teams#show'
+  get '/power_scores', to: 'teams#powerScores'
 
 
   # sidekiq dashboard – localhost:3000/sidekiq
