@@ -1,15 +1,19 @@
 
 module Standings
 
+  COUNT_LATEST = 20
+  MULTIPLIER = 2
+  DATE_NOW = Time.now.strftime "%Y-%m-%d"
   WINS_POINTS = 2
   # LOSSES_POINTS = 0
   # OT_POINTS = 1
-  DATE_NOW = Time.now.strftime "%Y-%m-%d"
 
   def weighted_standings(
-    range=1, count_latest=20,
-    recency_multiplier=2,
-    end_date=DATE_NOW )
+    range=1,
+    end_date=DATE_NOW,
+    count_latest=COUNT_LATEST,
+    recency_multiplier=MULTIPLIER
+   )
 
     game_results_by_team = latest_game_results(end_date)
 
@@ -60,7 +64,7 @@ module Standings
       name = team_hash[:name]
 
       if results_range_data.class != Array
-        [ name, points_latest ]
+        [ name, results_range_data ]
       else
         # map through range of games
         power_scores_over_range =
@@ -110,9 +114,18 @@ module Standings
           scores: power_scores_over_range ]
       end #if
     end #map weighted_standings_over_range
-    .sort_by do |team_hash|
-      team_hash[:scores]
-      .first[:powerScore] end.reverse
+
+    # hash, or array, depending on count_latest > games played overall
+    if weighted_standings_over_range[0].class == Hash
+      weighted_standings_over_range
+      .sort_by do |team_hash|
+        team_hash[:scores]
+        .first[:powerScore] end.reverse
+    elsif
+      weighted_standings_over_range[0].class == Array
+      weighted_standings_over_range
+      .sort do |a, b| a[1] <=> b[1] end
+    end
   end
 
   # convert record to points
