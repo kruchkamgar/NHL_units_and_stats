@@ -13,11 +13,13 @@ const PowerScoresDisplay = ({
 
   const today = dateString(new Date());
   const [timeMark, setTimeMark] = useState("2020-03-04");
-  // could put condition in action creator
-  if(!fetching && (
-    powerScores.length === 0 || schedule.length === 0 ||
-    direction == 1) ) getScheduleAndPowerScores(timeMark);
+    // could put condition in action creator
+    if(!fetching && (
+      powerScores.length === 0 || schedule.length === 0 ||
+      direction == 1) ) getScheduleAndPowerScores(timeMark);
 
+  // use to determine, when next to fetch
+  const [trackRange, setTrackRange] = useState(5);
   const [dates, setDates] = useState();
 
   let direction = 0;
@@ -68,13 +70,11 @@ useEffect( ()=> {
   const handleDateChange =
   (_direction) => {
     direction = _direction;
-    // let newDay = null, newGames = null;
-
     setTimeMark( prevTimeMark => {
       // direction = compareTimeMarks(prevTimeMark)
       return addDays(prevTimeMark, direction) })
 
-    setGames( gamesByDate(newGames) );
+    // setGames( gamesByDates(newGames) );
   }
 
   const previousDay = <Day games={games[0]} scores={false}/>;
@@ -83,10 +83,12 @@ useEffect( ()=> {
 
   return (
     <div className="wrapper d-flex">
-      <div className="queued chart">{previousDay}</div>
+      <div className="queued chart" onClick={ ()=>
+        handleDateChange(-1)}>{previousDay}</div>
       <div className="queue chart">
         <Day games={games[1]} scores={powerScoresByDate[1]}/></div>
-      <div className="queued chart">{nextDay}</div>
+      <div className="queued chart" onClick={ ()=>
+        handleDateChange(1)}>{nextDay}</div>
     </div>
   )
 }

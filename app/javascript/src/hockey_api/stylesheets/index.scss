@@ -26,6 +26,8 @@ div.app {
 .wrapper.d-flex { display: flex; }
 
 .chart { flex: 0 0 15em; }
+.queue { flex: 0 0 30em; }
+.queue .data { flex: 1 0 2em; }
 .gameRow { margin: 10px 0; }
 .row { display: flex; }
 .data-element.title { flex: 1 0 10em; }

@@ -45,10 +45,10 @@ export const gameDates = (scheduleDates, date) => {
 }
 
 export const addDays = (date, days) => {
-  const summation = new Date(Number(date));
-  summation
-  .setDate(date.getDate() + days)
-  return summation
+  const newDate = new Date(date);
+  newDate
+  .setDate(newDate.getDate() + days)
+  return dateString( new Date(newDate) );
 }
 
 export const dateString = (date) => {

@@ -4,8 +4,16 @@
 const GameRow = ({teams}) => {
   let rows
 
+  // may move to Day component for additional sort control
+  const teamKeys = Object.keys(teams)
+  if (
+    !( teamKeys
+       .some( teamKey => teams[teamKey].powerScore === undefined ) )
+  ) { teamKeys.sort( (a, b) =>
+        teams[b].powerScore.scores.powerScore - teams[a].powerScore.scores.powerScore ) }
+
   rows =
-  Object.keys(teams)
+  teamKeys
   .map( (teamKey, index) => {
     const team = teams[teamKey]
     // previous and subsequent days -- placeholders
