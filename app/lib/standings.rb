@@ -104,7 +104,7 @@ module Standings
           Hash[
             powerScore: power_score_to_points.round(1),
             pointsPercentageLatest: points_latest_percentage,
-            pointsPercentagePrior: points_prior_percentage,
+            pointsPercentagePrior: points_prior_percentage.round(3),
             asOfDate: games[tail][:date] ]
         end
 
