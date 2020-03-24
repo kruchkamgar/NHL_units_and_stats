@@ -21,6 +21,7 @@ const Day = ({
       const keyTeam = game.teams[key]
       teams[key] = {}
       teams[key].score = keyTeam.score
+      teams[key].name = keyTeam.team.name
       // - match the game teams with powerScore teams
       if(scores){
         Object.assign(
@@ -44,11 +45,10 @@ const Day = ({
 
 
   return (
-    <div className="powerScores chart">
-      <table>
-        <tbody>
-        {gameRows}</tbody>
-      </table>
+    <div className="powerScores">
+      <div>
+        {gameRows}
+      </div>
     </div>
   )
 }

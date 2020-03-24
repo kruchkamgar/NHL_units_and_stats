@@ -43,7 +43,7 @@ useEffect( ()=> {
         return powerScores
         .map( team =>{
           return {
-            name: team.name,
+            name: team.name, // allow matching between schedule data and powerScores analytics
             scores: team.scores
               .find( score => score.asOfDate <= dates[key] ) }
         }) })
@@ -55,10 +55,6 @@ useEffect( ()=> {
     });
   } //if
 }, [dates])
-
-  // setGames( gamesByDate(schedule, timeMark) );
-
-  // render previous and next days [logic to store them as variables]
 
   // const compareTimeMarks =
   // (prevTimeMark) => {
@@ -86,11 +82,12 @@ useEffect( ()=> {
   //
 
   return (
-    <React.Fragment>
-      <div className="queued">{previousDay}</div>
-      <Day games={games[1]} scores={powerScoresByDate[1]}/>
-      <div className="queued">{nextDay}</div>
-    </React.Fragment>
+    <div className="wrapper d-flex">
+      <div className="queued chart">{previousDay}</div>
+      <div className="queue chart">
+        <Day games={games[1]} scores={powerScoresByDate[1]}/></div>
+      <div className="queued chart">{nextDay}</div>
+    </div>
   )
 }
 
