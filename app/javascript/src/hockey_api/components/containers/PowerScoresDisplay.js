@@ -5,7 +5,7 @@ import { scheduleAndPowerScores } from '../../actions'
 
 const mapStateToProps = (state) =>
   ({
-    powerScores: state.powerScores.powerScores,
+    powerScoresByDate: state.powerScores.powerScores,
     schedule: state.powerScores.schedule,
     scheduleDates: state.powerScores.scheduleDates,
     fetching: state.powerScores.fetching

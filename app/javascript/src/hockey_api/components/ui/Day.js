@@ -1,7 +1,7 @@
 import GameRow from './GameRow.js';
 
 const Day = ({
-  scores = [],
+  dayScores = [],
   games = []
 }) => {
 
@@ -11,24 +11,26 @@ const Day = ({
 // - calculate combined power
 // - calc performance jump
 
+// move to server side?
   const gameRows =
   games
-  .map( (game, index) =>{
+  .map( (game, index) => {
 
     const teams = {}
     Object.keys(game.teams)
-    .forEach( key => {
-      const keyTeam = game.teams[key]
-      teams[key] = {}
-      teams[key].score = keyTeam.score
-      teams[key].name = keyTeam.team.name
+    .forEach( sideKey => {
+      const keyTeam = game.teams[sideKey]
+      teams[sideKey] = {}
+      teams[sideKey].score = keyTeam.score
+      teams[sideKey].name = keyTeam.team.name
       // - match the game teams with powerScore teams
-      if(scores){
+      if(dayScores){ // dayScore may equal false
         Object.assign(
-          teams[key],
-          {powerScore:
-            scores.find( score =>
-              keyTeam.team.name === score.name ) }
+          teams[sideKey],
+          { ...
+            dayScores.powerScores
+            .find( score =>
+              keyTeam.team.name === score.team ) }
         ) }
     })
     // result of game (scores)

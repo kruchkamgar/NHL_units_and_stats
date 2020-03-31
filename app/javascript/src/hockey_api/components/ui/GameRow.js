@@ -10,7 +10,7 @@ const GameRow = ({teams}) => {
     !( teamKeys
        .some( teamKey => teams[teamKey].powerScore === undefined ) )
   ) { teamKeys.sort( (a, b) =>
-        teams[b].powerScore.scores.powerScore - teams[a].powerScore.scores.powerScore ) }
+        teams[b].powerScore.powerScore - teams[a].powerScore.powerScore ) }
 
   rows =
   teamKeys
@@ -26,7 +26,7 @@ const GameRow = ({teams}) => {
           </div> )
     }
     else {
-      const scores = team.powerScore.scores
+      const scores = team.powerScore
       const powerScores =
         <React.Fragment>
           <div className="percentages data-element data">
@@ -38,7 +38,7 @@ const GameRow = ({teams}) => {
         </React.Fragment>
 
       return (
-        <div key={index} id={team.powerScore.name}
+        <div key={index} id={team.name}
             className={`row ${team.result}`}>
           <div className="data-element title">{team.name}</div>
           <div className="data-element data">{team.score}</div>

@@ -25,7 +25,7 @@ const scheduleDates = (schedule) => {
 export const scheduleAndPowerScores = (date) => dispatch => {
   dispatch({ type: C.FETCHING })
 
-  fetch(`/power_scores?range=5&date=${date}`)
+  fetch(`/power_scores?days=5&date=${date}`)
   .then(response => response.json() )
   .then(scheduleAndPowerScores => {
     dispatch({
