@@ -1,7 +1,7 @@
 require 'byebug'
 
 class TeamsController < ApplicationController
-include Standings
+include PowerScores
 
   def index
     # teams = Team.last(5)
@@ -10,22 +10,22 @@ include Standings
   end
 
   def powerScores
-    range = games_params[:range].to_i
+    days = games_params[:days].to_i
     if games_params[:date]
       date = games_params[:date]
     else
-      date = Standings::DATE_NOW end
+      date = PowerScores::DATE_NOW end
 
     render json: Hash[
-      powerScores: weighted_standings(
-        range, date),
+      powerScores: power_scores_by_days(
+        days, date),
       schedule: get_schedule_data(date) ]
   end
 
 private
 
   def games_params
-    params.permit(:range, :date)
+    params.permit(:days, :date)
   end
 
 end
