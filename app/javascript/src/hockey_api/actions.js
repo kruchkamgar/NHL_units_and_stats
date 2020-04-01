@@ -18,7 +18,7 @@ export const clearErrors = () =>
 
 
 const scheduleDates = (schedule) => {
-  return schedule.dates
+  return schedule
     .map( date=> date.date )
 }
 

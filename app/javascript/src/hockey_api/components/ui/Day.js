@@ -2,14 +2,15 @@ import GameRow from './GameRow.js';
 
 const Day = ({
   dayScores = [],
-  games = []
+  games = [],
+  date = ""
 }) => {
 
 // sort function for columns of the day component
 // gameTableFunctions:
 // - calculate surprise (powerScore differential)
 // - calculate combined power
-// - calc performance jump
+// - calc performance jump [across requested days, or else on server]
 
 // move to server side?
   const gameRows =
@@ -29,8 +30,8 @@ const Day = ({
           teams[sideKey],
           { ...
             dayScores.powerScores
-            .find( score =>
-              keyTeam.team.name === score.team ) }
+            .find( scores =>
+              keyTeam.team.name === scores.team ) }
         ) }
     })
     // result of game (scores)
@@ -47,11 +48,14 @@ const Day = ({
 
 
   return (
-    <div className="powerScores">
-      <div>
-        {gameRows}
+    <React.Fragment>
+      <div className="">{date}</div>
+      <div className="powerScores">
+        <div>
+          {gameRows}
+        </div>
       </div>
-    </div>
+    </React.Fragment>
   )
 }
 

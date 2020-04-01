@@ -22,7 +22,7 @@ export const gamesByDates = (prevGames, dates, schedule, direction) => {
     ['previous', 'day', 'subsequent']
     .map( day =>{
       const correspondingDate =
-      schedule.dates
+      schedule
         .find( _date =>
           _date.date === dates[day] )
       if( !(correspondingDate === undefined)) return correspondingDate.games
@@ -34,15 +34,20 @@ export const gamesByDates = (prevGames, dates, schedule, direction) => {
 
 export const gameDates = (scheduleDates, date) => {
   const dateIndex =
-  scheduleDates
-    .findIndex( _date => {
-      return _date === date });
+  scheduleDates.findIndex( _date => _date === date );
 
   return {
     previous: scheduleDates[dateIndex-1],
     day: scheduleDates[dateIndex],
     subsequent: scheduleDates[dateIndex+1] };
 }
+
+// export const shiftScheduleDays = (date, days, schedule) => {
+//   const newDate = new Date(date);
+//   const index = schedule.findIndex( _date => _date === date )
+//   newDate.setDate( schedule[index + days])
+//   return dateString( new Date(newDate) );
+// }
 
 export const addDays = (date, days) => {
   const newDate = new Date(date);

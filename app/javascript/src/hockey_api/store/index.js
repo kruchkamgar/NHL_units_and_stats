@@ -16,7 +16,7 @@ import { clearErrors } from '../actions';
 	console.log(`
 		errors: ${errors.length}, ${errors}
 	`)
-	console.groupEnd()
+  console.groupEnd()
 
   if (errors.length !== 0) {
     store.dispatch(clearErrors()) }

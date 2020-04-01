@@ -1,5 +1,5 @@
 import Day from './Day';
-import { useState, useEffect } from 'react';
+import { useState, useReducer, useEffect } from 'react';
 
 import { gameDates, gamesByDates, addDays, dateString } from 'src/hockey_api/lib/dates';
 
@@ -9,35 +9,36 @@ const PowerScoresDisplay = ({
   scheduleDates = [],
   getScheduleAndPowerScores = f=>f,
   fetching = false,
-  range = 5
+  scheduleDays = 5
 }) => {
 
   const today = dateString(new Date());
   const [timeMark, setTimeMark] = useState("2020-03-04");
-  // when (request - timeMark) == 4 || == 0 and direction == 1, make new request
-  const [request, setRequest] = useState(timeMark);
+
     // could put condition in action creator
     if(!fetching && (
       powerScoresByDate.length === 0 || schedule.length === 0 ||
-      direction == 1) ) getScheduleAndPowerScores(timeMark);
-
-  // use to determine, when next to fetch
-  const [trackDays, setTrackDays] = useState(5);
-  const [dates, setDates] = useState();
+      direction === 1) ) getScheduleAndPowerScores(timeMark);
 
   let direction = 0;
+  // triggers setGames, could merely call setGames from 'handleDateChange'
+  const [dates, setDates] = useState(
+    gameDates(scheduleDates, timeMark, direction) );
+
   const [games, setGames] = useState({
     previous: [], day:[], subsequent:[]
-  });
+  })
   const [powerScoresPerDay, setPowerScoresPerDay] = useState([]);
+  const [days, daysDispatch] = useReducer(daysReducer, { previous: null, day: null, subsequent: null })
 
-useEffect( ()=> {
-  if(scheduleDates.length > 0){
-    // days based on schedule
-    setDates(
-      gameDates(scheduleDates, timeMark, direction) );
+  function daysReducer(state, action) {
+    switch(action.type) {
+      case 'update' :
+        return action.payload
+      default :
+        throw new Error()
+    }
   }
-}, [timeMark, scheduleDates]); // useEffect
 
 useEffect( ()=> {
   if(!(dates === undefined)){
@@ -52,56 +53,73 @@ useEffect( ()=> {
     // - function to collect games from schedule matching the date
 // performance, logic: do this on the server side, by keeping powerScoresByDate in schedule format.
 // - (pull all needed game data like 'home, away', there)
-    setGames( prevGames=>{
-      return gamesByDates(prevGames, dates, schedule, direction)
-    });
   } //if
 }, [dates])
 
-  // const compareTimeMarks =
-  // (prevTimeMark) => {
-  //   let direction = 0;
-  //   if (prevTimeMark < timeMark) direction = 1;
-  //   if (prevTimeMark > timeMark) direction = -1;
-  //   return direction;
-  // }
+useEffect( ()=> {
+  schedule.length > 0 ?
+    setGames( prevGames=>{
+      return gamesByDates(prevGames, dates, schedule, direction)
+    }) : null
+}, [dates, schedule])
+
+useEffect( ()=> {
+  if(!(dates === undefined)){
+    daysDispatch({
+      type: 'update',
+      payload: {
+        previous: <Day date={dates.previous} games={games[0]} dayScores={false}/>,
+        day: powerScoresPerDay[1] ?
+          <Day date={dates.day} games={games[1]} dayScores={powerScoresPerDay[1]}/> : null,
+        subsequent: <Day date={dates.subsequent} games={games[2]} dayScores={false}/> }
+    }) // daysDispatch
+  } // if
+}, [games])
+
+// useEffect( () => {
+//   console.log("reducer updates");
+//   console.log("days.previous", days.previous);
+// }, [days])
 
   // - click handler function to move between days
-  const setTimeMark_ = (_direction) => {
-    direction = _direction;
-    setTimeMark( prevTimeMark => {
-      // direction = compareTimeMarks(prevTimeMark)
-      return addDays(prevTimeMark, direction) })
-  }
+  // const setTimeMark_ =
+  // (_direction) => {
+  //   direction = _direction;
+  //   setTimeMark( prevTimeMark => {
+  //     // direction = compareTimeMarks(prevTimeMark)
+  //     return addDays(prevTimeMark, direction) })
+  // }
 
   const handleDateChange =
   (_direction) => {
+    direction = _direction === "increment" ? 1 : -1;
 
     if (_direction === "increment") {
-      nextDay.props.games ? setTimeMark_(1) : null; // check server for more games instead (call getScheduleAndPowerScores() with the timeMark+range date.  )
+      // could also use a 'scheduleDatesIndex' variable, set automatically or tracked
+      days.subsequent.props.games ?
+        setDates( gameDates(scheduleDates, dates.subsequent) ) : null; // check server for more games instead (call getScheduleAndPowerScores() with the timeMark+range date.  )
       // - modify the action to append new games
     }
-    else { setTimeMark_(-1); }
+    else {
+      setDates( gameDates(scheduleDates, dates.previous) )
+      !powerScoresByDate.find( score => score.date === dates.previous) ?
+        getScheduleAndPowerScores(dates.previous) : null;
+    }
   }
 
   // to animate:
   // - use placeholder days instead, or create a new one (document.createElement...)
   // - increment the games array number modulo 3 (3 mod 2+1 = 0) and unshift the previous day's games
-  const previousDay = <Day games={games[0]} dayScores={false}/>;
-
-  const currentDay = powerScoresPerDay[1] ? <Day games={games[1]}
-    dayScores={powerScoresPerDay[1]}/> : null;
-  const nextDay = <Day games={games[2]} dayScores={false}/>;
   //
 
   return (
     <div className="wrapper d-flex">
       <div className="queued chart" onClick={ ()=>
-        handleDateChange("decrement")}>{previousDay}</div>
+        handleDateChange("decrement")}>{days.previous}</div>
       <div className="queue chart">
-        {currentDay}</div>
+        {days.day}</div>
       <div className="queued chart" onClick={ ()=>
-        handleDateChange("increment")}>{nextDay}</div>
+        handleDateChange("increment")}>{days.subsequent}</div>
     </div>
   )
 }
