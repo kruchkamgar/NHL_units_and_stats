@@ -51,7 +51,7 @@ export const powerScores = (state=[], action) => {
     case C.CLEAR_POWERSCORES :
       return []
     case C.STORE_POWERSCORES :
-      return action.payload
+      return [...action.payload, ...state]
     default :
       return state
   }
