@@ -19,7 +19,7 @@ include PowerScores
     render json: Hash[
       powerScores: power_scores_by_days(
         days, date),
-      schedule: get_schedule_data(date) ]
+      schedule: get_schedule_data(date)["dates"] ]
   end
 
 private

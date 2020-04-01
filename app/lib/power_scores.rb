@@ -38,24 +38,24 @@ module PowerScores
       team_names
       .map do |name|
         game_records = records_by_team[name].reverse
-        tail = game_records.index do |record|
+        head = game_records.index do |record|
           record[:date] == date end
 
         if game_records.size <= count_latest
           points_latest_n = tally_points( game_records[tail] )
         else
-          head = -(count_latest+tail+1)
+          tail = (count_latest+head+1)
           points_latest_n =
-          tally_points( game_records[tail] ) - tally_points( game_records[head] )
+          tally_points( game_records[head] ) - tally_points( game_records[tail] )
 
-          count_prior = head
+          count_prior = game_records[tail..-1].size
           # - calculate powerScore (which implicitly corresponds to the date)
           # points_latest, count_prior, games = results_range
 
           power_score =
           calc_power_score(
             count_latest, recency_multiplier, points_latest_n,
-            count_prior, games, tail )
+            count_prior, game_records, head )
 
           Hash[ team: name, powerScore: power_score] end #else
       end # map team_names
@@ -162,7 +162,7 @@ module PowerScores
   end
 
   def calc_power_score(
-    count_latest, recency_multiplier, points_latest, count_prior, games, tail= -1 )
+    count_latest, recency_multiplier, points_latest, count_prior, games, head= 0 )
 
     adjusted_count_latest =
     count_latest * recency_multiplier
@@ -174,7 +174,7 @@ module PowerScores
     # head_result = head_results_last_(games, count_latest)
 
     # points_latest = tally_points(tally_latest)
-    points_prior = tally_points(games[tail]) - points_latest
+    points_prior = tally_points(games[head]) - points_latest
 
     points_latest_percentage =
     points_latest/(count_latest * WINS_POINTS).to_f
@@ -193,7 +193,8 @@ module PowerScores
       powerScore: power_score_to_points.round(1),
       pointsPercentageLatest: points_latest_percentage.round(3),
       pointsPercentagePrior: points_prior_percentage.round(3),
-      asOfDate: games[tail]["gameDate"].match( /.+(?=T)/)[0] ]
+      asOfDate: games[head][:date] ]
+      # .match( /.+(?=T)/)[0]
   end
 
   # convert record to points
