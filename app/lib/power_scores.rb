@@ -17,7 +17,7 @@ module PowerScores
 
   records_by_team = game_results_by_team(end_date)[:records] # team name => array of records hashes
 
-# logic alternative: create a hash by date, by iterating over the schedule
+  # create a hash by date, by iterating over the schedule
   # - (contingency: powerScore from equal number of games)-- find the min number of games played, and put a corresponding lower bounds on sample for calculation of
     game_results_by_team(end_date)[:schedule][-days..-1]
     .map do |date_hash|
@@ -34,6 +34,8 @@ module PowerScores
       end.flatten
       # per team, find index of game by date
 
+      # source power_scores for each team_name:
+      # - by mapping team_names, to team records ('records_by_team': arrays of game results per game date)
       power_scores_by_team =
       team_names
       .map do |name|
