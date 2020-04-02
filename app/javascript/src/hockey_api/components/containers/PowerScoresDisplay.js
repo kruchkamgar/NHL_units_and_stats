@@ -14,7 +14,7 @@ const mapStateToProps = (state) =>
 
 const mapDispatchToProps = dispatch => {
     return {
-      getScheduleAndPowerScores: (date) => dispatch(scheduleAndPowerScores(date))
+      getScheduleAndPowerScores: (date, storeSchedule=true) => dispatch(scheduleAndPowerScores(date, storeSchedule))
     }
   }
 

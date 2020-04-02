@@ -41,8 +41,18 @@ const PowerScoresDisplay = ({
   }
 
 useEffect( ()=> {
+  !fetching &&
+  !(powerScoresByDate.length === 0) &&
+  !powerScoresByDate.find( score => score.date === dates.previous) ?
+    getScheduleAndPowerScores(dates.previous, false) : null;
+
+  console.log("previous pScore", !powerScoresByDate.find( score => score.date === dates.previous) );
+}, [dates])
+
+useEffect( ()=> {
+  console.log("dates or powerScoresByDate");
   if(!(dates === undefined)){
-    // find the latest powerScores using the timeMark
+    // find the latest powerScores using the dates
     setPowerScoresPerDay(
       Object.keys(dates)
       .map( dateKey => {
@@ -54,13 +64,15 @@ useEffect( ()=> {
 // performance, logic: do this on the server side, by keeping powerScoresByDate in schedule format.
 // - (pull all needed game data like 'home, away', there)
   } //if
-}, [dates])
+}, [dates, powerScoresByDate])
 
 useEffect( ()=> {
   schedule.length > 0 ?
     setGames( prevGames=>{
       return gamesByDates(prevGames, dates, schedule, direction)
     }) : null
+
+  direction = 0;
 }, [dates, schedule])
 
 useEffect( ()=> {
@@ -102,8 +114,6 @@ useEffect( ()=> {
     }
     else {
       setDates( gameDates(scheduleDates, dates.previous) )
-      !powerScoresByDate.find( score => score.date === dates.previous) ?
-        getScheduleAndPowerScores(dates.previous) : null;
     }
   }
 

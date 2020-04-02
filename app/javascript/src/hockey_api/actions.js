@@ -16,13 +16,21 @@ export const clearError = index =>
 export const clearErrors = () =>
     ({ type: C.CLEAR_ERRORS })
 
-
 const scheduleDates = (schedule) => {
   return schedule
     .map( date=> date.date )
 }
 
-export const scheduleAndPowerScores = (date) => dispatch => {
+const scheduleAndScheduleDates = (response, dispatch) => {
+  dispatch(
+    { type: C.STORE_SCHEDULE,
+      payload: response.schedule })
+  dispatch(
+    { type: C.STORE_SCHEDULE_DATES,
+      payload: scheduleDates(response.schedule) })
+}
+
+export const scheduleAndPowerScores = (date, storeSchedule) => dispatch => {
   dispatch({ type: C.FETCHING })
 
   fetch(`/power_scores?days=5&date=${date}`)
@@ -30,16 +38,12 @@ export const scheduleAndPowerScores = (date) => dispatch => {
   .then(scheduleAndPowerScores => {
     dispatch({
       type: C.STORE_POWERSCORES,
-      payload: scheduleAndPowerScores.powerScores
-    })
-    dispatch({
-      type: C.STORE_SCHEDULE,
-      payload: scheduleAndPowerScores.schedule
-    })
-    dispatch({
-      type: C.STORE_SCHEDULE_DATES,
-      payload: scheduleDates(scheduleAndPowerScores.schedule)
-    })
+      payload: scheduleAndPowerScores.powerScores })
+    storeSchedule ?
+      scheduleAndScheduleDates(scheduleAndPowerScores, dispatch) : null;
+    // dispatch({
+      // type: C.STORE_SCHEDULE_DATES,
+      // payload: scheduleDates(scheduleAndPowerScores.schedule) })
 
     dispatch({ type: C.END_FETCHING })
   })
