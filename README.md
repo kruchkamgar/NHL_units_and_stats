@@ -1,6 +1,6 @@
 # README
 
-address: http://165.227.47.250/units
+address: -
 
 * ...
 
@@ -21,8 +21,9 @@ models
 * team
 * game roster
 * player
-* circumstances
 * units
+* instances
+* (goals, plus-minus...)
 ...
 
 
