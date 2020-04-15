@@ -11,6 +11,8 @@ export const errors = (state=[], action) => {
     	]
     case C.CLEAR_ERROR :
       return state.filter((message, i) => i !== action.payload)
+    case C.CLEAR_ERRORS :
+      return []
   	default:
   		return state
   }
@@ -20,8 +22,6 @@ export const errors = (state=[], action) => {
 export const fetching = (state=false, action) => {
 
   switch(action.type) {
-    case C.CANCEL_FETCHING :
-      return false
 		case C.FETCHING :
 			return true
 		case C.END_FETCHING :
@@ -45,14 +45,52 @@ export const units = (state=[], action) => {
 
 }
 
+export const powerScores = (state=[], action) => {
+
+  switch(action.type) {
+    case C.CLEAR_POWERSCORES :
+      return []
+    case C.STORE_POWERSCORES :
+      return [...action.payload, ...state]
+    default :
+      return state
+  }
+}
+
+export const schedule = (state=[], action) => {
+
+  switch(action.type) {
+    case C.CLEAR_SCHEDULE :
+      return []
+    case C.STORE_SCHEDULE :
+      return action.payload
+    default :
+      return state
+  }
+}
+
+export const scheduleDates = (state=[], action) => {
+
+  switch(action.type) {
+    case C.CLEAR_SCHEDULE_DATES :
+      return []
+    case C.STORE_SCHEDULE_DATES :
+      return action.payload
+    default :
+      return state
+  }
+}
+
 export default combineReducers({
   errors,
 	allUnits: combineReducers({
 		fetching,
 		units
 	}),
-  standings: combineReducers({
+  powerScores: combineReducers({
     fetching,
-    standings
+    powerScores,
+    schedule,
+    scheduleDates
   })
 })

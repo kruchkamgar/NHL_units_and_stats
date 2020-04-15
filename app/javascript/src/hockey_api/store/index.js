@@ -4,21 +4,22 @@ import appReducer from './reducers'
 import thunkMiddleware from 'redux-thunk'
 import { createStore, applyMiddleware } from 'redux'
 
+import { clearErrors } from '../actions';
+
  const consoleMessages = store => next => action => {
 	let result
 	console.groupCollapsed(`dispatching action => ${action.type}`)
-	console.log('units', store.getState().allUnits.units.length)
+
 	result = next(action)
 
-	let {errors, allUnits } = store.getState()
+	let { errors } = store.getState()
 	console.log(`
-
-		units: ${allUnits.units.length}
-		fetching units: ${allUnits.fetching}
-		errors (units): ${errors.length}
-
+		errors: ${errors.length}, ${errors}
 	`)
-	console.groupEnd()
+  console.groupEnd()
+
+  if (errors.length !== 0) {
+    store.dispatch(clearErrors()) }
 
 	return result;
 }
@@ -32,3 +33,7 @@ export default (initialState={}) => {
 			consoleMessages)
 		)
 }
+
+
+// 	units: ${allUnits.units.length}
+// 	fetching units: ${allUnits.fetching}

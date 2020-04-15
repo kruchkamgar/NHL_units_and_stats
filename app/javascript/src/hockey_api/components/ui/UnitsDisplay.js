@@ -22,9 +22,9 @@ function UnitsDisplay({
     renderPlusMinus(data_prepped);
   });
 
-  var unitsData = units.map( prepData.getUnitData );
+  const unitsData = units.map( prepData.getUnitData );
 
-  var data_prepped = unitsData.slice(0);
+  const data_prepped = unitsData.slice(0);
   data_prepped.forEach(prepData.applyFractionArray);
 
   // var unitsWrapperRef;
@@ -36,7 +36,7 @@ function UnitsDisplay({
     }
 
     return (
-      <div id="units-wrapper">
+      <div id="units-wrapper wrapper grid">
         <form onSubmit={ query_submit } className="query">
           <label htmlFor="team">Team number</label>
           <input id="team" type="number" step="1" min="1"
@@ -45,6 +45,7 @@ function UnitsDisplay({
           <button type="button" onClick={() => clearUnits() }>
             clear units </button>
         </form>
+
         <div className="data-labels info">
           <div className="players">players</div>
           <div className="per60Info">
@@ -58,7 +59,7 @@ function UnitsDisplay({
   } //UnitsDisplay
 
   UnitsDisplay.propTypes = {
-
+    units: PropTypes.array.isRequired
   }
 
   export default UnitsDisplay

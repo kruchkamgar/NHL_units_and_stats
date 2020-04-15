@@ -13,65 +13,71 @@ export const clearError = index =>
         payload: index
     })
 
-export const standings = (latest=20) => dispatch => {
-  dispatch({ type: C.FETCH_UNITS })
+export const clearErrors = () =>
+    ({ type: C.CLEAR_ERRORS })
 
-  fetch(
-    '/standings')
+const scheduleDates = (schedule) => {
+  return schedule
+    .map( date=> date.date )
+}
+
+const scheduleAndScheduleDates = (response, dispatch) => {
+  dispatch(
+    { type: C.STORE_SCHEDULE,
+      payload: response.schedule })
+  dispatch(
+    { type: C.STORE_SCHEDULE_DATES,
+      payload: scheduleDates(response.schedule) })
+}
+
+export const scheduleAndPowerScores = (date, storeSchedule) => dispatch => {
+  dispatch({ type: C.FETCHING })
+
+  fetch(`/power_scores?days=5&date=${date}`)
   .then(response => response.json() )
-  .then(standings => {
+  .then(scheduleAndPowerScores => {
     dispatch({
-      type: C.STORE_STANDINGS,
-      payload: standings
-    })
+      type: C.STORE_POWERSCORES,
+      payload: scheduleAndPowerScores.powerScores })
+    storeSchedule ?
+      scheduleAndScheduleDates(scheduleAndPowerScores, dispatch) : null;
+    // dispatch({
+      // type: C.STORE_SCHEDULE_DATES,
+      // payload: scheduleDates(scheduleAndPowerScores.schedule) })
+
     dispatch({ type: C.END_FETCHING })
+  })
+  .catch(error => {
+      dispatch(
+          addError(error.message) )
+      dispatch({
+          type: C.END_FETCHING })
   })
 
 }
-
-
 
 export const clearUnits = () =>
   ({
     type: C.CLEAR_UNITS
   })
 
-// export const units = () => dispatch => {
-//
-//     //stores fetching reducer as true
-//     dispatch({ type: C.FETCHING })
-//
-//     fetch('/units')
-//       .then(response => response.json())
-//       .then(units => {
-//           dispatch({
-//               type: C.STORE_UNITS,
-//               payload: units })
-//           dispatch({ type: C.STORE })
-//       })
-//       .catch(error => {
-//           dispatch(
-//               addError(error.message)     )
-//           dispatch({
-//               type: C.CANCEL_FETCHING })
-//       })
-// }
-export const team_units = (team_number) => dispatch => { // *1
+export const teamUnits = (teamNumber) => dispatch => { // *1
     //stores fetching reducer as true
     dispatch({ type: C.FETCHING })
 
-    fetch(`/units/${team_number}`)
+    fetch(`/units/${teamNumber}`)
       .then(response => response.json())
       .then(units => {
           dispatch({
               type: C.STORE_UNITS,
               payload: units })
-          dispatch({ type: C.END_FETCHING }) //fetching: false
+          dispatch({
+            type: C.END_FETCHING }) //fetching: false
       })
       .catch(error => {
           dispatch(
               addError(error.message) )
           dispatch({
-              type: C.CANCEL_FETCHING })
+              type: C.END_FETCHING })
       })
 }

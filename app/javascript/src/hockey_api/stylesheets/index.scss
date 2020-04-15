@@ -7,21 +7,31 @@ div.app {
   height: 100%;
   padding: 0;
   margin: 0;
-
-  .wrapper {
-    display: grid;
-
-    grid-template-columns: 10px 1fr 20px;
-    grid-template-rows: 1fr 100px;
-    grid-template-areas:
-    '. content .'
-    'menu menu menu';
-
-    grid-gap: 10px;
-    background-color: white;
-    padding: 10px 0 0;
-  }
 }
+
+.wrapper.grid {
+  display: grid;
+
+  grid-template-columns: 10px 1fr 20px;
+  grid-template-rows: 1fr 100px;
+  grid-template-areas:
+  '. content .'
+  'menu menu menu';
+
+  grid-gap: 10px;
+  background-color: white;
+  padding: 10px 0 0;
+}
+
+.wrapper.d-flex { display: flex; }
+
+.chart { flex: 0 0 15em; }
+.queue { flex: 0 0 30em; }
+.queue .data { flex: 1 0 2em; }
+.gameRow { margin: 10px 0; }
+.row { display: flex; }
+.data-element.title { flex: 1 0 10em; }
+.data-element.data { flex: 1 0 3em; }
 
 body { margin:0; }
 

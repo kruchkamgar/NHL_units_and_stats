@@ -7,32 +7,15 @@
 # Ignore bundler config.
 /.bundle
 
-# Ignore the default SQLite database.
-/db/*.sqlite3
-/db/*.sqlite3-journal
-
 # Ignore all logfiles and tempfiles.
 /log/*
 /tmp/*
 !/log/.keep
 !/tmp/.keep
 
-# Ignore uploaded files in development
+# Ignore uploaded files in development.
 /storage/*
 !/storage/.keep
-
-/yarn-error.log
-
-# Ignore loose and development files
-/node_modules
-
-/db/*.sql
-/db/*.tar
-/db/sql_extras
-
-/app/services/test_composed_queries.rb
-/app/services/penalties_data.rb
-/scratch
 
 /public/assets
 .byebug_history
@@ -46,7 +29,3 @@
 /yarn-error.log
 yarn-debug.log*
 .yarn-integrity
-
-
-.DS_Store
-
