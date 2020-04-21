@@ -296,7 +296,7 @@ module PowerScores
   end
 
   def schedule_url(
-    start_date: "2019-10-01", end_date: end_date )
+    start_date: "2019-10-01", end_date: )
     "https://statsapi.web.nhl.com/api/v1/schedule?startDate=#{start_date}&endDate=#{end_date}"
   end
 
