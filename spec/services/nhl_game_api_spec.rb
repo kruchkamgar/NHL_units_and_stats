@@ -1,4 +1,4 @@
-require 'NHL_game_API'
+require 'NHL_game_Api'
 
 describe NHLGameApi do
 

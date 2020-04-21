@@ -1,4 +1,4 @@
-require './app/services/NHL_game_API.rb'
+require './app/services/NHL_game_Api.rb'
 
 module SeedTeamHashes
 
