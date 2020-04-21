@@ -2,7 +2,7 @@ require './app/services/NHL_game_API.rb'
 
 module SeedTeamHashes
 
-  include NHLGameAPI #set @game_id
+  include NHLGameApi #set @game_id
   def fetch_team_hash
     box_score_url = get_game_url()
     fetch_data( box_score_url )

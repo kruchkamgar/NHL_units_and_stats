@@ -4,10 +4,10 @@
 =end
 
 
-module NHLGameEventsAPI
+module NHLGameEventsApi
 
   class Adapter
-    include NHLGameEventsAPI
+    include NHLGameEventsApi
 
     def initialize (team: nil, game:)
       @team = team

@@ -10,7 +10,7 @@ module CreateRecordsFromAPI
     date_hash["games"].first["gamePk"]
 
     game, teams_hash =
-    NHLGameAPI::Adapter
+    NHLGameApi::Adapter
     .new(game_id: game_id)
     .create_game
 
@@ -21,7 +21,7 @@ module CreateRecordsFromAPI
 
   def create_records_derived_from_events(roster:, team:, game:)
     inserted_events_array =
-    NHLGameEventsAPI::Adapter
+    NHLGameEventsApi::Adapter
     .new(team: team, game: game)
     .create_game_events_and_log_entries # *1
 

@@ -111,7 +111,7 @@ include SeedTeamHashes
   end
 
   def create_game_events_and_log_entries_
-    NHLGameEventsAPI::Adapter
+    NHLGameEventsApi::Adapter
     .new(team:
       @team, game: @game )
     .create_game_events_and_log_entries

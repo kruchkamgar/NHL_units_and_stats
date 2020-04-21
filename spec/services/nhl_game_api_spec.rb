@@ -1,10 +1,10 @@
 require 'NHL_game_API'
 
-describe NHLGameAPI do
+describe NHLGameApi do
 
-  describe 'NHLGameAPI::Adapter' do
+  describe 'NHLGameApi::Adapter' do
     game_id = 2017020019
-    let(:adapter) { NHLGameAPI::Adapter.new(game_id: game_id) }
+    let(:adapter) { NHLGameApi::Adapter.new(game_id: game_id) }
 
     describe '#create_game' do
 
@@ -17,6 +17,6 @@ describe NHLGameAPI do
       end
     end
 
-  end # describe NHLGameAPI::Adapter
+  end # describe NHLGameApi::Adapter
 
 end

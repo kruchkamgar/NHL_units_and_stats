@@ -3,7 +3,7 @@ require_relative './shared_examples/an_SQL_insert'
 require_relative './data/events_flow'
 require_relative './data/players_and_profiles'
 
-describe 'NHLGameEventsAPI' do
+describe 'NHLGameEventsApi' do
   before(:context) do
     @init_index = 100
     @team = Team.new(id: 100, team_id: 1)
@@ -18,7 +18,7 @@ describe 'NHLGameEventsAPI' do
     allow(Game).to receive_message_chain(:where, :includes, :[]).and_return(@game)
     allow(Roster).to receive_message_chain(:where, :includes, :[]).and_return(@roster)
 
-    NHLGameEventsAPI::Adapter.new(team:
+    NHLGameEventsApi::Adapter.new(team:
     @team, game: @game, roster: @roster)
   }
 

@@ -1,10 +1,10 @@
 require 'NHL_Team_API'
 
-describe NHLTeamAPI do
+describe NHLTeamApi do
 
-  describe 'NHLTeamAPI::Adapter' do
-    let(:team) { NHLTeamAPI::Adapter.new(:team_id => 1, :season => "20172018") }
-    let(:no_season) { NHLTeamAPI::Adapter.new(:team_id => 1) }
+  describe 'NHLTeamApi::Adapter' do
+    let(:team) { NHLTeamApi::Adapter.new(:team_id => 1, :season => "20172018") }
+    let(:no_season) { NHLTeamApi::Adapter.new(:team_id => 1) }
 
       describe '#initialize' do
 

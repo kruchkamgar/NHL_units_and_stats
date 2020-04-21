@@ -7,7 +7,7 @@ module ReadNHLApis
 
 $season = 20192020
 
-include NHLTeamAPI
+include NHLTeamApi
   def create_teams_seasons(i = 0, n = -1)
     set_season($season)
 
@@ -54,7 +54,7 @@ include NHLTeamAPI
     def set_schedule_dates
       # create team and get its schedule
       team_adapter =
-      NHLTeamAPI::Adapter.new(team: @team)
+      NHLTeamApi::Adapter.new(team: @team)
       .find_or_create_team
 
       schedule_hash = team_adapter.fetch_data
