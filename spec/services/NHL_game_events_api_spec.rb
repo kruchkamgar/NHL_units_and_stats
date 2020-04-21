@@ -1,7 +1,7 @@
 require 'NHL_game_events_api'
-require_relative '../shared_examples/an_SQL_insert'
-require_relative './data/events_flow'
-require_relative './data/players_and_profiles'
+require './spec/shared_examples/an_SQL_insert'
+require  './spec/data/events_flow'
+require './spec/data/players_and_profiles'
 
 describe 'NHLGameEventsApi' do
   before(:context) do
