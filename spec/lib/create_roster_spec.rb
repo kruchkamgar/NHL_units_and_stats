@@ -1,6 +1,6 @@
 require 'create_roster'
 # require_relative './data/team_hash'
-require '/spec/data/players_and_profiles'
+require './spec/data/players_and_profiles'
 require_relative '../data/data.rb'
 
 # create game
