@@ -1,7 +1,7 @@
 require 'create_roster'
 # require_relative './data/team_hash'
-require_relative './spec/data/players_and_profiles'
-require_relative './spec/data/data.rb'
+require '/spec/data/players_and_profiles'
+require_relative '../data/data.rb'
 
 # create game
 # create roster w/ and without the game; (roster could exist without this game)

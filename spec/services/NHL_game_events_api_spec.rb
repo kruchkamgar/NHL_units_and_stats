@@ -1,5 +1,5 @@
 require 'NHL_game_events_api'
-require_relative './shared_examples/an_SQL_insert'
+require_relative '../shared_examples/an_SQL_insert'
 require_relative './data/events_flow'
 require_relative './data/players_and_profiles'
 
