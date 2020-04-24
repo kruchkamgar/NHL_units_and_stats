@@ -85,7 +85,7 @@ module Utilities
         # Time.at(@seconds).strftime("%M:%S")
       # end
     when "TZ"
-    when "Nhl_time_stamp"
+    when "NHL_time_stamp"
       time_stamp_format = "%04d%02d%02d_%02d%02d%02d" % @special_format_hash[:time]
     end # case
   end

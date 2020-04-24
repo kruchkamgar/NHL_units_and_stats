@@ -218,7 +218,7 @@ module PowerScores
   end #tally_points
 
   def game_results_by_team(end_date)
-    # query the Nhl schedule for last 20 games
+    # query the NHL schedule for last 20 games
     # find the last n games for each team:
     # - https://statsapi.web.nhl.com/api/v1/schedule?startDate=2019-02-10&endDate=2020-01-01
 

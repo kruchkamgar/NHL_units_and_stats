@@ -8,7 +8,7 @@
 #   ]
 # end
 #
-# # used by: create_roster_spec, Nhl_game_events_api_spec
+# # used by: create_roster_spec, NHL_game_events_api_spec
 # def sample_profiles
 #   team_hash_02["players"].first(3).
 #   map.with_index do |id, index|

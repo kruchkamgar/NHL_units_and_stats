@@ -4,10 +4,10 @@
 =end
 
 
-module NhlGameEventsApi
+module NHLGameEventsApi
 
   class Adapter
-    include NhlGameEventsApi
+    include NHLGameEventsApi
 
     def initialize (team: nil, game:)
       @team = team
@@ -242,7 +242,7 @@ module NhlGameEventsApi
       end
     end
 
-    # get game's player_profile, of roster player (via  NhlRosterApi.rb)
+    # get game's player_profile, of roster player (via  NHLRosterApi.rb)
     # roster > players; game > player_profiles; player > player_profiles
     def get_profile_by (**search_hash)
       #cross-reference passed attributes (search_hash keys) with roster players
@@ -297,5 +297,5 @@ https://stackoverflow.com/questions/810962/getting-new-ids-after-insert.
 # could ALSO just grab the last X inserted records, per the Changes() sqlite function
 
 # *3-
-# Nhl API currently omits the per-shift position of players
+# NHL API currently omits the per-shift position of players
 # could manually edit based on known line combinations (player 1 plays center when on unit alongside players 2, 3)
