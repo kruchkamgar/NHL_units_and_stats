@@ -1,6 +1,6 @@
 # requires a team argument
 
-module CreateRecordsFromAPI
+module CreateRecordsFromApi
 
   extend CreateUnitsAndInstances
   extend ProcessSpecialEvents
