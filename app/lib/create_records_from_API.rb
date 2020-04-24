@@ -77,7 +77,7 @@ private
       [ side_hash["team"]["id"],
         side_hash,
         side,
-        side["team"]["name"]
+        side["team"]["name"],
         side["team"]["name"] == team.name ] end
     .sort do |a,b|
       a.first <=> b.first end
@@ -96,7 +96,7 @@ private
         roster: CreateRoster::create_game_roster(
           team_hashes.second, team_objects[i], game ),
         side: team_hashes.third,
-        team_name: team_hashes.fourth
+        team_name: team_hashes.fourth,
         team: team_hashes.fifth ]
     end
 
