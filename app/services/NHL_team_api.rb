@@ -5,7 +5,7 @@ fetches the teams' information
 - does not fetch all the seasons (leave this to application logic / seeds.rb)
 =end
 
-module NHLTeamApi
+module NhlTeamApi
 
   TEAM_URL = 'https://statsapi.web.nhl.com/api/v1/teams/'
   BASE_URL = 'https://statsapi.web.nhl.com/api/v1/teams/'
@@ -41,7 +41,7 @@ module NHLTeamApi
 
   class Adapter
 
-  include NHLTeamApi
+  include NhlTeamApi
     def initialize (name: nil, team:, season: nil, start_date: nil, end_date: nil)
       @name, @team, @season, @start_date, @end_date = name, team, season, start_date, end_date
 

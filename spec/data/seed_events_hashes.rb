@@ -3,7 +3,7 @@
 module SeedEventsHashes
 
   # 2018021020 (NJD, vs CBJ) - includes penalties which carry over periods
-  include NHLGameEventsApi
+  include NhlGameEventsApi
   def events_hashes_instance_data()
     url = get_shifts_url()
     fetch_data(url)["data"]

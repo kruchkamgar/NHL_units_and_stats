@@ -1,13 +1,13 @@
-# reload!; include ReadNHLApis; ReadNHLApiss.create_teams_seasons
+# reload!; include ReadNhlApis; ReadNhlApiss.create_teams_seasons
 # ts = TeamSeason.new(season: 20182019, team: Team.first); ts.create_tallies;
 require 'sidekiq'
 require 'sidekiq-scheduler'
 
-module ReadNHLApis
+module ReadNhlApis
 
 $season = 20192020
 
-include NHLTeamApi
+include NhlTeamApi
   def create_teams_seasons(i = 0, n = -1)
     set_season($season)
 
@@ -54,7 +54,7 @@ include NHLTeamApi
     def set_schedule_dates
       # create team and get its schedule
       team_adapter =
-      NHLTeamApi::Adapter.new(team: @team)
+      NhlTeamApi::Adapter.new(team: @team)
       .find_or_create_team
 
       schedule_hash = team_adapter.fetch_data
@@ -64,7 +64,7 @@ include NHLTeamApi
     # two creation methods: one for transpired games and one to schedule worker/job for games to come
   include CreateRecordsFromApi
   include Utilities
-  include ReadNHLApis
+  include ReadNhlApis
 
     def create_records_from_transpired_schedule
       transpired_schedule_dates =

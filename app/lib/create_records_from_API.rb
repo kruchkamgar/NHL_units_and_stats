@@ -10,7 +10,7 @@ module CreateRecordsFromApi
     date_hash["games"].first["gamePk"]
 
     game, teams_hash =
-    NHLGameApi::Adapter
+    NhlGameApi::Adapter
     .new(game_id: game_id)
     .create_game
 
@@ -21,7 +21,7 @@ module CreateRecordsFromApi
 
   def create_records_derived_from_events(roster:, team:, game:)
     inserted_events_array =
-    NHLGameEventsApi::Adapter
+    NhlGameEventsApi::Adapter
     .new(team: team, game: game)
     .create_game_events_and_log_entries # *1
 
@@ -69,7 +69,7 @@ module CreateRecordsFromApi
 
 private
         # option: create the main roster
-        # NHLRosterApi::Adapter.new(team.team_id, season: team.season).fetch_roster
+        # NhlRosterApi::Adapter.new(team.team_id, season: team.season).fetch_roster
   def create_rosters(game, teams_hash, team)
     teams_data =
     teams_hash

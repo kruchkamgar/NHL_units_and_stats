@@ -22,7 +22,7 @@ include SeedMethods
   def seed_events
     @events_hashes = events_hashes() unless @events_hashes # from data.rb
     @inserted_events_array =
-    create_game_events_and_log_entries_() # via NHLGameEventsApi
+    create_game_events_and_log_entries_() # via NhlGameEventsApi
   end
 
   def seed_all

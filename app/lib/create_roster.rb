@@ -4,7 +4,7 @@
 - connect game with player_profiles
 
 Adapter
-- fetch given roster(s) from NHL API
+- fetch given roster(s) from Nhl API
 
 assocation structure:
 roster > player > player_profile;

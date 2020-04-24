@@ -6,10 +6,10 @@ fetches the game information:
 
 =end
 
-module NHLGameApi
+module NhlGameApi
 
   class Adapter
-  include NHLGameApi
+  include NhlGameApi
 
     def initialize (game_id: )
       @game_id = game_id #2017020019
