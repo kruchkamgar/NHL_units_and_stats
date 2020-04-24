@@ -62,7 +62,7 @@ include NHLTeamApi
     end
 
     # two creation methods: one for transpired games and one to schedule worker/job for games to come
-  include CreateRecordsFromAPI
+  include CreateRecordsFromApi
   include Utilities
   include ReadNHLApis
 

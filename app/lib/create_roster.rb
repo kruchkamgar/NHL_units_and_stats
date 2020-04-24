@@ -114,7 +114,7 @@ module CreateRoster
           created_at: Time.now,
           updated_at: Time.now ]
       end
-      players_changes = SQLOperations.sql_insert_all("players", prepared_players ).count
+      players_changes = SqlOperations.sql_insert_all("players", prepared_players ).count
       roster_players =
       Player.order(id: :desc).limit(players_changes) + player_records
     else roster_players = player_records end
@@ -158,7 +158,7 @@ module CreateRoster
     end
 
     if new_profiles_array.any? # *3 (incomplete)
-      profiles_changes = SQLOperations.sql_insert_all("player_profiles", new_profiles_array ).count
+      profiles_changes = SqlOperations.sql_insert_all("player_profiles", new_profiles_array ).count
 
       PlayerProfile.order(id: :desc).limit(profiles_changes)
     end

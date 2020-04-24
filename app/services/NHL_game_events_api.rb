@@ -76,7 +76,7 @@ module NHLGameEventsApi
       end
       # insert events
       events_changes =
-      SQLOperations
+      SqlOperations
       .sql_insert_all("events", made_events_array )
       .count
       # grab events
@@ -111,7 +111,7 @@ module NHLGameEventsApi
         ] #*3
       end
 
-      log_entries = SQLOperations.sql_insert_all("log_entries", new_log_entries_array )
+      log_entries = SqlOperations.sql_insert_all("log_entries", new_log_entries_array )
 
     end #create_game_events
 
@@ -135,7 +135,7 @@ module NHLGameEventsApi
       end
 
       events_changes =
-      SQLOperations.
+      SqlOperations.
       sql_insert_all("events", made_events_array ).count
       # just use value of Changes() and ORDER DESC LIMIT ...
 
@@ -150,7 +150,7 @@ module NHLGameEventsApi
       made_log_entries_array =
       make_new_scorers_log_entries() + make_new_assisters_log_entries()
 
-      log_entries_changes = SQLOperations.sql_insert_all("log_entries", made_log_entries_array )
+      log_entries_changes = SqlOperations.sql_insert_all("log_entries", made_log_entries_array )
     end
 
     def make_new_scorers_log_entries
@@ -242,7 +242,7 @@ module NHLGameEventsApi
       end
     end
 
-    # get game's player_profile, of roster player (via  NHLRosterAPI.rb)
+    # get game's player_profile, of roster player (via  NHLRosterApi.rb)
     # roster > players; game > player_profiles; player > player_profiles
     def get_profile_by (**search_hash)
       #cross-reference passed attributes (search_hash keys) with roster players

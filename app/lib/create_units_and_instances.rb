@@ -379,7 +379,7 @@ private
         updated_at: Time.now ]
     end
     units_changes =
-    SQLOperations.sql_insert_all("units", prepared_units).count
+    SqlOperations.sql_insert_all("units", prepared_units).count
 
     if units_changes > 0
       inserted_units =
@@ -431,7 +431,7 @@ private
   end #prepare_instances
 
   def insert_instances(prepared_instances)
-    instances_changes = SQLOperations.sql_insert_all("instances", prepared_instances).count
+    instances_changes = SqlOperations.sql_insert_all("instances", prepared_instances).count
 
     queued_instances =
     Instance.order(id: :desc).limit(instances_changes).reverse
@@ -472,7 +472,7 @@ private
     end #each group
 
 
-    SQLOperations.sql_insert_all("circumstances", prepared_circumstances)
+    SqlOperations.sql_insert_all("circumstances", prepared_circumstances)
   end
 
   def associate_events_to_instances(queued_instances, formed_instances)
@@ -487,7 +487,7 @@ private
       end
     end.flatten
 
-    SQLOperations.sql_insert_all("events_instances", prepared_associations)
+    SqlOperations.sql_insert_all("events_instances", prepared_associations)
   end
 
   def associate_roster_to_units(queued_units, roster)
@@ -508,7 +508,7 @@ private
         unit_id: unit.id ]
     end
 
-    SQLOperations.sql_insert_all("rosters_units", prepared_rosters_units) if prepared_rosters_units.any?
+    SqlOperations.sql_insert_all("rosters_units", prepared_rosters_units) if prepared_rosters_units.any?
   end
 
 

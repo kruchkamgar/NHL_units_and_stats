@@ -1,6 +1,6 @@
 
 
-module SQLOperations
+module SqlOperations
 
   # standardized bulk sql insert method
   def sql_insert_all (table, data_hash)
