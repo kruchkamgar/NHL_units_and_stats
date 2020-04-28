@@ -1,6 +1,6 @@
 # README
 
-address: https://hokkey123.xyz:8443/units
+address: www.hokkey123.xyz:8443/units
 
 
 ---------------------
