@@ -17,4 +17,4 @@ require("channels")
 // const imagePath = (name) => images(name, true)
 
 import '../src/hockey_api'
-import '../src/hockey_api/stylesheets/application.css'
+import '../src/hockey_api/stylesheets/application.css.scss'
