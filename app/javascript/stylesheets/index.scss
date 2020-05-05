@@ -1,0 +1,57 @@
+@import "globals.scss";
+
+html,
+body,
+div#react-container,
+div.app {
+  height: 100%;
+  padding: 0;
+  margin: 0;
+}
+
+.wrapper.grid {
+  display: grid;
+
+  grid-template-columns: 10px 1fr 20px;
+  grid-template-rows: 1fr 100px;
+  grid-template-areas:
+  '. content .'
+  'menu menu menu';
+
+  grid-gap: 10px;
+  background-color: white;
+  padding: 10px 0 0;
+}
+
+.wrapper.d-flex { display: flex; }
+
+.chart { flex: 0 0 15em; }
+.queue { flex: 0 0 30em; }
+.queue .data { flex: 1 0 2em; }
+.gameRow { margin: 10px 0; }
+.row { display: flex; }
+.data-element.title { flex: 1 0 10em; }
+.data-element.data { flex: 1 0 3em; }
+
+body { margin:0; }
+
+div.whoops-404 {
+  background-color: white;
+  font-size: 2em;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+/*
+@media (min-width: 480px) {
+  body { width: 100%; }
+}
+@media (min-width: 768px) {
+  body { width: 768px; }
+}
+@media (min-width: 1024px) {
+  body { width: 100%; }
+}
+*/
