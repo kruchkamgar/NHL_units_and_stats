@@ -22,9 +22,7 @@ const PowerScoresDisplay = ({
 
   let direction = 0;
   // triggers setGames, could merely call setGames from 'handleDateChange'
-  const [dates, setDates] = useState(
-    gameDates(scheduleDates, timeMark, direction) );
-
+  const [dates, setDates] = useState(); // 'dates' offers a hash of 3
   const [games, setGames] = useState({
     previous: [], day:[], subsequent:[]
   })
@@ -41,16 +39,21 @@ const PowerScoresDisplay = ({
   }
 
 useEffect( ()=> {
-  !fetching &&
+  setDates(
+    gameDates(scheduleDates, timeMark, direction) );
+},[scheduleDates])
+
+useEffect( ()=> {
+  !fetching && dates &&
   !(powerScoresByDate.length === 0) &&
   !powerScoresByDate.find( score => score.date === dates.previous) ?
     getScheduleAndPowerScores(dates.previous, false) : null;
 
-  console.log("previous pScore", !powerScoresByDate.find( score => score.date === dates.previous) );
+  dates ? console.log("previous pScore", !powerScoresByDate.find( score => score.date === dates.previous) ) : null;
 }, [dates])
 
 useEffect( ()=> {
-  console.log("dates or powerScoresByDate");
+  console.log("dates or powerScoresByDate => setPowerScoresPerDay");
   if(!(dates === undefined)){
     // find the latest powerScores using the dates
     setPowerScoresPerDay(
@@ -67,6 +70,8 @@ useEffect( ()=> {
 }, [dates, powerScoresByDate])
 
 useEffect( ()=> {
+  // it doesnt set games until refresh of page.
+  dates &&
   schedule.length > 0 ?
     setGames( prevGames=>{
       return gamesByDates(prevGames, dates, schedule, direction)
@@ -86,7 +91,7 @@ useEffect( ()=> {
         subsequent: <Day date={dates.subsequent} games={games[2]} dayScores={false}/> }
     }) // daysDispatch
   } // if
-}, [games])
+}, [powerScoresPerDay])
 
 // useEffect( () => {
 //   console.log("reducer updates");
