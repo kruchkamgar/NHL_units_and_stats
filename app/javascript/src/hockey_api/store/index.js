@@ -13,12 +13,13 @@ import { clearErrors } from '../actions';
 	result = next(action)
 
 	let { errors } = store.getState()
-	console.log(`
-		errors: ${errors.length}, ${errors}
-	`)
+  if (errors) {
+  	console.log(`
+  		errors: ${errors.length}, ${errors} `)
+  }
   console.groupEnd()
 
-  if (errors.length !== 0) {
+  if (errors && errors.length !== 0) {
     store.dispatch(clearErrors()) }
 
 	return result;
