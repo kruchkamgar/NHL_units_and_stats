@@ -9,7 +9,7 @@ import { Link } from 'react';
 // import Axes from './Axes';
 // import UnitRow from './UnitRow';
 
-import '../../stylesheets/UnitsDisplay.scss'
+import 'stylesheets/UnitsDisplay.scss'
 
 function UnitsDisplay({
   units = [],

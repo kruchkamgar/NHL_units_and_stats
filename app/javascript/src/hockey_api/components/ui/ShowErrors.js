@@ -1,6 +1,6 @@
 import PropTypes from 'prop-types';
 import {closebutton} from 'react-icons/fa'
-import '../../stylesheets/ShowErrors.scss'
+import 'stylesheets/ShowErrors.scss'
 
 const ShowErrors = ({ errors=[], onClearError=f=>f }) =>
     <div className="show-errors">

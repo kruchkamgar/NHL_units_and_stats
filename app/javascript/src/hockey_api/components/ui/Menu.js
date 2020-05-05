@@ -2,7 +2,7 @@ import { NavLink, Link } from 'react-router-dom'
 import { FaHome } from 'react-icons/fa'
 import { FaCalendarPlusO } from 'react-icons/fa'
 import { FaCalendar, FaTh } from 'react-icons/fa'
-import '../../stylesheets/Menu.scss'
+import 'stylesheets/Menu.scss'
 
 const Menu = () =>
     <nav className="menu">
