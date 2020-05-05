@@ -3,7 +3,7 @@ import ShowErrors from './containers/ShowErrors'
 import { Switch, Route, Redirect } from 'react-router-dom'
 import UnitsDisplay from './containers/UnitsDisplay'
 import PowerScoresDisplay from './containers/PowerScoresDisplay'
-import '../stylesheets/index.scss'
+import 'stylesheets/index.scss'
 
 export const App = () =>
   <div className="app">
